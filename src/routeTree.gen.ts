@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SacRouteImport } from './routes/sac'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
@@ -18,14 +19,17 @@ import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppRisksRouteImport } from './routes/_app/risks'
 import { Route as AppReportsRouteImport } from './routes/_app/reports'
 import { Route as AppPurchasesRouteImport } from './routes/_app/purchases'
+import { Route as AppProjectsRouteImport } from './routes/_app/projects'
 import { Route as AppProcessMapRouteImport } from './routes/_app/process-map'
 import { Route as AppPocRouteImport } from './routes/_app/poc'
 import { Route as AppOccurrencesRouteImport } from './routes/_app/occurrences'
 import { Route as AppMeetingsRouteImport } from './routes/_app/meetings'
+import { Route as AppIndicatorsRouteImport } from './routes/_app/indicators'
 import { Route as AppFormsRouteImport } from './routes/_app/forms'
 import { Route as AppEquipmentsRouteImport } from './routes/_app/equipments'
 import { Route as AppDocumentsRouteImport } from './routes/_app/documents'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppCustomerServiceRouteImport } from './routes/_app/customer-service'
 import { Route as AppCompetenciesRouteImport } from './routes/_app/competencies'
 import { Route as AppCalibrationsRouteImport } from './routes/_app/calibrations'
 import { Route as AppAuditsRouteImport } from './routes/_app/audits'
@@ -39,8 +43,15 @@ import { Route as AppFormsNewRouteImport } from './routes/_app/forms.new'
 import { Route as AppFormsIdRouteImport } from './routes/_app/forms.$id'
 import { Route as AppEquipmentsIdRouteImport } from './routes/_app/equipments.$id'
 import { Route as AppDocumentsIdRouteImport } from './routes/_app/documents.$id'
+import { Route as AppCustomerServiceNewRouteImport } from './routes/_app/customer-service.new'
+import { Route as AppCustomerServiceIdRouteImport } from './routes/_app/customer-service.$id'
 import { Route as AppAuditsIdRouteImport } from './routes/_app/audits.$id'
 
+const SacRoute = SacRouteImport.update({
+  id: '/sac',
+  path: '/sac',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -85,6 +96,11 @@ const AppPurchasesRoute = AppPurchasesRouteImport.update({
   path: '/purchases',
   getParentRoute: () => AppRoute,
 } as any)
+const AppProjectsRoute = AppProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppProcessMapRoute = AppProcessMapRouteImport.update({
   id: '/process-map',
   path: '/process-map',
@@ -105,6 +121,11 @@ const AppMeetingsRoute = AppMeetingsRouteImport.update({
   path: '/meetings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppIndicatorsRoute = AppIndicatorsRouteImport.update({
+  id: '/indicators',
+  path: '/indicators',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppFormsRoute = AppFormsRouteImport.update({
   id: '/forms',
   path: '/forms',
@@ -123,6 +144,11 @@ const AppDocumentsRoute = AppDocumentsRouteImport.update({
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCustomerServiceRoute = AppCustomerServiceRouteImport.update({
+  id: '/customer-service',
+  path: '/customer-service',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCompetenciesRoute = AppCompetenciesRouteImport.update({
@@ -190,6 +216,16 @@ const AppDocumentsIdRoute = AppDocumentsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppDocumentsRoute,
 } as any)
+const AppCustomerServiceNewRoute = AppCustomerServiceNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppCustomerServiceRoute,
+} as any)
+const AppCustomerServiceIdRoute = AppCustomerServiceIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppCustomerServiceRoute,
+} as any)
 const AppAuditsIdRoute = AppAuditsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -199,19 +235,23 @@ const AppAuditsIdRoute = AppAuditsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/sac': typeof SacRoute
   '/action-plans': typeof AppActionPlansRoute
   '/audit-log': typeof AppAuditLogRoute
   '/audits': typeof AppAuditsRouteWithChildren
   '/calibrations': typeof AppCalibrationsRoute
   '/competencies': typeof AppCompetenciesRoute
+  '/customer-service': typeof AppCustomerServiceRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRouteWithChildren
   '/equipments': typeof AppEquipmentsRouteWithChildren
   '/forms': typeof AppFormsRouteWithChildren
+  '/indicators': typeof AppIndicatorsRoute
   '/meetings': typeof AppMeetingsRoute
   '/occurrences': typeof AppOccurrencesRouteWithChildren
   '/poc': typeof AppPocRouteWithChildren
   '/process-map': typeof AppProcessMapRoute
+  '/projects': typeof AppProjectsRoute
   '/purchases': typeof AppPurchasesRoute
   '/reports': typeof AppReportsRoute
   '/risks': typeof AppRisksRouteWithChildren
@@ -219,6 +259,8 @@ export interface FileRoutesByFullPath {
   '/suppliers': typeof AppSuppliersRouteWithChildren
   '/users': typeof AppUsersRoute
   '/audits/$id': typeof AppAuditsIdRoute
+  '/customer-service/$id': typeof AppCustomerServiceIdRoute
+  '/customer-service/new': typeof AppCustomerServiceNewRoute
   '/documents/$id': typeof AppDocumentsIdRoute
   '/equipments/$id': typeof AppEquipmentsIdRoute
   '/forms/$id': typeof AppFormsIdRoute
@@ -231,19 +273,23 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/sac': typeof SacRoute
   '/action-plans': typeof AppActionPlansRoute
   '/audit-log': typeof AppAuditLogRoute
   '/audits': typeof AppAuditsRouteWithChildren
   '/calibrations': typeof AppCalibrationsRoute
   '/competencies': typeof AppCompetenciesRoute
+  '/customer-service': typeof AppCustomerServiceRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRouteWithChildren
   '/equipments': typeof AppEquipmentsRouteWithChildren
   '/forms': typeof AppFormsRouteWithChildren
+  '/indicators': typeof AppIndicatorsRoute
   '/meetings': typeof AppMeetingsRoute
   '/occurrences': typeof AppOccurrencesRouteWithChildren
   '/poc': typeof AppPocRouteWithChildren
   '/process-map': typeof AppProcessMapRoute
+  '/projects': typeof AppProjectsRoute
   '/purchases': typeof AppPurchasesRoute
   '/reports': typeof AppReportsRoute
   '/risks': typeof AppRisksRouteWithChildren
@@ -251,6 +297,8 @@ export interface FileRoutesByTo {
   '/suppliers': typeof AppSuppliersRouteWithChildren
   '/users': typeof AppUsersRoute
   '/audits/$id': typeof AppAuditsIdRoute
+  '/customer-service/$id': typeof AppCustomerServiceIdRoute
+  '/customer-service/new': typeof AppCustomerServiceNewRoute
   '/documents/$id': typeof AppDocumentsIdRoute
   '/equipments/$id': typeof AppEquipmentsIdRoute
   '/forms/$id': typeof AppFormsIdRoute
@@ -265,19 +313,23 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/sac': typeof SacRoute
   '/_app/action-plans': typeof AppActionPlansRoute
   '/_app/audit-log': typeof AppAuditLogRoute
   '/_app/audits': typeof AppAuditsRouteWithChildren
   '/_app/calibrations': typeof AppCalibrationsRoute
   '/_app/competencies': typeof AppCompetenciesRoute
+  '/_app/customer-service': typeof AppCustomerServiceRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/documents': typeof AppDocumentsRouteWithChildren
   '/_app/equipments': typeof AppEquipmentsRouteWithChildren
   '/_app/forms': typeof AppFormsRouteWithChildren
+  '/_app/indicators': typeof AppIndicatorsRoute
   '/_app/meetings': typeof AppMeetingsRoute
   '/_app/occurrences': typeof AppOccurrencesRouteWithChildren
   '/_app/poc': typeof AppPocRouteWithChildren
   '/_app/process-map': typeof AppProcessMapRoute
+  '/_app/projects': typeof AppProjectsRoute
   '/_app/purchases': typeof AppPurchasesRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/risks': typeof AppRisksRouteWithChildren
@@ -285,6 +337,8 @@ export interface FileRoutesById {
   '/_app/suppliers': typeof AppSuppliersRouteWithChildren
   '/_app/users': typeof AppUsersRoute
   '/_app/audits/$id': typeof AppAuditsIdRoute
+  '/_app/customer-service/$id': typeof AppCustomerServiceIdRoute
+  '/_app/customer-service/new': typeof AppCustomerServiceNewRoute
   '/_app/documents/$id': typeof AppDocumentsIdRoute
   '/_app/equipments/$id': typeof AppEquipmentsIdRoute
   '/_app/forms/$id': typeof AppFormsIdRoute
@@ -299,19 +353,23 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/sac'
     | '/action-plans'
     | '/audit-log'
     | '/audits'
     | '/calibrations'
     | '/competencies'
+    | '/customer-service'
     | '/dashboard'
     | '/documents'
     | '/equipments'
     | '/forms'
+    | '/indicators'
     | '/meetings'
     | '/occurrences'
     | '/poc'
     | '/process-map'
+    | '/projects'
     | '/purchases'
     | '/reports'
     | '/risks'
@@ -319,6 +377,8 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/users'
     | '/audits/$id'
+    | '/customer-service/$id'
+    | '/customer-service/new'
     | '/documents/$id'
     | '/equipments/$id'
     | '/forms/$id'
@@ -331,19 +391,23 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/sac'
     | '/action-plans'
     | '/audit-log'
     | '/audits'
     | '/calibrations'
     | '/competencies'
+    | '/customer-service'
     | '/dashboard'
     | '/documents'
     | '/equipments'
     | '/forms'
+    | '/indicators'
     | '/meetings'
     | '/occurrences'
     | '/poc'
     | '/process-map'
+    | '/projects'
     | '/purchases'
     | '/reports'
     | '/risks'
@@ -351,6 +415,8 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/users'
     | '/audits/$id'
+    | '/customer-service/$id'
+    | '/customer-service/new'
     | '/documents/$id'
     | '/equipments/$id'
     | '/forms/$id'
@@ -364,19 +430,23 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/login'
+    | '/sac'
     | '/_app/action-plans'
     | '/_app/audit-log'
     | '/_app/audits'
     | '/_app/calibrations'
     | '/_app/competencies'
+    | '/_app/customer-service'
     | '/_app/dashboard'
     | '/_app/documents'
     | '/_app/equipments'
     | '/_app/forms'
+    | '/_app/indicators'
     | '/_app/meetings'
     | '/_app/occurrences'
     | '/_app/poc'
     | '/_app/process-map'
+    | '/_app/projects'
     | '/_app/purchases'
     | '/_app/reports'
     | '/_app/risks'
@@ -384,6 +454,8 @@ export interface FileRouteTypes {
     | '/_app/suppliers'
     | '/_app/users'
     | '/_app/audits/$id'
+    | '/_app/customer-service/$id'
+    | '/_app/customer-service/new'
     | '/_app/documents/$id'
     | '/_app/equipments/$id'
     | '/_app/forms/$id'
@@ -398,10 +470,18 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  SacRoute: typeof SacRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sac': {
+      id: '/sac'
+      path: '/sac'
+      fullPath: '/sac'
+      preLoaderRoute: typeof SacRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -465,6 +545,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPurchasesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/projects': {
+      id: '/_app/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof AppProjectsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/process-map': {
       id: '/_app/process-map'
       path: '/process-map'
@@ -493,6 +580,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMeetingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/indicators': {
+      id: '/_app/indicators'
+      path: '/indicators'
+      fullPath: '/indicators'
+      preLoaderRoute: typeof AppIndicatorsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/forms': {
       id: '/_app/forms'
       path: '/forms'
@@ -519,6 +613,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/customer-service': {
+      id: '/_app/customer-service'
+      path: '/customer-service'
+      fullPath: '/customer-service'
+      preLoaderRoute: typeof AppCustomerServiceRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/competencies': {
@@ -612,6 +713,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDocumentsIdRouteImport
       parentRoute: typeof AppDocumentsRoute
     }
+    '/_app/customer-service/new': {
+      id: '/_app/customer-service/new'
+      path: '/new'
+      fullPath: '/customer-service/new'
+      preLoaderRoute: typeof AppCustomerServiceNewRouteImport
+      parentRoute: typeof AppCustomerServiceRoute
+    }
+    '/_app/customer-service/$id': {
+      id: '/_app/customer-service/$id'
+      path: '/$id'
+      fullPath: '/customer-service/$id'
+      preLoaderRoute: typeof AppCustomerServiceIdRouteImport
+      parentRoute: typeof AppCustomerServiceRoute
+    }
     '/_app/audits/$id': {
       id: '/_app/audits/$id'
       path: '/$id'
@@ -633,6 +748,19 @@ const AppAuditsRouteChildren: AppAuditsRouteChildren = {
 const AppAuditsRouteWithChildren = AppAuditsRoute._addFileChildren(
   AppAuditsRouteChildren,
 )
+
+interface AppCustomerServiceRouteChildren {
+  AppCustomerServiceIdRoute: typeof AppCustomerServiceIdRoute
+  AppCustomerServiceNewRoute: typeof AppCustomerServiceNewRoute
+}
+
+const AppCustomerServiceRouteChildren: AppCustomerServiceRouteChildren = {
+  AppCustomerServiceIdRoute: AppCustomerServiceIdRoute,
+  AppCustomerServiceNewRoute: AppCustomerServiceNewRoute,
+}
+
+const AppCustomerServiceRouteWithChildren =
+  AppCustomerServiceRoute._addFileChildren(AppCustomerServiceRouteChildren)
 
 interface AppDocumentsRouteChildren {
   AppDocumentsIdRoute: typeof AppDocumentsIdRoute
@@ -725,14 +853,17 @@ interface AppRouteChildren {
   AppAuditsRoute: typeof AppAuditsRouteWithChildren
   AppCalibrationsRoute: typeof AppCalibrationsRoute
   AppCompetenciesRoute: typeof AppCompetenciesRoute
+  AppCustomerServiceRoute: typeof AppCustomerServiceRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
   AppDocumentsRoute: typeof AppDocumentsRouteWithChildren
   AppEquipmentsRoute: typeof AppEquipmentsRouteWithChildren
   AppFormsRoute: typeof AppFormsRouteWithChildren
+  AppIndicatorsRoute: typeof AppIndicatorsRoute
   AppMeetingsRoute: typeof AppMeetingsRoute
   AppOccurrencesRoute: typeof AppOccurrencesRouteWithChildren
   AppPocRoute: typeof AppPocRouteWithChildren
   AppProcessMapRoute: typeof AppProcessMapRoute
+  AppProjectsRoute: typeof AppProjectsRoute
   AppPurchasesRoute: typeof AppPurchasesRoute
   AppReportsRoute: typeof AppReportsRoute
   AppRisksRoute: typeof AppRisksRouteWithChildren
@@ -747,14 +878,17 @@ const AppRouteChildren: AppRouteChildren = {
   AppAuditsRoute: AppAuditsRouteWithChildren,
   AppCalibrationsRoute: AppCalibrationsRoute,
   AppCompetenciesRoute: AppCompetenciesRoute,
+  AppCustomerServiceRoute: AppCustomerServiceRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
   AppDocumentsRoute: AppDocumentsRouteWithChildren,
   AppEquipmentsRoute: AppEquipmentsRouteWithChildren,
   AppFormsRoute: AppFormsRouteWithChildren,
+  AppIndicatorsRoute: AppIndicatorsRoute,
   AppMeetingsRoute: AppMeetingsRoute,
   AppOccurrencesRoute: AppOccurrencesRouteWithChildren,
   AppPocRoute: AppPocRouteWithChildren,
   AppProcessMapRoute: AppProcessMapRoute,
+  AppProjectsRoute: AppProjectsRoute,
   AppPurchasesRoute: AppPurchasesRoute,
   AppReportsRoute: AppReportsRoute,
   AppRisksRoute: AppRisksRouteWithChildren,
@@ -769,6 +903,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  SacRoute: SacRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
