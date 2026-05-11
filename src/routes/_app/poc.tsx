@@ -31,7 +31,7 @@ function POCPage() {
       />
 
       <div className="bg-gradient-to-br from-primary to-info text-primary-foreground rounded-xl p-6 mb-6 shadow-md">
-        <h2 className="text-xl font-semibold">QualiLab SaaS — Demonstração executiva</h2>
+        <h2 className="text-xl font-semibold">QualiLab — Demonstração executiva</h2>
         <p className="text-sm opacity-90 mt-1 max-w-2xl">
           Todos os módulos obrigatórios estão funcionais e populados com dados realistas de laboratório.
           Use o roteiro guiado para apresentar a solução completa em até 15 minutos.

@@ -46,9 +46,9 @@ function LoginPage() {
       {/* Lado branding */}
       <div className="hidden lg:flex flex-col justify-between p-12 bg-sidebar text-sidebar-foreground">
         <div className="flex items-center gap-3">
-          <img src={logo} alt="QualiLab" className="size-10 rounded-lg object-contain bg-white/5 p-1" />
+          <img src={logo} alt="QualiLab" className="size-12 rounded-xl object-contain bg-white p-1.5 shadow-sm ring-1 ring-white/10" />
           <div>
-            <div className="font-semibold">QualiLab SaaS</div>
+            <div className="font-semibold text-lg tracking-tight">QualiLab</div>
             <div className="text-xs text-sidebar-foreground/60">Gestão da Qualidade Laboratorial</div>
           </div>
         </div>
@@ -78,9 +78,9 @@ function LoginPage() {
       <div className="flex items-center justify-center p-6 sm:p-12 bg-background">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <img src={logo} alt="QualiLab" className="size-10 rounded-lg object-contain" />
+            <img src={logo} alt="QualiLab" className="size-12 rounded-xl object-contain bg-white p-1.5 ring-1 ring-border" />
             <div>
-              <div className="font-semibold">QualiLab SaaS</div>
+              <div className="font-semibold text-lg tracking-tight">QualiLab</div>
               <div className="text-xs text-muted-foreground">ISO/IEC 17025</div>
             </div>
           </div>
