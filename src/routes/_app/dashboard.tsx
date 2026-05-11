@@ -83,7 +83,7 @@ function Dashboard() {
     <>
       <PageHeader
         title="Dashboard Executivo"
-        description="Visão geral da Gestão da Qualidade do Laboratório · ISO/IEC 17025:2017"
+        description="Visão geral da Gestão da Qualidade"
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">

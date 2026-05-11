@@ -60,7 +60,7 @@ export function AppSidebar() {
         <img src={logo} alt="QualiLab" className="size-10 rounded-lg object-contain bg-white p-1 ring-1 ring-white/10" />
         <div>
           <div className="text-base font-semibold leading-tight tracking-tight">QualiLab</div>
-          <div className="text-[11px] text-sidebar-foreground/60">ISO/IEC 17025</div>
+          <div className="text-[11px] text-sidebar-foreground/60">Gestão da Qualidade</div>
         </div>
       </div>
 

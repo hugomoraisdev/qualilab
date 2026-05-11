@@ -50,8 +50,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "QualiLab — Gestão da Qualidade ISO/IEC 17025" },
-      { name: "description", content: "Plataforma SaaS de Gestão da Qualidade para laboratórios conforme ABNT NBR ISO/IEC 17025:2017." },
+      { title: "QualiLab — Gestão da Qualidade" },
+      { name: "description", content: "Plataforma corporativa de Gestão da Qualidade." },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
