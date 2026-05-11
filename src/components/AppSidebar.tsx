@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/logo.png";
 
 const groups: { label: string; items: { to: string; label: string; icon: React.ComponentType<{ className?: string }> }[] }[] = [
   {
@@ -56,9 +57,7 @@ export function AppSidebar() {
   return (
     <aside className="hidden md:flex md:flex-col w-64 shrink-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
       <div className="px-5 py-5 border-b border-sidebar-border flex items-center gap-2">
-        <div className="size-9 rounded-lg bg-sidebar-primary/15 grid place-items-center">
-          <FlaskConical className="size-5 text-sidebar-primary" />
-        </div>
+        <img src={logo} alt="QualiLab" className="size-9 rounded-lg object-contain bg-white/5 p-1" />
         <div>
           <div className="text-sm font-semibold leading-tight">QualiLab</div>
           <div className="text-[11px] text-sidebar-foreground/60">SaaS · ISO/IEC 17025</div>
