@@ -56,11 +56,11 @@ export function AppSidebar() {
 
   return (
     <aside className="hidden md:flex md:flex-col w-64 shrink-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
-      <div className="px-5 py-5 border-b border-sidebar-border flex items-center gap-2">
-        <img src={logo} alt="QualiLab" className="size-9 rounded-lg object-contain bg-white/5 p-1" />
+      <div className="px-5 py-5 border-b border-sidebar-border flex items-center gap-2.5">
+        <img src={logo} alt="QualiLab" className="size-10 rounded-lg object-contain bg-white p-1 ring-1 ring-white/10" />
         <div>
-          <div className="text-sm font-semibold leading-tight">QualiLab</div>
-          <div className="text-[11px] text-sidebar-foreground/60">SaaS · ISO/IEC 17025</div>
+          <div className="text-base font-semibold leading-tight tracking-tight">QualiLab</div>
+          <div className="text-[11px] text-sidebar-foreground/60">ISO/IEC 17025</div>
         </div>
       </div>
 
