@@ -35,6 +35,7 @@ import { Route as AppSuppliersIdRouteImport } from './routes/_app/suppliers.$id'
 import { Route as AppRisksIdRouteImport } from './routes/_app/risks.$id'
 import { Route as AppPocRoteiroRouteImport } from './routes/_app/poc.roteiro'
 import { Route as AppOccurrencesIdRouteImport } from './routes/_app/occurrences.$id'
+import { Route as AppFormsNewRouteImport } from './routes/_app/forms.new'
 import { Route as AppFormsIdRouteImport } from './routes/_app/forms.$id'
 import { Route as AppEquipmentsIdRouteImport } from './routes/_app/equipments.$id'
 import { Route as AppDocumentsIdRouteImport } from './routes/_app/documents.$id'
@@ -169,6 +170,11 @@ const AppOccurrencesIdRoute = AppOccurrencesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppOccurrencesRoute,
 } as any)
+const AppFormsNewRoute = AppFormsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppFormsRoute,
+} as any)
 const AppFormsIdRoute = AppFormsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -216,6 +222,7 @@ export interface FileRoutesByFullPath {
   '/documents/$id': typeof AppDocumentsIdRoute
   '/equipments/$id': typeof AppEquipmentsIdRoute
   '/forms/$id': typeof AppFormsIdRoute
+  '/forms/new': typeof AppFormsNewRoute
   '/occurrences/$id': typeof AppOccurrencesIdRoute
   '/poc/roteiro': typeof AppPocRoteiroRoute
   '/risks/$id': typeof AppRisksIdRoute
@@ -247,6 +254,7 @@ export interface FileRoutesByTo {
   '/documents/$id': typeof AppDocumentsIdRoute
   '/equipments/$id': typeof AppEquipmentsIdRoute
   '/forms/$id': typeof AppFormsIdRoute
+  '/forms/new': typeof AppFormsNewRoute
   '/occurrences/$id': typeof AppOccurrencesIdRoute
   '/poc/roteiro': typeof AppPocRoteiroRoute
   '/risks/$id': typeof AppRisksIdRoute
@@ -280,6 +288,7 @@ export interface FileRoutesById {
   '/_app/documents/$id': typeof AppDocumentsIdRoute
   '/_app/equipments/$id': typeof AppEquipmentsIdRoute
   '/_app/forms/$id': typeof AppFormsIdRoute
+  '/_app/forms/new': typeof AppFormsNewRoute
   '/_app/occurrences/$id': typeof AppOccurrencesIdRoute
   '/_app/poc/roteiro': typeof AppPocRoteiroRoute
   '/_app/risks/$id': typeof AppRisksIdRoute
@@ -313,6 +322,7 @@ export interface FileRouteTypes {
     | '/documents/$id'
     | '/equipments/$id'
     | '/forms/$id'
+    | '/forms/new'
     | '/occurrences/$id'
     | '/poc/roteiro'
     | '/risks/$id'
@@ -344,6 +354,7 @@ export interface FileRouteTypes {
     | '/documents/$id'
     | '/equipments/$id'
     | '/forms/$id'
+    | '/forms/new'
     | '/occurrences/$id'
     | '/poc/roteiro'
     | '/risks/$id'
@@ -376,6 +387,7 @@ export interface FileRouteTypes {
     | '/_app/documents/$id'
     | '/_app/equipments/$id'
     | '/_app/forms/$id'
+    | '/_app/forms/new'
     | '/_app/occurrences/$id'
     | '/_app/poc/roteiro'
     | '/_app/risks/$id'
@@ -572,6 +584,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOccurrencesIdRouteImport
       parentRoute: typeof AppOccurrencesRoute
     }
+    '/_app/forms/new': {
+      id: '/_app/forms/new'
+      path: '/new'
+      fullPath: '/forms/new'
+      preLoaderRoute: typeof AppFormsNewRouteImport
+      parentRoute: typeof AppFormsRoute
+    }
     '/_app/forms/$id': {
       id: '/_app/forms/$id'
       path: '/$id'
@@ -641,10 +660,12 @@ const AppEquipmentsRouteWithChildren = AppEquipmentsRoute._addFileChildren(
 
 interface AppFormsRouteChildren {
   AppFormsIdRoute: typeof AppFormsIdRoute
+  AppFormsNewRoute: typeof AppFormsNewRoute
 }
 
 const AppFormsRouteChildren: AppFormsRouteChildren = {
   AppFormsIdRoute: AppFormsIdRoute,
+  AppFormsNewRoute: AppFormsNewRoute,
 }
 
 const AppFormsRouteWithChildren = AppFormsRoute._addFileChildren(

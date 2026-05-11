@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -7,6 +7,7 @@ import { occurrences } from "@/lib/mock-data";
 export const Route = createFileRoute("/_app/occurrences")({ component: OccPage });
 
 function OccPage() {
+  const navigate = useNavigate();
   return (
     <>
       <PageHeader title="Ocorrências e Não Conformidades" description="Tratamento de NCs, reclamações, desvios e oportunidades de melhoria" />
@@ -14,6 +15,8 @@ function OccPage() {
         data={occurrences}
         searchKeys={["id", "type", "origin", "description", "responsible", "status"]}
         newLabel="Nova ocorrência"
+        exportName="ocorrencias"
+        onRowClick={(r) => navigate({ to: "/occurrences/$id", params: { id: r.id } })}
         columns={[
           { key: "id", header: "Código", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
           { key: "type", header: "Tipo" },
