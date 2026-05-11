@@ -22,7 +22,7 @@ function POCPage() {
     <>
       <PageHeader
         title="Ambiente POC"
-        description="Prova de Conceito · ABNT NBR ISO/IEC 17025:2017"
+        description="Prova de Conceito · Ambiente de demonstração"
         actions={
           <Link to="/poc/roteiro">
             <Button><Rocket className="size-4" /> Iniciar roteiro de demonstração</Button>

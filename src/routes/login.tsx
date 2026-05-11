@@ -81,7 +81,7 @@ function LoginPage() {
             <img src={logo} alt="QualiLab" className="size-12 rounded-xl object-contain bg-white p-1.5 ring-1 ring-border" />
             <div>
               <div className="font-semibold text-lg tracking-tight">QualiLab</div>
-              <div className="text-xs text-muted-foreground">ISO/IEC 17025</div>
+              <div className="text-xs text-muted-foreground">Gestão da Qualidade</div>
             </div>
           </div>
 

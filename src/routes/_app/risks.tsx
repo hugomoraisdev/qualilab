@@ -33,7 +33,7 @@ function RisksPage() {
     <>
       <PageHeader
         title="Riscos"
-        description="Matriz de risco 5×5 e tratamento conforme ISO/IEC 17025:2017"
+        description="Matriz de risco 5×5 e tratamento"
         actions={
           <div className="inline-flex bg-muted rounded-md p-0.5">
             <button onClick={() => setView("matrix")} className={`px-2.5 py-1 rounded text-xs flex items-center gap-1 ${view === "matrix" ? "bg-card shadow-sm" : ""}`}><Grid3x3 className="size-3.5" /> Matriz</button>
