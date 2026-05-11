@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Search, Plus, Eye } from "lucide-react";
+import { Search, Plus, Eye, FileSpreadsheet } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -11,8 +11,30 @@ export interface Column<T> {
   className?: string;
 }
 
+function downloadCsv<T extends Record<string, any>>(rows: T[], columns: Column<T>[], filename: string) {
+  const header = columns.map((c) => `"${c.header.replace(/"/g, '""')}"`).join(",");
+  const body = rows
+    .map((r) =>
+      columns
+        .map((c) => {
+          const v = r[c.key];
+          const s = v == null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
+          return `"${s.replace(/"/g, '""')}"`;
+        })
+        .join(","),
+    )
+    .join("\n");
+  const blob = new Blob(["\uFEFF" + header + "\n" + body], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function DataTable<T extends Record<string, any>>({
-  data, columns, searchKeys, newLabel = "Novo cadastro", onRowClick, emptyHint,
+  data, columns, searchKeys, newLabel = "Novo cadastro", onRowClick, emptyHint, exportName, hideNew, onNew,
 }: {
   data: T[];
   columns: Column<T>[];
@@ -20,6 +42,9 @@ export function DataTable<T extends Record<string, any>>({
   newLabel?: string;
   onRowClick?: (row: T) => void;
   emptyHint?: string;
+  exportName?: string;
+  hideNew?: boolean;
+  onNew?: () => void;
 }) {
   const [q, setQ] = useState("");
 
@@ -31,8 +56,8 @@ export function DataTable<T extends Record<string, any>>({
 
   return (
     <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between gap-3 p-4 border-b border-border">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border">
+        <div className="relative flex-1 min-w-[180px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
             placeholder="Buscar..."
@@ -41,12 +66,31 @@ export function DataTable<T extends Record<string, any>>({
             className="pl-9 h-9"
           />
         </div>
-        <Button
-          size="sm"
-          onClick={() => toast.info("Cadastro em ambiente POC", { description: "Os dados de demonstração são pré-carregados." })}
-        >
-          <Plus className="size-4" /> {newLabel}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const name = (exportName ?? "qualilab") + "_" + new Date().toISOString().slice(0, 10) + ".csv";
+              downloadCsv(filtered, columns, name);
+              toast.success("CSV exportado", { description: `${filtered.length} registros` });
+            }}
+            title="Exportar CSV"
+          >
+            <FileSpreadsheet className="size-4" /> CSV
+          </Button>
+          {!hideNew && (
+            <Button
+              size="sm"
+              onClick={() => {
+                if (onNew) return onNew();
+                toast.info("Cadastro em ambiente POC", { description: "Os dados de demonstração são pré-carregados." });
+              }}
+            >
+              <Plus className="size-4" /> {newLabel}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -72,7 +116,8 @@ export function DataTable<T extends Record<string, any>>({
             {filtered.map((row, i) => (
               <tr
                 key={i}
-                className="border-t border-border hover:bg-accent/30 transition-colors"
+                className="border-t border-border hover:bg-accent/30 transition-colors cursor-pointer"
+                onClick={() => onRowClick?.(row)}
               >
                 {columns.map((c) => (
                   <td key={c.key} className={`px-4 py-3 align-middle ${c.className ?? ""}`}>
@@ -81,7 +126,7 @@ export function DataTable<T extends Record<string, any>>({
                 ))}
                 <td className="px-4 py-3 text-right">
                   <button
-                    onClick={() => onRowClick?.(row) ?? toast.info(`Detalhes: ${row.id ?? ""}`)}
+                    onClick={(e) => { e.stopPropagation(); onRowClick?.(row) ?? toast.info(`Detalhes: ${row.id ?? ""}`); }}
                     className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                     title="Visualizar"
                   >

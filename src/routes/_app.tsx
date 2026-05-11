@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/lib/auth";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/_app")({
@@ -13,6 +13,7 @@ function AppLayout() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [hydrated, setHydrated] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => { setHydrated(true); }, []);
 
@@ -25,9 +26,16 @@ function AppLayout() {
 
   return (
     <div className="min-h-screen flex bg-background">
-      <AppSidebar />
+      <AppSidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b border-border bg-card flex items-center gap-3 px-4 sm:px-6">
+          <button
+            className="md:hidden rounded-md p-2 hover:bg-accent text-muted-foreground"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Abrir menu"
+          >
+            <Menu className="size-5" />
+          </button>
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input placeholder="Buscar em todo o sistema..." className="pl-9 h-9 bg-background" />
