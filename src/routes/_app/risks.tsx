@@ -49,12 +49,10 @@ function RisksPage() {
             <div className="grid grid-cols-[auto_repeat(5,minmax(110px,1fr))] gap-1.5 min-w-[700px]">
               <div></div>
               {[1, 2, 3, 4, 5].map(i => <div key={i} className="text-xs text-center text-muted-foreground font-medium">Impacto {i}</div>)}
-              {[5, 4, 3, 2, 1].map(p => (
-                <>
-                  <div key={`l-${p}`} className="text-xs text-muted-foreground font-medium flex items-center pr-2 justify-end">Prob. {p}</div>
-                  {[1, 2, 3, 4, 5].map(i => <MatrixCell key={`${p}-${i}`} p={p} i={i} />)}
-                </>
-              ))}
+              {[5, 4, 3, 2, 1].flatMap(p => [
+                <div key={`l-${p}`} className="text-xs text-muted-foreground font-medium flex items-center pr-2 justify-end">Prob. {p}</div>,
+                ...[1, 2, 3, 4, 5].map(i => <MatrixCell key={`${p}-${i}`} p={p} i={i} />),
+              ])}
             </div>
           </div>
           <div className="flex flex-wrap gap-3 mt-4 text-xs">
