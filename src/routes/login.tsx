@@ -107,23 +107,6 @@ function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-8 rounded-lg border border-border bg-muted/40 p-4">
-            <div className="text-xs font-semibold text-foreground mb-2">Usuários de demonstração</div>
-            <div className="grid gap-1.5">
-              {DEMO_OPTIONS.map((u) => (
-                <button
-                  key={u.email}
-                  type="button"
-                  onClick={() => { setEmail(u.email); setPassword("demo123"); }}
-                  className="flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs hover:bg-background transition-colors"
-                >
-                  <span className="font-mono">{u.email}</span>
-                  <span className="text-muted-foreground">{u.role}</span>
-                </button>
-              ))}
-            </div>
-            <div className="text-[11px] text-muted-foreground mt-2">Senha: <span className="font-mono">demo123</span></div>
-          </div>
         </div>
       </div>
     </div>
