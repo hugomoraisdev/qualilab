@@ -55,17 +55,17 @@ function LoginPage() {
 
         <div className="max-w-md space-y-4">
           <h1 className="text-3xl font-semibold leading-tight">
-            Conformidade, rastreabilidade e controle para laboratórios <span className="text-sidebar-primary">ISO/IEC 17025</span>
+            Gestão da qualidade <span className="text-sidebar-primary">simples e integrada</span>
           </h1>
           <p className="text-sm text-sidebar-foreground/70">
-            Documentos, calibrações, auditorias, riscos, ocorrências, fornecedores e competências em uma única plataforma corporativa.
+            Uma plataforma corporativa para organizar processos, garantir conformidade e dar visibilidade às operações.
           </p>
           <ul className="space-y-2 text-sm text-sidebar-foreground/80">
-            <li>• Controle documental com versão e aprovação</li>
-            <li>• Cronograma e alertas de calibração</li>
-            <li>• Matriz de risco 5×5 e tratamento</li>
-            <li>• Auditoria interna e externa com checklists</li>
-            <li>• Log completo de rastreabilidade</li>
+            <li>• Controle de documentos e versões</li>
+            <li>• Indicadores e relatórios em tempo real</li>
+            <li>• Gestão de riscos e planos de ação</li>
+            <li>• Auditorias e checklists configuráveis</li>
+            <li>• Rastreabilidade completa das ações</li>
           </ul>
         </div>
 
