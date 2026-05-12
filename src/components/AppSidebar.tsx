@@ -3,6 +3,7 @@ import {
   LayoutDashboard, FileText, ClipboardCheck, AlertTriangle, ShieldAlert, ListChecks,
   Wrench, Gauge, Truck, ShoppingCart, GraduationCap, Users2, Workflow, FormInput,
   BarChart3, Settings, Users, History, Rocket, LogOut, Headset, Target, KanbanSquare, X,
+  CheckSquare, DatabaseZap,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
@@ -17,6 +18,7 @@ const groups: { label: string; items: Item[] }[] = [
     items: [
       { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, perm: "dashboard" },
       { to: "/poc", label: "Ambiente POC", icon: Rocket, perm: "poc" },
+      { to: "/poc-checklist", label: "Checklist Edital", icon: CheckSquare, perm: "poc" },
     ],
   },
   {
@@ -49,6 +51,7 @@ const groups: { label: string; items: Item[] }[] = [
     items: [
       { to: "/reports", label: "Relatórios", icon: BarChart3, perm: "reports" },
       { to: "/indicators", label: "Indicadores", icon: Target, perm: "indicators" },
+      { to: "/data-migration", label: "Importação / Migração", icon: DatabaseZap, perm: "all" },
       { to: "/settings", label: "Configurações", icon: Settings, perm: "all" },
       { to: "/users", label: "Usuários e Permissões", icon: Users, perm: "all" },
       { to: "/audit-log", label: "Log de Auditoria", icon: History, perm: "audit-log" },
