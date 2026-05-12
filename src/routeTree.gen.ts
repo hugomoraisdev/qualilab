@@ -39,6 +39,8 @@ import { Route as AppSuppliersIdRouteImport } from './routes/_app/suppliers.$id'
 import { Route as AppRisksIdRouteImport } from './routes/_app/risks.$id'
 import { Route as AppPocRoteiroRouteImport } from './routes/_app/poc.roteiro'
 import { Route as AppOccurrencesIdRouteImport } from './routes/_app/occurrences.$id'
+import { Route as AppMeetingsNewRouteImport } from './routes/_app/meetings.new'
+import { Route as AppMeetingsIdRouteImport } from './routes/_app/meetings.$id'
 import { Route as AppFormsNewRouteImport } from './routes/_app/forms.new'
 import { Route as AppFormsIdRouteImport } from './routes/_app/forms.$id'
 import { Route as AppEquipmentsIdRouteImport } from './routes/_app/equipments.$id'
@@ -196,6 +198,16 @@ const AppOccurrencesIdRoute = AppOccurrencesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppOccurrencesRoute,
 } as any)
+const AppMeetingsNewRoute = AppMeetingsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppMeetingsRoute,
+} as any)
+const AppMeetingsIdRoute = AppMeetingsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppMeetingsRoute,
+} as any)
 const AppFormsNewRoute = AppFormsNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -247,7 +259,7 @@ export interface FileRoutesByFullPath {
   '/equipments': typeof AppEquipmentsRouteWithChildren
   '/forms': typeof AppFormsRouteWithChildren
   '/indicators': typeof AppIndicatorsRoute
-  '/meetings': typeof AppMeetingsRoute
+  '/meetings': typeof AppMeetingsRouteWithChildren
   '/occurrences': typeof AppOccurrencesRouteWithChildren
   '/poc': typeof AppPocRouteWithChildren
   '/process-map': typeof AppProcessMapRoute
@@ -265,6 +277,8 @@ export interface FileRoutesByFullPath {
   '/equipments/$id': typeof AppEquipmentsIdRoute
   '/forms/$id': typeof AppFormsIdRoute
   '/forms/new': typeof AppFormsNewRoute
+  '/meetings/$id': typeof AppMeetingsIdRoute
+  '/meetings/new': typeof AppMeetingsNewRoute
   '/occurrences/$id': typeof AppOccurrencesIdRoute
   '/poc/roteiro': typeof AppPocRoteiroRoute
   '/risks/$id': typeof AppRisksIdRoute
@@ -285,7 +299,7 @@ export interface FileRoutesByTo {
   '/equipments': typeof AppEquipmentsRouteWithChildren
   '/forms': typeof AppFormsRouteWithChildren
   '/indicators': typeof AppIndicatorsRoute
-  '/meetings': typeof AppMeetingsRoute
+  '/meetings': typeof AppMeetingsRouteWithChildren
   '/occurrences': typeof AppOccurrencesRouteWithChildren
   '/poc': typeof AppPocRouteWithChildren
   '/process-map': typeof AppProcessMapRoute
@@ -303,6 +317,8 @@ export interface FileRoutesByTo {
   '/equipments/$id': typeof AppEquipmentsIdRoute
   '/forms/$id': typeof AppFormsIdRoute
   '/forms/new': typeof AppFormsNewRoute
+  '/meetings/$id': typeof AppMeetingsIdRoute
+  '/meetings/new': typeof AppMeetingsNewRoute
   '/occurrences/$id': typeof AppOccurrencesIdRoute
   '/poc/roteiro': typeof AppPocRoteiroRoute
   '/risks/$id': typeof AppRisksIdRoute
@@ -325,7 +341,7 @@ export interface FileRoutesById {
   '/_app/equipments': typeof AppEquipmentsRouteWithChildren
   '/_app/forms': typeof AppFormsRouteWithChildren
   '/_app/indicators': typeof AppIndicatorsRoute
-  '/_app/meetings': typeof AppMeetingsRoute
+  '/_app/meetings': typeof AppMeetingsRouteWithChildren
   '/_app/occurrences': typeof AppOccurrencesRouteWithChildren
   '/_app/poc': typeof AppPocRouteWithChildren
   '/_app/process-map': typeof AppProcessMapRoute
@@ -343,6 +359,8 @@ export interface FileRoutesById {
   '/_app/equipments/$id': typeof AppEquipmentsIdRoute
   '/_app/forms/$id': typeof AppFormsIdRoute
   '/_app/forms/new': typeof AppFormsNewRoute
+  '/_app/meetings/$id': typeof AppMeetingsIdRoute
+  '/_app/meetings/new': typeof AppMeetingsNewRoute
   '/_app/occurrences/$id': typeof AppOccurrencesIdRoute
   '/_app/poc/roteiro': typeof AppPocRoteiroRoute
   '/_app/risks/$id': typeof AppRisksIdRoute
@@ -383,6 +401,8 @@ export interface FileRouteTypes {
     | '/equipments/$id'
     | '/forms/$id'
     | '/forms/new'
+    | '/meetings/$id'
+    | '/meetings/new'
     | '/occurrences/$id'
     | '/poc/roteiro'
     | '/risks/$id'
@@ -421,6 +441,8 @@ export interface FileRouteTypes {
     | '/equipments/$id'
     | '/forms/$id'
     | '/forms/new'
+    | '/meetings/$id'
+    | '/meetings/new'
     | '/occurrences/$id'
     | '/poc/roteiro'
     | '/risks/$id'
@@ -460,6 +482,8 @@ export interface FileRouteTypes {
     | '/_app/equipments/$id'
     | '/_app/forms/$id'
     | '/_app/forms/new'
+    | '/_app/meetings/$id'
+    | '/_app/meetings/new'
     | '/_app/occurrences/$id'
     | '/_app/poc/roteiro'
     | '/_app/risks/$id'
@@ -685,6 +709,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOccurrencesIdRouteImport
       parentRoute: typeof AppOccurrencesRoute
     }
+    '/_app/meetings/new': {
+      id: '/_app/meetings/new'
+      path: '/new'
+      fullPath: '/meetings/new'
+      preLoaderRoute: typeof AppMeetingsNewRouteImport
+      parentRoute: typeof AppMeetingsRoute
+    }
+    '/_app/meetings/$id': {
+      id: '/_app/meetings/$id'
+      path: '/$id'
+      fullPath: '/meetings/$id'
+      preLoaderRoute: typeof AppMeetingsIdRouteImport
+      parentRoute: typeof AppMeetingsRoute
+    }
     '/_app/forms/new': {
       id: '/_app/forms/new'
       path: '/new'
@@ -800,6 +838,20 @@ const AppFormsRouteWithChildren = AppFormsRoute._addFileChildren(
   AppFormsRouteChildren,
 )
 
+interface AppMeetingsRouteChildren {
+  AppMeetingsIdRoute: typeof AppMeetingsIdRoute
+  AppMeetingsNewRoute: typeof AppMeetingsNewRoute
+}
+
+const AppMeetingsRouteChildren: AppMeetingsRouteChildren = {
+  AppMeetingsIdRoute: AppMeetingsIdRoute,
+  AppMeetingsNewRoute: AppMeetingsNewRoute,
+}
+
+const AppMeetingsRouteWithChildren = AppMeetingsRoute._addFileChildren(
+  AppMeetingsRouteChildren,
+)
+
 interface AppOccurrencesRouteChildren {
   AppOccurrencesIdRoute: typeof AppOccurrencesIdRoute
 }
@@ -859,7 +911,7 @@ interface AppRouteChildren {
   AppEquipmentsRoute: typeof AppEquipmentsRouteWithChildren
   AppFormsRoute: typeof AppFormsRouteWithChildren
   AppIndicatorsRoute: typeof AppIndicatorsRoute
-  AppMeetingsRoute: typeof AppMeetingsRoute
+  AppMeetingsRoute: typeof AppMeetingsRouteWithChildren
   AppOccurrencesRoute: typeof AppOccurrencesRouteWithChildren
   AppPocRoute: typeof AppPocRouteWithChildren
   AppProcessMapRoute: typeof AppProcessMapRoute
@@ -884,7 +936,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppEquipmentsRoute: AppEquipmentsRouteWithChildren,
   AppFormsRoute: AppFormsRouteWithChildren,
   AppIndicatorsRoute: AppIndicatorsRoute,
-  AppMeetingsRoute: AppMeetingsRoute,
+  AppMeetingsRoute: AppMeetingsRouteWithChildren,
   AppOccurrencesRoute: AppOccurrencesRouteWithChildren,
   AppPocRoute: AppPocRouteWithChildren,
   AppProcessMapRoute: AppProcessMapRoute,
