@@ -24,9 +24,9 @@ function POCPage() {
         title="Ambiente POC"
         description="Prova de Conceito · Ambiente de demonstração"
         actions={
-          <Link to="/poc/roteiro">
-            <Button><Rocket className="size-4" /> Iniciar roteiro de demonstração</Button>
-          </Link>
+          <Button asChild>
+            <Link to="/poc/roteiro"><Rocket className="size-4" /> Iniciar roteiro de demonstração</Link>
+          </Button>
         }
       />
 
