@@ -34,7 +34,7 @@ function RoteiroPage() {
       <PageHeader
         title="Roteiro de Demonstração"
         description="13 passos para apresentar o QualiLab em uma POC completa"
-        actions={<Link to="/poc"><Button variant="outline">Voltar ao POC</Button></Link>}
+        actions={<Button asChild variant="outline"><Link to="/poc">Voltar ao POC</Link></Button>}
       />
 
       <div className="bg-card border border-border rounded-lg p-4 mb-6 shadow-sm flex items-center justify-between">
@@ -62,11 +62,11 @@ function RoteiroPage() {
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">{s.desc}</div>
                 </div>
-                <Link to={s.to}>
-                  <Button size="sm" variant={isDone ? "outline" : "default"}>
+                <Button asChild size="sm" variant={isDone ? "outline" : "default"}>
+                  <Link to={s.to}>
                     Abrir <ArrowRight className="size-3.5" />
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </div>
             </li>
           );
