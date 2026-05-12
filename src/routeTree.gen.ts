@@ -39,6 +39,7 @@ import { Route as AppAuditLogRouteImport } from './routes/_app/audit-log'
 import { Route as AppActionPlansRouteImport } from './routes/_app/action-plans'
 import { Route as AppSuppliersIdRouteImport } from './routes/_app/suppliers.$id'
 import { Route as AppRisksIdRouteImport } from './routes/_app/risks.$id'
+import { Route as AppPocVarreduraRouteImport } from './routes/_app/poc.varredura'
 import { Route as AppPocRoteiroRouteImport } from './routes/_app/poc.roteiro'
 import { Route as AppOccurrencesIdRouteImport } from './routes/_app/occurrences.$id'
 import { Route as AppMeetingsNewRouteImport } from './routes/_app/meetings.new'
@@ -200,6 +201,11 @@ const AppRisksIdRoute = AppRisksIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppRisksRoute,
 } as any)
+const AppPocVarreduraRoute = AppPocVarreduraRouteImport.update({
+  id: '/varredura',
+  path: '/varredura',
+  getParentRoute: () => AppPocRoute,
+} as any)
 const AppPocRoteiroRoute = AppPocRoteiroRouteImport.update({
   id: '/roteiro',
   path: '/roteiro',
@@ -295,6 +301,7 @@ export interface FileRoutesByFullPath {
   '/meetings/new': typeof AppMeetingsNewRoute
   '/occurrences/$id': typeof AppOccurrencesIdRoute
   '/poc/roteiro': typeof AppPocRoteiroRoute
+  '/poc/varredura': typeof AppPocVarreduraRoute
   '/risks/$id': typeof AppRisksIdRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
 }
@@ -337,6 +344,7 @@ export interface FileRoutesByTo {
   '/meetings/new': typeof AppMeetingsNewRoute
   '/occurrences/$id': typeof AppOccurrencesIdRoute
   '/poc/roteiro': typeof AppPocRoteiroRoute
+  '/poc/varredura': typeof AppPocVarreduraRoute
   '/risks/$id': typeof AppRisksIdRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
 }
@@ -381,6 +389,7 @@ export interface FileRoutesById {
   '/_app/meetings/new': typeof AppMeetingsNewRoute
   '/_app/occurrences/$id': typeof AppOccurrencesIdRoute
   '/_app/poc/roteiro': typeof AppPocRoteiroRoute
+  '/_app/poc/varredura': typeof AppPocVarreduraRoute
   '/_app/risks/$id': typeof AppRisksIdRoute
   '/_app/suppliers/$id': typeof AppSuppliersIdRoute
 }
@@ -425,6 +434,7 @@ export interface FileRouteTypes {
     | '/meetings/new'
     | '/occurrences/$id'
     | '/poc/roteiro'
+    | '/poc/varredura'
     | '/risks/$id'
     | '/suppliers/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -467,6 +477,7 @@ export interface FileRouteTypes {
     | '/meetings/new'
     | '/occurrences/$id'
     | '/poc/roteiro'
+    | '/poc/varredura'
     | '/risks/$id'
     | '/suppliers/$id'
   id:
@@ -510,6 +521,7 @@ export interface FileRouteTypes {
     | '/_app/meetings/new'
     | '/_app/occurrences/$id'
     | '/_app/poc/roteiro'
+    | '/_app/poc/varredura'
     | '/_app/risks/$id'
     | '/_app/suppliers/$id'
   fileRoutesById: FileRoutesById
@@ -733,6 +745,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRisksIdRouteImport
       parentRoute: typeof AppRisksRoute
     }
+    '/_app/poc/varredura': {
+      id: '/_app/poc/varredura'
+      path: '/varredura'
+      fullPath: '/poc/varredura'
+      preLoaderRoute: typeof AppPocVarreduraRouteImport
+      parentRoute: typeof AppPocRoute
+    }
     '/_app/poc/roteiro': {
       id: '/_app/poc/roteiro'
       path: '/roteiro'
@@ -904,10 +923,12 @@ const AppOccurrencesRouteWithChildren = AppOccurrencesRoute._addFileChildren(
 
 interface AppPocRouteChildren {
   AppPocRoteiroRoute: typeof AppPocRoteiroRoute
+  AppPocVarreduraRoute: typeof AppPocVarreduraRoute
 }
 
 const AppPocRouteChildren: AppPocRouteChildren = {
   AppPocRoteiroRoute: AppPocRoteiroRoute,
+  AppPocVarreduraRoute: AppPocVarreduraRoute,
 }
 
 const AppPocRouteWithChildren =
@@ -1002,13 +1023,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
