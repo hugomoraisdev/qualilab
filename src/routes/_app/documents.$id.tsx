@@ -1,13 +1,83 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { documents } from "@/lib/mock-data";
-import { ArrowLeft, FileText, Download, History, MessageSquare, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, FileText, Download, History, MessageSquare, CheckCircle2, BookOpenCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth";
+import { confirmRead, hasConfirmed, listReads, type DocumentRead } from "@/lib/document-reads-store";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/documents/$id")({
   component: DocumentDetail,
 });
+
+function ReadConfirmationCard({ documentId }: { documentId: string }) {
+  const { user } = useAuth();
+  const [reads, setReads] = useState<DocumentRead[]>([]);
+  const refresh = () => setReads(listReads(documentId));
+  useEffect(() => {
+    refresh();
+    const h = () => refresh();
+    window.addEventListener("storage:qualilab_document_reads", h);
+    return () => window.removeEventListener("storage:qualilab_document_reads", h);
+  }, [documentId]);
+
+  const already = user ? hasConfirmed(documentId, user.email) : false;
+  const totalApplicable = 5; // total fictício de colaboradores aplicáveis para POC
+  const pct = Math.min(100, Math.round((reads.length / totalApplicable) * 100));
+
+  return (
+    <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
+      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+        <BookOpenCheck className="size-4 text-primary" /> Confirmação de leitura
+      </h3>
+      <div className="text-xs text-muted-foreground mb-3">
+        {reads.length} de {totalApplicable} colaboradores aplicáveis confirmaram leitura ({pct}%).
+      </div>
+      <div className="h-2 rounded-full bg-muted overflow-hidden mb-4">
+        <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+      </div>
+      <Button
+        size="sm"
+        disabled={already || !user}
+        variant={already ? "outline" : "default"}
+        onClick={() => {
+          if (!user) return;
+          confirmRead({
+            documentId,
+            userEmail: user.email,
+            userName: user.name,
+            confirmedAt: new Date().toISOString(),
+          });
+          toast.success("Leitura confirmada", { description: `${user.name} · ${new Date().toLocaleString("pt-BR")}` });
+          refresh();
+        }}
+      >
+        {already ? <><CheckCircle2 className="size-4" /> Leitura confirmada</> : <>Confirmar leitura</>}
+      </Button>
+
+      <div className="mt-4">
+        <div className="text-xs font-semibold mb-2">Confirmações registradas</div>
+        {reads.length === 0 && <div className="text-xs text-muted-foreground italic">Nenhuma confirmação ainda.</div>}
+        <ul className="space-y-1.5">
+          {reads.map((r) => (
+            <li key={`${r.userEmail}-${r.confirmedAt}`} className="text-sm flex items-center justify-between border-t border-border pt-1.5">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="size-3.5 text-success" />
+                {r.userName}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {new Date(r.confirmedAt).toLocaleString("pt-BR")}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
 
 function DocumentDetail() {
   const { id } = Route.useParams();
