@@ -19,6 +19,7 @@ const groups: { label: string; items: Item[] }[] = [
       { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, perm: "dashboard" },
       { to: "/poc", label: "Ambiente POC", icon: Rocket, perm: "poc" },
       { to: "/poc-checklist", label: "Checklist Edital", icon: CheckSquare, perm: "poc" },
+      { to: "/poc/varredura", label: "Varredura de Telas", icon: CheckSquare, perm: "poc" },
     ],
   },
   {
