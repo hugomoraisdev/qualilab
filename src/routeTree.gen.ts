@@ -21,6 +21,7 @@ import { Route as AppReportsRouteImport } from './routes/_app/reports'
 import { Route as AppPurchasesRouteImport } from './routes/_app/purchases'
 import { Route as AppProjectsRouteImport } from './routes/_app/projects'
 import { Route as AppProcessMapRouteImport } from './routes/_app/process-map'
+import { Route as AppPocChecklistRouteImport } from './routes/_app/poc-checklist'
 import { Route as AppPocRouteImport } from './routes/_app/poc'
 import { Route as AppOccurrencesRouteImport } from './routes/_app/occurrences'
 import { Route as AppMeetingsRouteImport } from './routes/_app/meetings'
@@ -28,6 +29,7 @@ import { Route as AppIndicatorsRouteImport } from './routes/_app/indicators'
 import { Route as AppFormsRouteImport } from './routes/_app/forms'
 import { Route as AppEquipmentsRouteImport } from './routes/_app/equipments'
 import { Route as AppDocumentsRouteImport } from './routes/_app/documents'
+import { Route as AppDataMigrationRouteImport } from './routes/_app/data-migration'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCustomerServiceRouteImport } from './routes/_app/customer-service'
 import { Route as AppCompetenciesRouteImport } from './routes/_app/competencies'
@@ -108,6 +110,11 @@ const AppProcessMapRoute = AppProcessMapRouteImport.update({
   path: '/process-map',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPocChecklistRoute = AppPocChecklistRouteImport.update({
+  id: '/poc-checklist',
+  path: '/poc-checklist',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPocRoute = AppPocRouteImport.update({
   id: '/poc',
   path: '/poc',
@@ -141,6 +148,11 @@ const AppEquipmentsRoute = AppEquipmentsRouteImport.update({
 const AppDocumentsRoute = AppDocumentsRouteImport.update({
   id: '/documents',
   path: '/documents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDataMigrationRoute = AppDataMigrationRouteImport.update({
+  id: '/data-migration',
+  path: '/data-migration',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
@@ -255,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/competencies': typeof AppCompetenciesRoute
   '/customer-service': typeof AppCustomerServiceRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/data-migration': typeof AppDataMigrationRoute
   '/documents': typeof AppDocumentsRouteWithChildren
   '/equipments': typeof AppEquipmentsRouteWithChildren
   '/forms': typeof AppFormsRouteWithChildren
@@ -262,6 +275,7 @@ export interface FileRoutesByFullPath {
   '/meetings': typeof AppMeetingsRouteWithChildren
   '/occurrences': typeof AppOccurrencesRouteWithChildren
   '/poc': typeof AppPocRouteWithChildren
+  '/poc-checklist': typeof AppPocChecklistRoute
   '/process-map': typeof AppProcessMapRoute
   '/projects': typeof AppProjectsRoute
   '/purchases': typeof AppPurchasesRoute
@@ -295,6 +309,7 @@ export interface FileRoutesByTo {
   '/competencies': typeof AppCompetenciesRoute
   '/customer-service': typeof AppCustomerServiceRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/data-migration': typeof AppDataMigrationRoute
   '/documents': typeof AppDocumentsRouteWithChildren
   '/equipments': typeof AppEquipmentsRouteWithChildren
   '/forms': typeof AppFormsRouteWithChildren
@@ -302,6 +317,7 @@ export interface FileRoutesByTo {
   '/meetings': typeof AppMeetingsRouteWithChildren
   '/occurrences': typeof AppOccurrencesRouteWithChildren
   '/poc': typeof AppPocRouteWithChildren
+  '/poc-checklist': typeof AppPocChecklistRoute
   '/process-map': typeof AppProcessMapRoute
   '/projects': typeof AppProjectsRoute
   '/purchases': typeof AppPurchasesRoute
@@ -337,6 +353,7 @@ export interface FileRoutesById {
   '/_app/competencies': typeof AppCompetenciesRoute
   '/_app/customer-service': typeof AppCustomerServiceRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/data-migration': typeof AppDataMigrationRoute
   '/_app/documents': typeof AppDocumentsRouteWithChildren
   '/_app/equipments': typeof AppEquipmentsRouteWithChildren
   '/_app/forms': typeof AppFormsRouteWithChildren
@@ -344,6 +361,7 @@ export interface FileRoutesById {
   '/_app/meetings': typeof AppMeetingsRouteWithChildren
   '/_app/occurrences': typeof AppOccurrencesRouteWithChildren
   '/_app/poc': typeof AppPocRouteWithChildren
+  '/_app/poc-checklist': typeof AppPocChecklistRoute
   '/_app/process-map': typeof AppProcessMapRoute
   '/_app/projects': typeof AppProjectsRoute
   '/_app/purchases': typeof AppPurchasesRoute
@@ -379,6 +397,7 @@ export interface FileRouteTypes {
     | '/competencies'
     | '/customer-service'
     | '/dashboard'
+    | '/data-migration'
     | '/documents'
     | '/equipments'
     | '/forms'
@@ -386,6 +405,7 @@ export interface FileRouteTypes {
     | '/meetings'
     | '/occurrences'
     | '/poc'
+    | '/poc-checklist'
     | '/process-map'
     | '/projects'
     | '/purchases'
@@ -419,6 +439,7 @@ export interface FileRouteTypes {
     | '/competencies'
     | '/customer-service'
     | '/dashboard'
+    | '/data-migration'
     | '/documents'
     | '/equipments'
     | '/forms'
@@ -426,6 +447,7 @@ export interface FileRouteTypes {
     | '/meetings'
     | '/occurrences'
     | '/poc'
+    | '/poc-checklist'
     | '/process-map'
     | '/projects'
     | '/purchases'
@@ -460,6 +482,7 @@ export interface FileRouteTypes {
     | '/_app/competencies'
     | '/_app/customer-service'
     | '/_app/dashboard'
+    | '/_app/data-migration'
     | '/_app/documents'
     | '/_app/equipments'
     | '/_app/forms'
@@ -467,6 +490,7 @@ export interface FileRouteTypes {
     | '/_app/meetings'
     | '/_app/occurrences'
     | '/_app/poc'
+    | '/_app/poc-checklist'
     | '/_app/process-map'
     | '/_app/projects'
     | '/_app/purchases'
@@ -583,6 +607,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProcessMapRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/poc-checklist': {
+      id: '/_app/poc-checklist'
+      path: '/poc-checklist'
+      fullPath: '/poc-checklist'
+      preLoaderRoute: typeof AppPocChecklistRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/poc': {
       id: '/_app/poc'
       path: '/poc'
@@ -630,6 +661,13 @@ declare module '@tanstack/react-router' {
       path: '/documents'
       fullPath: '/documents'
       preLoaderRoute: typeof AppDocumentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/data-migration': {
+      id: '/_app/data-migration'
+      path: '/data-migration'
+      fullPath: '/data-migration'
+      preLoaderRoute: typeof AppDataMigrationRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/dashboard': {
@@ -907,6 +945,7 @@ interface AppRouteChildren {
   AppCompetenciesRoute: typeof AppCompetenciesRoute
   AppCustomerServiceRoute: typeof AppCustomerServiceRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
+  AppDataMigrationRoute: typeof AppDataMigrationRoute
   AppDocumentsRoute: typeof AppDocumentsRouteWithChildren
   AppEquipmentsRoute: typeof AppEquipmentsRouteWithChildren
   AppFormsRoute: typeof AppFormsRouteWithChildren
@@ -914,6 +953,7 @@ interface AppRouteChildren {
   AppMeetingsRoute: typeof AppMeetingsRouteWithChildren
   AppOccurrencesRoute: typeof AppOccurrencesRouteWithChildren
   AppPocRoute: typeof AppPocRouteWithChildren
+  AppPocChecklistRoute: typeof AppPocChecklistRoute
   AppProcessMapRoute: typeof AppProcessMapRoute
   AppProjectsRoute: typeof AppProjectsRoute
   AppPurchasesRoute: typeof AppPurchasesRoute
@@ -932,6 +972,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCompetenciesRoute: AppCompetenciesRoute,
   AppCustomerServiceRoute: AppCustomerServiceRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
+  AppDataMigrationRoute: AppDataMigrationRoute,
   AppDocumentsRoute: AppDocumentsRouteWithChildren,
   AppEquipmentsRoute: AppEquipmentsRouteWithChildren,
   AppFormsRoute: AppFormsRouteWithChildren,
@@ -939,6 +980,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMeetingsRoute: AppMeetingsRouteWithChildren,
   AppOccurrencesRoute: AppOccurrencesRouteWithChildren,
   AppPocRoute: AppPocRouteWithChildren,
+  AppPocChecklistRoute: AppPocChecklistRoute,
   AppProcessMapRoute: AppProcessMapRoute,
   AppProjectsRoute: AppProjectsRoute,
   AppPurchasesRoute: AppPurchasesRoute,

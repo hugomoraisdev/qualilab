@@ -8,7 +8,7 @@ export const PERMISSIONS: Record<Role, string[]> = {
     "dashboard", "poc",
     "documents.view", "documents.create", "documents.approve",
     "audits", "risks", "occurrences", "occurrences.create",
-    "action-plans", "meetings", "process-map",
+    "action-plans", "meetings", "meetings.create", "process-map",
     "equipments", "calibrations", "calibrations.fill",
     "suppliers", "purchases", "competencies",
     "forms", "forms.create", "forms.fill", "forms.approve",
