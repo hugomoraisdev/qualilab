@@ -163,6 +163,7 @@ function DocumentDetail() {
               <li className="flex items-center justify-between"><span>Aprovação</span><span className="text-xs text-muted-foreground">Carla A.</span></li>
             </ul>
           </section>
+          <ReadConfirmationCard documentId={doc.id} />
         </aside>
       </div>
     </>
