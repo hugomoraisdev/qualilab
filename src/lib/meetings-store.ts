@@ -20,10 +20,12 @@ export interface Meeting {
   status: "Agendada" | "Realizada" | "Cancelada";
   recurrenceParentId?: string;
   recurrence?: {
-    frequency: "weekly" | "biweekly" | "monthly";
-    occurrences: number;
+    frequency: "weekly" | "biweekly" | "monthly" | "quarterly";
+    until: string; // ISO date — repetir até
   };
 }
+
+export type RecurrenceFrequency = NonNullable<Meeting["recurrence"]>["frequency"];
 
 const KEY = "qualilab_meetings_v2";
 
