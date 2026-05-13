@@ -1,14 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { risks } from "@/lib/mock-data";
+import { risksStore } from "@/lib/risks-store";
+import { useTableStore } from "@/lib/table-store";
 import { ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/_app/risks/$id")({ component: RiskDetail });
 
 function RiskDetail() {
   const { id } = Route.useParams();
-  const r = risks.find(x => x.id === id) ?? risks[0];
+  const risks = useTableStore(risksStore);
+  const r = risks.find(x => x.id === id);
+  if (!r) {
+    return (
+      <>
+        <Link to="/risks" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"><ArrowLeft className="size-4 mr-1" /> Voltar</Link>
+        <PageHeader title="Risco não encontrado" description={id} />
+      </>
+    );
+  }
   return (
     <>
       <Link to="/risks" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"><ArrowLeft className="size-4 mr-1" /> Voltar</Link>

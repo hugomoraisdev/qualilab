@@ -2,11 +2,13 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
-import { occurrences } from "@/lib/mock-data";
+import { occurrencesStore } from "@/lib/occurrences-store";
+import { useTableStore } from "@/lib/table-store";
 
 export const Route = createFileRoute("/_app/occurrences")({ component: OccPage });
 
 function OccPage() {
+  const occurrences = useTableStore(occurrencesStore);
   const navigate = useNavigate();
   return (
     <>

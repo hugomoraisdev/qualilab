@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { risks } from "@/lib/mock-data";
+import { risksStore, type RiskRow } from "@/lib/risks-store";
+import { useTableStore } from "@/lib/table-store";
 import { Grid3x3, ListIcon } from "lucide-react";
 import { useState } from "react";
 import { DataTable } from "@/components/DataTable";
 
 export const Route = createFileRoute("/_app/risks")({ component: RisksPage });
 
-function MatrixCell({ p, i }: { p: number; i: number }) {
+function MatrixCell({ p, i, risks }: { p: number; i: number; risks: RiskRow[] }) {
   const items = risks.filter(r => r.probability === p && r.impact === i);
   const score = p * i;
   let bg = "bg-success/20";
@@ -19,7 +20,7 @@ function MatrixCell({ p, i }: { p: number; i: number }) {
     <div className={`relative rounded-md border border-border ${bg} min-h-[64px] p-1.5 text-[10px]`}>
       <div className="absolute top-1 right-1.5 text-[10px] font-mono opacity-60">{score}</div>
       {items.map(r => (
-        <Link key={r.id} to="/risks" className="block bg-background/90 backdrop-blur rounded px-1 py-0.5 mb-0.5 truncate font-medium hover:bg-background">
+        <Link key={r.id} to="/risks/$id" params={{ id: r.id }} className="block bg-background/90 backdrop-blur rounded px-1 py-0.5 mb-0.5 truncate font-medium hover:bg-background">
           {r.id}
         </Link>
       ))}
@@ -28,6 +29,7 @@ function MatrixCell({ p, i }: { p: number; i: number }) {
 }
 
 function RisksPage() {
+  const risks = useTableStore(risksStore);
   const [view, setView] = useState<"list" | "matrix">("matrix");
   return (
     <>
@@ -51,7 +53,7 @@ function RisksPage() {
               {[1, 2, 3, 4, 5].map(i => <div key={i} className="text-xs text-center text-muted-foreground font-medium">Impacto {i}</div>)}
               {[5, 4, 3, 2, 1].flatMap(p => [
                 <div key={`l-${p}`} className="text-xs text-muted-foreground font-medium flex items-center pr-2 justify-end">Prob. {p}</div>,
-                ...[1, 2, 3, 4, 5].map(i => <MatrixCell key={`${p}-${i}`} p={p} i={i} />),
+                ...[1, 2, 3, 4, 5].map(i => <MatrixCell key={`${p}-${i}`} p={p} i={i} risks={risks} />),
               ])}
             </div>
           </div>
