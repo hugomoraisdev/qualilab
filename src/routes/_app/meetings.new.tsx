@@ -20,8 +20,11 @@ function NewMeeting() {
   const [participants, setParticipants] = useState("Roberto Gestor, Mariana Técnica, Paulo Auditor");
   const [agendaText, setAgendaText] = useState("Revisão de indicadores\nStatus de auditorias\nAções corretivas em aberto");
   const [recurring, setRecurring] = useState(false);
-  const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "monthly">("monthly");
-  const [occurrences, setOccurrences] = useState(6);
+  const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "monthly" | "quarterly">("monthly");
+  const [until, setUntil] = useState(() => {
+    const d = new Date(); d.setMonth(d.getMonth() + 6);
+    return d.toISOString().slice(0, 10);
+  });
 
   function save() {
     const agenda: AgendaItem[] = agendaText
