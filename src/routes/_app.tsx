@@ -10,18 +10,15 @@ export const Route = createFileRoute("/_app")({
 });
 
 function AppLayout() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [hydrated, setHydrated] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  useEffect(() => { setHydrated(true); }, []);
-
   useEffect(() => {
-    if (hydrated && !user) navigate({ to: "/login" });
-  }, [hydrated, user, navigate]);
+    if (!loading && !user) navigate({ to: "/login" });
+  }, [loading, user, navigate]);
 
-  if (!hydrated) return null;
+  if (loading) return null;
   if (!user) return null;
 
   return (
