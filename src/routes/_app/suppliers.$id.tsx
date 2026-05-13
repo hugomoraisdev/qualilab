@@ -248,6 +248,76 @@ function SupDetail() {
           )}
         </div>
       </section>
+
+      <section className="bg-card border border-border rounded-lg p-5 shadow-sm mt-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+          <div>
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <FileText className="size-4" /> Documentos recebidos
+              {pendingSubmissions > 0 && (
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-warning px-1.5 text-[10px] font-bold text-warning-foreground">
+                  {pendingSubmissions}
+                </span>
+              )}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Submissões enviadas pelo fornecedor via portal público (código <span className="font-mono">{s.code ?? "—"}</span>).
+            </p>
+          </div>
+        </div>
+
+        {!s.code ? (
+          <p className="text-xs text-muted-foreground">Defina um código para este fornecedor para receber documentos via portal.</p>
+        ) : submissions.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Nenhum documento recebido até o momento.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Protocolo</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Arquivo</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {submissions.map((sub) => (
+                <TableRow key={sub.id}>
+                  <TableCell className="font-mono text-xs">{sub.protocol}</TableCell>
+                  <TableCell className="text-xs">{sub.created_at?.slice(0, 10) ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{sub.document_type}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-xs truncate" title={sub.description ?? ""}>
+                    {sub.description ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    {sub.file_url ? (
+                      <a href={sub.file_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary underline">
+                        Abrir <ExternalLink className="size-3" />
+                      </a>
+                    ) : <span className="text-xs text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge tone={statusTone(sub.status)}>{statusLabel(sub.status)}</StatusBadge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="inline-flex gap-1">
+                      {sub.status !== "aprovado" && (
+                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => updateSubmissionStatus(sub.id, "aprovado")}>Aprovar</Button>
+                      )}
+                      {sub.status !== "reprovado" && (
+                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => updateSubmissionStatus(sub.id, "reprovado")}>Reprovar</Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </section>
     </>
   );
 }
