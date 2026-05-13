@@ -133,10 +133,10 @@ function CompPage() {
   );
 }
 
-const ACTION_META: Record<CompetencyHistoryRow["action"], { label: string; tone: any; Icon: any }> = {
-  created: { label: "Criada", tone: "success", Icon: Plus },
-  updated: { label: "Atualizada", tone: "info", Icon: Pencil },
-  deleted: { label: "Removida", tone: "danger", Icon: Trash2 },
+const ACTION_META = {
+  created: { label: "Criada", tone: "success" as const, Icon: Plus },
+  updated: { label: "Atualizada", tone: "info" as const, Icon: Pencil },
+  deleted: { label: "Removida", tone: "destructive" as const, Icon: Trash2 },
 };
 
 function HistoryTimeline({ rows }: { rows: CompetencyHistoryRow[] }) {
