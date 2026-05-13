@@ -1,10 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
-import { meetings as mockMeetings } from "@/lib/mock-data";
-import { listMeetings, type Meeting } from "@/lib/meetings-store";
+import { useTableStore } from "@/lib/table-store";
+import { meetingsStore, agendaStore } from "@/lib/meetings-store";
 import { Button } from "@/components/ui/button";
 import { Plus, Repeat } from "lucide-react";
 
@@ -12,26 +11,21 @@ export const Route = createFileRoute("/_app/meetings")({ component: MeetPage });
 
 function MeetPage() {
   const navigate = useNavigate();
-  const [stored, setStored] = useState<Meeting[]>([]);
-  useEffect(() => {
-    const r = () => setStored(listMeetings());
-    r();
-    const h = () => r();
-    window.addEventListener("storage:qualilab_meetings_v2", h);
-    return () => window.removeEventListener("storage:qualilab_meetings_v2", h);
-  }, []);
+  const meetings = useTableStore(meetingsStore).filter((m) => !m.deleted_at);
+  const agenda = useTableStore(agendaStore);
 
-  const all = [
-    ...stored.map((m) => ({
-      id: m.id, type: m.type, date: m.date,
+  const rows = meetings
+    .slice()
+    .sort((a, b) => a.meeting_date.localeCompare(b.meeting_date))
+    .map((m) => ({
+      id: m.id,
+      type: m.type,
+      date: m.meeting_date,
       participants: m.participants,
-      agenda: m.agenda.map((a) => a.title).join("; "),
+      agenda: agenda.filter((a) => a.meeting_id === m.id).map((a) => a.title).join("; "),
       status: m.status,
-      recurring: !!m.recurrence || !!m.recurrenceParentId,
-      _stored: true as const,
-    })),
-    ...mockMeetings.map((m) => ({ ...m, recurring: false, _stored: false as const })),
-  ];
+      recurring: !!m.recurrence_frequency || !!m.recurrence_parent_id,
+    }));
 
   return (
     <>
@@ -45,10 +39,11 @@ function MeetPage() {
         }
       />
       <DataTable
-        data={all}
+        data={rows}
         searchKeys={["id", "type", "agenda", "status"]}
+        hideNew
         exportName="reunioes"
-        onRowClick={(r) => r._stored && navigate({ to: "/meetings/$id", params: { id: r.id } })}
+        onRowClick={(r) => navigate({ to: "/meetings/$id", params: { id: r.id } })}
         columns={[
           { key: "id", header: "Código", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
           { key: "type", header: "Tipo", render: (r) => (

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { saveForm, newId, type FormField, type FieldType, type CustomForm } from "@/lib/forms-store";
+import { saveForm, newId, type FormField, type FieldType, type FormRow } from "@/lib/forms-store";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 
@@ -45,21 +45,20 @@ function FormBuilder() {
 
   const remove = (id: string) => setFields(fields.filter((f) => f.id !== id));
 
-  const save = () => {
+  const save = async () => {
     if (!title.trim()) return toast.error("Defina um título para o formulário.");
     if (fields.length === 0) return toast.error("Adicione ao menos um campo.");
-    const form: CustomForm = {
+    const form: FormRow = {
       id: newId("FORM"),
       title: title.trim(),
-      description: description.trim(),
-      responsible: user?.name ?? "—",
+      description: description.trim() || null,
+      responsible_id: user?.id ?? null,
       fields,
-      requiresApproval,
+      requires_approval: requiresApproval,
       approvers: requiresApproval ? ["Carla Administradora", "Roberto Gestor"] : [],
-      createdAt: new Date().toISOString(),
       status: "active",
     };
-    saveForm(form);
+    await saveForm(form);
     toast.success("Formulário criado", { description: `${form.title} (${fields.length} campos)` });
     navigate({ to: "/forms/$id", params: { id: form.id } });
   };
@@ -72,7 +71,6 @@ function FormBuilder() {
       <PageHeader title="Novo formulário" description="Crie campos personalizados de forma autônoma — sem necessidade de TI." />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-        {/* Builder */}
         <section className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-4">
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -159,7 +157,6 @@ function FormBuilder() {
           </div>
         </section>
 
-        {/* Preview */}
         <aside className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-3 lg:sticky lg:top-4 self-start">
           <h3 className="text-sm font-semibold">Preview ao vivo</h3>
           <div className="border border-dashed border-border rounded-md p-4 space-y-3">

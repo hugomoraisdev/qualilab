@@ -5,7 +5,10 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { saveTicket, nextProtocol, type CustomerTicket, type TicketType, type TicketPriority } from "@/lib/sac-store";
+import {
+  saveTicket, addTimeline, nextProtocol, newId,
+  type TicketRow, type TicketType, type TicketPriority, type TimelineRow,
+} from "@/lib/sac-store";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 
@@ -20,20 +23,32 @@ function NewTicket() {
   const [priority, setPriority] = useState<TicketPriority>("media");
   const [description, setDescription] = useState("");
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim() || !description.trim()) return toast.error("Preencha cliente e descrição.");
-    const now = new Date().toISOString().slice(0, 16).replace("T", " ");
-    const t: CustomerTicket = {
-      id: "SAC-" + Date.now().toString(36).toUpperCase(),
-      protocol: nextProtocol(),
-      customerName, contactEmail, type, priority, description,
-      status: "aberto", origin: "interno",
-      createdAt: now, updatedAt: now,
-      assignedTo: user?.name ?? "—",
-      timeline: [{ date: now, author: user?.name ?? "Sistema", action: "Ticket aberto" }],
+    const protocol = await nextProtocol();
+    const t: TicketRow = {
+      id: newId("SAC"),
+      protocol,
+      customer_name: customerName,
+      contact_email: contactEmail || null,
+      type, priority, description,
+      status: "aberto",
+      origin: "interno",
+      linked_occurrence_id: null,
+      satisfaction_score: null,
+      assigned_to: user?.id ?? null,
+      assigned_to_name: user?.name ?? null,
     };
-    saveTicket(t);
+    await saveTicket(t);
+    const ev: TimelineRow = {
+      id: newId("TL"),
+      ticket_id: t.id,
+      author_id: user?.id ?? null,
+      author_name: user?.name ?? "Sistema",
+      action: "Ticket aberto",
+    };
+    await addTimeline(ev);
     toast.success("Atendimento aberto", { description: `Protocolo ${t.protocol}` });
     navigate({ to: "/customer-service/$id", params: { id: t.id } });
   };
