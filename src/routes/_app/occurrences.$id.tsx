@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { occurrences } from "@/lib/mock-data";
+import { occurrencesStore } from "@/lib/occurrences-store";
+import { useTableStore } from "@/lib/table-store";
 import { ArrowLeft, Plus, Trash2, Lightbulb, Fish, ListOrdered, FileQuestion } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -173,7 +174,18 @@ function Brainstorm() {
 // ============================================================================
 function OccDetail() {
   const { id } = Route.useParams();
-  const o = occurrences.find(x => x.id === id) ?? occurrences[0];
+  const occurrences = useTableStore(occurrencesStore);
+  const o = occurrences.find(x => x.id === id);
+  if (!o) {
+    return (
+      <>
+        <Link to="/occurrences" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+          <ArrowLeft className="size-4 mr-1" /> Voltar
+        </Link>
+        <PageHeader title="Ocorrência não encontrada" description={id} />
+      </>
+    );
+  }
   return (
     <>
       <Link to="/occurrences" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">

@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { documents } from "@/lib/mock-data";
+import { documentsStore } from "@/lib/documents-store";
+import { useTableStore } from "@/lib/table-store";
 import { ArrowLeft, FileText, Download, History, MessageSquare, CheckCircle2, BookOpenCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
-import { confirmRead, hasConfirmed, listReads, type DocumentRead } from "@/lib/document-reads-store";
+import { confirmRead, hasConfirmed, useDocumentReads } from "@/lib/document-reads-store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/documents/$id")({
@@ -15,17 +15,9 @@ export const Route = createFileRoute("/_app/documents/$id")({
 
 function ReadConfirmationCard({ documentId }: { documentId: string }) {
   const { user } = useAuth();
-  const [reads, setReads] = useState<DocumentRead[]>([]);
-  const refresh = () => setReads(listReads(documentId));
-  useEffect(() => {
-    refresh();
-    const h = () => refresh();
-    window.addEventListener("storage:qualilab_document_reads", h);
-    return () => window.removeEventListener("storage:qualilab_document_reads", h);
-  }, [documentId]);
-
+  const reads = useDocumentReads(documentId);
   const already = user ? hasConfirmed(documentId, user.email) : false;
-  const totalApplicable = 5; // total fictício de colaboradores aplicáveis para POC
+  const totalApplicable = 5;
   const pct = Math.min(100, Math.round((reads.length / totalApplicable) * 100));
 
   return (
@@ -43,16 +35,15 @@ function ReadConfirmationCard({ documentId }: { documentId: string }) {
         size="sm"
         disabled={already || !user}
         variant={already ? "outline" : "default"}
-        onClick={() => {
+        onClick={async () => {
           if (!user) return;
-          confirmRead({
+          await confirmRead({
             documentId,
+            userId: user.id,
             userEmail: user.email,
             userName: user.name,
-            confirmedAt: new Date().toISOString(),
           });
           toast.success("Leitura confirmada", { description: `${user.name} · ${new Date().toLocaleString("pt-BR")}` });
-          refresh();
         }}
       >
         {already ? <><CheckCircle2 className="size-4" /> Leitura confirmada</> : <>Confirmar leitura</>}
@@ -63,13 +54,13 @@ function ReadConfirmationCard({ documentId }: { documentId: string }) {
         {reads.length === 0 && <div className="text-xs text-muted-foreground italic">Nenhuma confirmação ainda.</div>}
         <ul className="space-y-1.5">
           {reads.map((r) => (
-            <li key={`${r.userEmail}-${r.confirmedAt}`} className="text-sm flex items-center justify-between border-t border-border pt-1.5">
+            <li key={`${r.user_email}-${r.confirmed_at}`} className="text-sm flex items-center justify-between border-t border-border pt-1.5">
               <span className="flex items-center gap-2">
                 <CheckCircle2 className="size-3.5 text-success" />
-                {r.userName}
+                {r.user_name}
               </span>
               <span className="text-xs text-muted-foreground">
-                {new Date(r.confirmedAt).toLocaleString("pt-BR")}
+                {new Date(r.confirmed_at).toLocaleString("pt-BR")}
               </span>
             </li>
           ))}
@@ -81,11 +72,23 @@ function ReadConfirmationCard({ documentId }: { documentId: string }) {
 
 function DocumentDetail() {
   const { id } = Route.useParams();
-  const doc = documents.find(d => d.id === id) ?? documents[0];
+  const documents = useTableStore(documentsStore);
+  const doc = documents.find(d => d.id === id);
+
+  if (!doc) {
+    return (
+      <>
+        <Link to="/documents" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+          <ArrowLeft className="size-4 mr-1" /> Voltar para documentos
+        </Link>
+        <PageHeader title="Documento não encontrado" description={id} />
+      </>
+    );
+  }
 
   const versions = [
-    { v: doc.version, date: "2025-09-15", author: doc.responsible, status: "Atual" },
-    { v: "1.0", date: "2024-02-10", author: doc.responsible, status: "Substituída" },
+    { v: doc.version, date: "2025-09-15", author: doc.responsible ?? "—", status: "Atual" },
+    { v: "1.0", date: "2024-02-10", author: doc.responsible ?? "—", status: "Substituída" },
   ];
 
   return (
