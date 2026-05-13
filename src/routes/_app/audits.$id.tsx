@@ -11,6 +11,7 @@ import {
   auditsStore, auditFindingsStore, saveAudit, saveFinding, deleteFinding, newId,
   type AuditFindingRow,
 } from "@/lib/audits-store";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 export const Route = createFileRoute("/_app/audits/$id")({ component: AuditDetail });
 
