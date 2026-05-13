@@ -20,10 +20,12 @@ export interface Meeting {
   status: "Agendada" | "Realizada" | "Cancelada";
   recurrenceParentId?: string;
   recurrence?: {
-    frequency: "weekly" | "biweekly" | "monthly";
-    occurrences: number;
+    frequency: "weekly" | "biweekly" | "monthly" | "quarterly";
+    until: string; // ISO date — repetir até
   };
 }
+
+export type RecurrenceFrequency = NonNullable<Meeting["recurrence"]>["frequency"];
 
 const KEY = "qualilab_meetings_v2";
 
@@ -56,26 +58,30 @@ export function newId(prefix: string) {
   return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
 }
 
-export function addDate(iso: string, freq: "weekly" | "biweekly" | "monthly", n: number): string {
+export function addDate(iso: string, freq: RecurrenceFrequency, n: number): string {
   const d = new Date(iso + "T00:00:00");
   if (freq === "weekly") d.setDate(d.getDate() + 7 * n);
   else if (freq === "biweekly") d.setDate(d.getDate() + 14 * n);
-  else d.setMonth(d.getMonth() + n);
+  else if (freq === "monthly") d.setMonth(d.getMonth() + n);
+  else d.setMonth(d.getMonth() + 3 * n); // quarterly
   return d.toISOString().slice(0, 10);
 }
 
-// Cria a reunião base + N-1 ocorrências futuras quando recorrente
+// Cria a reunião base + as ocorrências futuras até a data limite (recurrence.until)
 export function createMeetingSeries(base: Omit<Meeting, "id">): Meeting[] {
   const created: Meeting[] = [];
   const parent: Meeting = { ...base, id: newId("RU") };
   saveMeeting(parent);
   created.push(parent);
-  if (base.recurrence && base.recurrence.occurrences > 1) {
-    for (let i = 1; i < base.recurrence.occurrences; i++) {
+  if (base.recurrence) {
+    const limit = base.recurrence.until;
+    for (let i = 1; i < 200; i++) {
+      const nextDate = addDate(base.date, base.recurrence.frequency, i);
+      if (nextDate > limit) break;
       const child: Meeting = {
         ...base,
         id: newId("RU"),
-        date: addDate(base.date, base.recurrence.frequency, i),
+        date: nextDate,
         recurrenceParentId: parent.id,
         agenda: base.agenda.map((a) => ({ ...a, id: `${a.id}-${i}` })),
       };
