@@ -59,6 +59,11 @@ function Dashboard() {
   const calNear = calibrations.filter(c => c.status === "Próxima do vencimento").length;
   const supActive = suppliers.filter(s => s.status === "Ativo").length;
   const supPending = suppliers.filter(s => s.status === "Em avaliação" || s.status === "Suspenso").length;
+  const realSuppliers = useTableStore(suppliersStore);
+  const supEvalAlerts = realSuppliers.filter((sp) => {
+    const st = getEvaluationStatus(sp);
+    return st === "vencida" || st === "a_vencer";
+  }).length;
   const occOpen = occurrences.filter(o => o.status !== "Concluída" && o.status !== "Cancelada").length;
   const ncCritical = occurrences.filter(o => o.severity === "Alta").length;
   const risksHigh = risks.filter(r => r.classification === "Alto" || r.classification === "Crítico").length;
