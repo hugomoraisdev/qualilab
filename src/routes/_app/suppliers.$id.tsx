@@ -111,6 +111,22 @@ function SupDetail() {
     }
   };
 
+  const updateSubmissionStatus = async (subId: string, status: SubmissionStatus) => {
+    const sub = supplierPortalStore.list().find((x) => x.id === subId);
+    if (!sub) return;
+    await supplierPortalStore.upsert({
+      ...sub,
+      status,
+      reviewed_by: user?.id ?? null,
+      reviewed_at: new Date().toISOString(),
+      linked_supplier_id: sub.linked_supplier_id ?? s.id,
+    });
+    toast.success(`Documento ${status === "aprovado" ? "aprovado" : status === "reprovado" ? "reprovado" : "atualizado"}`);
+  };
+
+  const submissions = s.code ? listSubmissionsByCode(s.code) : [];
+  const pendingSubmissions = submissions.filter((x) => x.status === "recebido").length;
+
   return (
     <>
       <Link to="/suppliers" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
