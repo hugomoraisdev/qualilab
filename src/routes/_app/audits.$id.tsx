@@ -11,6 +11,7 @@ import {
   auditsStore, auditFindingsStore, saveAudit, saveFinding, deleteFinding, newId,
   type AuditFindingRow,
 } from "@/lib/audits-store";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 export const Route = createFileRoute("/_app/audits/$id")({ component: AuditDetail });
 
@@ -65,6 +66,7 @@ function AuditDetail() {
         <ArrowLeft className="size-4 mr-1" /> Voltar
       </Link>
       <PageHeader title={a.scope} description={`${a.code ?? a.id} · ${a.type}${a.area ? " · Área " + a.area : ""}`} actions={<StatusBadge>{a.status}</StatusBadge>} />
+      <OfflineBanner stores={[auditsStore, auditFindingsStore]} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 bg-card border border-border rounded-lg p-5 shadow-sm">
