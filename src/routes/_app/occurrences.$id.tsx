@@ -1,130 +1,246 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { occurrencesStore } from "@/lib/occurrences-store";
+import {
+  occurrencesStore,
+  type OccurrenceRow,
+  type RootCauseTool,
+  type FiveWhysData,
+  type IshikawaData,
+  type BrainstormData,
+} from "@/lib/occurrences-store";
 import { useTableStore } from "@/lib/table-store";
-import { ArrowLeft, Plus, Trash2, Lightbulb, Fish, ListOrdered, FileQuestion } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Lightbulb, Fish, ListOrdered, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/occurrences/$id")({ component: OccDetail });
 
 // ============================================================================
-// 5 PORQUÊS
+// Metadados das ferramentas
 // ============================================================================
-function FiveWhys() {
-  const [whys, setWhys] = useState(["", "", "", "", ""]);
+const TOOL_META: Record<RootCauseTool, { label: string; Icon: typeof ListOrdered }> = {
+  "5_whys": { label: "5 Porquês", Icon: ListOrdered },
+  ishikawa: { label: "Ishikawa (6M)", Icon: Fish },
+  brainstorm: { label: "Brainstorm", Icon: Lightbulb },
+};
+
+const ISHIKAWA_GROUPS: { key: keyof IshikawaData["causes"]; label: string }[] = [
+  { key: "machine", label: "Máquina" },
+  { key: "method", label: "Método" },
+  { key: "material", label: "Material" },
+  { key: "manpower", label: "Mão de obra" },
+  { key: "environment", label: "Meio ambiente" },
+  { key: "measurement", label: "Medição" },
+];
+
+const emptyIshikawa = (): IshikawaData => ({
+  effect: "",
+  causes: { machine: [], method: [], material: [], manpower: [], environment: [], measurement: [] },
+});
+
+// ============================================================================
+// 5 Porquês
+// ============================================================================
+function FiveWhysForm({ value, onChange }: { value: FiveWhysData; onChange: (v: FiveWhysData) => void }) {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Pergunte "Por quê?" cinco vezes em cascata até identificar a causa raiz.
+        A resposta de cada pergunta alimenta a próxima. Pare quando chegar a uma causa acionável.
       </p>
-      {whys.map((w, i) => (
+      {value.whys.map((w, i) => (
         <div key={i} className="flex gap-2 items-start">
-          <div className="size-7 rounded-full bg-primary/10 text-primary text-xs font-bold grid place-items-center shrink-0 mt-1">{i + 1}</div>
+          <div className="size-7 rounded-full bg-primary/10 text-primary text-xs font-bold grid place-items-center shrink-0 mt-1">
+            {i + 1}
+          </div>
           <div className="flex-1 space-y-1">
-            <Label className="text-xs">Por que {i === 0 ? "aconteceu?" : i === 4 ? "(causa raiz)?" : `${i + 1}?`}</Label>
-            <Input value={w} onChange={(e) => setWhys(whys.map((x, j) => (j === i ? e.target.value : x)))} placeholder={`Resposta ${i + 1}`} />
+            <Label className="text-xs">
+              Por quê {i + 1}
+              {i > 0 && (
+                <span className="text-muted-foreground font-normal"> — sobre: “{value.whys[i - 1] || "…"}”</span>
+              )}
+            </Label>
+            <Input
+              value={w}
+              onChange={(e) =>
+                onChange({ ...value, whys: value.whys.map((x, j) => (j === i ? e.target.value : x)) })
+              }
+              placeholder={`Resposta ${i + 1}`}
+            />
           </div>
         </div>
       ))}
-      <div className="bg-primary/5 border border-primary/30 rounded-md p-3 mt-4">
-        <div className="text-xs font-semibold text-primary mb-1">Causa raiz identificada</div>
-        <div className="text-sm">{whys[4] || <span className="text-muted-foreground italic">Preencha as 5 perguntas acima…</span>}</div>
+      <div className="space-y-1.5 pt-2">
+        <Label className="text-xs">Causa raiz identificada</Label>
+        <Textarea
+          value={value.rootCause}
+          onChange={(e) => onChange({ ...value, rootCause: e.target.value })}
+          placeholder="Síntese final da causa raiz"
+          rows={2}
+        />
       </div>
     </div>
   );
 }
 
-// ============================================================================
-// 5W2H
-// ============================================================================
-const W2H_FIELDS = [
-  { key: "what", label: "What — O que será feito?" },
-  { key: "why", label: "Why — Por que será feito?" },
-  { key: "where", label: "Where — Onde será feito?" },
-  { key: "when", label: "When — Quando será feito?" },
-  { key: "who", label: "Who — Quem fará?" },
-  { key: "how", label: "How — Como será feito?" },
-  { key: "howMuch", label: "How much — Quanto custará?" },
-] as const;
-
-function FiveW2H() {
-  const [data, setData] = useState<Record<string, string>>({});
+function FiveWhysView({ data }: { data: FiveWhysData }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {W2H_FIELDS.map((f) => (
-        <div key={f.key} className="space-y-1.5">
-          <Label className="text-xs">{f.label}</Label>
-          <Input value={data[f.key] ?? ""} onChange={(e) => setData({ ...data, [f.key]: e.target.value })} />
+    <div className="space-y-2">
+      <ol className="space-y-1.5">
+        {data.whys.map((w, i) =>
+          w ? (
+            <li key={i} className="flex gap-2 text-sm">
+              <span className="size-6 rounded-full bg-primary/10 text-primary text-xs font-bold grid place-items-center shrink-0">
+                {i + 1}
+              </span>
+              <span>{w}</span>
+            </li>
+          ) : null,
+        )}
+      </ol>
+      {data.rootCause && (
+        <div className="bg-primary/5 border border-primary/30 rounded-md p-3 mt-3">
+          <div className="text-xs font-semibold text-primary mb-1">Causa raiz</div>
+          <div className="text-sm">{data.rootCause}</div>
         </div>
-      ))}
+      )}
     </div>
   );
 }
 
 // ============================================================================
-// Ishikawa (6M)
+// Ishikawa
 // ============================================================================
-const ISHIKAWA_GROUPS = [
-  { key: "method", label: "Método" },
-  { key: "machine", label: "Máquina" },
-  { key: "material", label: "Material" },
-  { key: "manpower", label: "Mão de obra" },
-  { key: "measurement", label: "Medição" },
-  { key: "environment", label: "Meio ambiente" },
-] as const;
-
-function Ishikawa() {
-  const [effect, setEffect] = useState("");
-  const [causes, setCauses] = useState<Record<string, string[]>>({});
-  const add = (k: string, v: string) => {
-    if (!v.trim()) return;
-    setCauses({ ...causes, [k]: [...(causes[k] ?? []), v.trim()] });
+function IshikawaForm({ value, onChange }: { value: IshikawaData; onChange: (v: IshikawaData) => void }) {
+  const add = (k: keyof IshikawaData["causes"], v: string) => {
+    const list = value.causes[k] ?? [];
+    if (!v.trim() || list.length >= 3) return;
+    onChange({ ...value, causes: { ...value.causes, [k]: [...list, v.trim()] } });
   };
-  const remove = (k: string, idx: number) => {
-    setCauses({ ...causes, [k]: (causes[k] ?? []).filter((_, i) => i !== idx) });
+  const remove = (k: keyof IshikawaData["causes"], idx: number) => {
+    onChange({
+      ...value,
+      causes: { ...value.causes, [k]: value.causes[k].filter((_, i) => i !== idx) },
+    });
   };
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label className="text-xs">Efeito / problema central</Label>
-        <Input value={effect} onChange={(e) => setEffect(e.target.value)} placeholder="Ex: Resultado fora da especificação" />
+        <Input
+          value={value.effect ?? ""}
+          onChange={(e) => onChange({ ...value, effect: e.target.value })}
+          placeholder="Ex: Resultado fora da especificação"
+        />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {ISHIKAWA_GROUPS.map((g) => (
-          <CauseGroup key={g.key} label={g.label} items={causes[g.key] ?? []} onAdd={(v) => add(g.key, v)} onRemove={(i) => remove(g.key, i)} />
+          <CauseGroup
+            key={g.key}
+            label={g.label}
+            items={value.causes[g.key] ?? []}
+            onAdd={(v) => add(g.key, v)}
+            onRemove={(i) => remove(g.key, i)}
+          />
         ))}
       </div>
-      <div className="text-[11px] text-muted-foreground italic">Diagrama visual (espinha de peixe) disponível como evolução no roadmap.</div>
+      <p className="text-[11px] text-muted-foreground italic">Até 3 causas por categoria.</p>
     </div>
   );
 }
-function CauseGroup({ label, items, onAdd, onRemove }: { label: string; items: string[]; onAdd: (v: string) => void; onRemove: (i: number) => void }) {
+
+function CauseGroup({
+  label,
+  items,
+  onAdd,
+  onRemove,
+}: {
+  label: string;
+  items: string[];
+  onAdd: (v: string) => void;
+  onRemove: (i: number) => void;
+}) {
   const [val, setVal] = useState("");
+  const full = items.length >= 3;
   return (
     <div className="border border-border rounded-md p-3 bg-background">
-      <div className="text-xs font-semibold mb-2">{label}</div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-xs font-semibold">{label}</div>
+        <span className="text-[10px] text-muted-foreground">{items.length}/3</span>
+      </div>
       <div className="space-y-1 mb-2">
         {items.length === 0 && <div className="text-[11px] text-muted-foreground italic">Sem causas listadas</div>}
         {items.map((it, i) => (
           <div key={i} className="flex items-center gap-1 text-xs bg-muted rounded px-2 py-1">
             <span className="flex-1">{it}</span>
-            <button onClick={() => onRemove(i)} className="text-muted-foreground hover:text-destructive"><Trash2 className="size-3" /></button>
+            <button onClick={() => onRemove(i)} className="text-muted-foreground hover:text-destructive">
+              <Trash2 className="size-3" />
+            </button>
           </div>
         ))}
       </div>
       <div className="flex gap-1">
-        <Input value={val} onChange={(e) => setVal(e.target.value)} placeholder="Adicionar causa…" className="h-8 text-xs"
-          onKeyDown={(e) => { if (e.key === "Enter") { onAdd(val); setVal(""); } }} />
-        <Button type="button" size="sm" variant="outline" className="h-8 px-2" onClick={() => { onAdd(val); setVal(""); }}>
+        <Input
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          placeholder={full ? "Limite atingido" : "Adicionar causa…"}
+          disabled={full}
+          className="h-8 text-xs"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onAdd(val);
+              setVal("");
+            }
+          }}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8 px-2"
+          disabled={full}
+          onClick={() => {
+            onAdd(val);
+            setVal("");
+          }}
+        >
           <Plus className="size-3" />
         </Button>
+      </div>
+    </div>
+  );
+}
+
+function IshikawaView({ data }: { data: IshikawaData }) {
+  return (
+    <div className="space-y-3">
+      {data.effect && (
+        <div className="text-sm">
+          <span className="text-muted-foreground">Efeito: </span>
+          <span className="font-medium">{data.effect}</span>
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {ISHIKAWA_GROUPS.map((g) => {
+          const items = data.causes[g.key] ?? [];
+          if (items.length === 0) return null;
+          return (
+            <div key={g.key} className="border border-border rounded-md p-3 bg-background">
+              <div className="text-xs font-semibold mb-1.5">{g.label}</div>
+              <ul className="text-sm space-y-0.5 list-disc pl-4">
+                {items.map((c, i) => (
+                  <li key={i}>{c}</li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -133,39 +249,197 @@ function CauseGroup({ label, items, onAdd, onRemove }: { label: string; items: s
 // ============================================================================
 // Brainstorm
 // ============================================================================
-function Brainstorm() {
-  const [ideas, setIdeas] = useState<{ id: string; text: string; selected: boolean }[]>([]);
+function BrainstormForm({ value, onChange }: { value: BrainstormData; onChange: (v: BrainstormData) => void }) {
   const [val, setVal] = useState("");
   const add = () => {
     if (!val.trim()) return;
-    setIdeas([...ideas, { id: Math.random().toString(36).slice(2), text: val.trim(), selected: false }]);
+    onChange({ ...value, ideas: [...value.ideas, val.trim()] });
     setVal("");
   };
+  const remove = (i: number) =>
+    onChange({ ...value, ideas: value.ideas.filter((_, j) => j !== i) });
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">Liste todas as ideias geradas pela equipe. Marque as causas mais prováveis.</p>
+      <p className="text-xs text-muted-foreground">Liste todas as ideias da equipe e selecione a mais provável.</p>
       <div className="flex gap-2">
-        <Input value={val} onChange={(e) => setVal(e.target.value)} placeholder="Nova ideia…" onKeyDown={(e) => e.key === "Enter" && add()} />
-        <Button type="button" onClick={add}><Plus className="size-4" /> Adicionar</Button>
+        <Input
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          placeholder="Nova ideia…"
+          onKeyDown={(e) => e.key === "Enter" && add()}
+        />
+        <Button type="button" onClick={add}>
+          <Plus className="size-4" /> Adicionar
+        </Button>
       </div>
       <div className="space-y-1.5">
-        {ideas.length === 0 && <div className="text-xs text-muted-foreground italic">Nenhuma ideia registrada ainda.</div>}
-        {ideas.map((i) => (
-          <label key={i.id} className={cn("flex items-center gap-2 border rounded-md px-3 py-2 cursor-pointer transition-colors",
-            i.selected ? "border-primary bg-primary/5" : "border-border hover:bg-accent/30")}>
-            <input
-              type="checkbox" checked={i.selected}
-              onChange={(e) => setIdeas(ideas.map((x) => (x.id === i.id ? { ...x, selected: e.target.checked } : x)))}
-            />
-            <span className="text-sm flex-1">{i.text}</span>
-            {i.selected && <span className="text-[10px] uppercase tracking-wide text-primary font-semibold">causa provável</span>}
-            <button onClick={() => setIdeas(ideas.filter((x) => x.id !== i.id))} className="text-muted-foreground hover:text-destructive">
+        {value.ideas.length === 0 && (
+          <div className="text-xs text-muted-foreground italic">Nenhuma ideia registrada ainda.</div>
+        )}
+        {value.ideas.map((idea, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-2 border border-border rounded-md px-3 py-2 hover:bg-accent/30"
+          >
+            <span className="text-sm flex-1">{idea}</span>
+            <button onClick={() => remove(i)} className="text-muted-foreground hover:text-destructive">
               <Trash2 className="size-3.5" />
             </button>
-          </label>
+          </div>
         ))}
       </div>
+      <div className="space-y-1.5 pt-2">
+        <Label className="text-xs">Causa selecionada</Label>
+        <Textarea
+          value={value.selected}
+          onChange={(e) => onChange({ ...value, selected: e.target.value })}
+          placeholder="Causa mais provável escolhida pela equipe"
+          rows={2}
+        />
+      </div>
     </div>
+  );
+}
+
+function BrainstormView({ data }: { data: BrainstormData }) {
+  return (
+    <div className="space-y-2">
+      {data.ideas.length > 0 && (
+        <ul className="text-sm space-y-0.5 list-disc pl-4">
+          {data.ideas.map((i, idx) => (
+            <li key={idx}>{i}</li>
+          ))}
+        </ul>
+      )}
+      {data.selected && (
+        <div className="bg-primary/5 border border-primary/30 rounded-md p-3 mt-2">
+          <div className="text-xs font-semibold text-primary mb-1">Causa selecionada</div>
+          <div className="text-sm">{data.selected}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Bloco "Análise de Causa Raiz"
+// ============================================================================
+function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
+  const saved = occurrence.root_cause_tool ?? null;
+  const [editing, setEditing] = useState(!saved);
+  const [tool, setTool] = useState<RootCauseTool>(saved ?? "5_whys");
+
+  const initial = useMemo<{
+    "5_whys": FiveWhysData;
+    ishikawa: IshikawaData;
+    brainstorm: BrainstormData;
+  }>(() => {
+    const base = {
+      "5_whys": { whys: ["", "", "", "", ""], rootCause: "" } as FiveWhysData,
+      ishikawa: emptyIshikawa(),
+      brainstorm: { ideas: [], selected: "" } as BrainstormData,
+    };
+    if (saved && occurrence.root_cause_data) {
+      (base as any)[saved] = occurrence.root_cause_data;
+    }
+    return base;
+  }, [saved, occurrence.root_cause_data]);
+
+  const [fiveWhys, setFiveWhys] = useState<FiveWhysData>(initial["5_whys"]);
+  const [ishikawa, setIshikawa] = useState<IshikawaData>(initial.ishikawa);
+  const [brainstorm, setBrainstorm] = useState<BrainstormData>(initial.brainstorm);
+
+  // Sync quando a ocorrência (props) muda externamente
+  useEffect(() => {
+    setFiveWhys(initial["5_whys"]);
+    setIshikawa(initial.ishikawa);
+    setBrainstorm(initial.brainstorm);
+    setTool(saved ?? "5_whys");
+    setEditing(!saved);
+  }, [initial, saved]);
+
+  const currentData = (): { tool: RootCauseTool; data: FiveWhysData | IshikawaData | BrainstormData } => {
+    if (tool === "5_whys") return { tool, data: fiveWhys };
+    if (tool === "ishikawa") return { tool, data: ishikawa };
+    return { tool, data: brainstorm };
+  };
+
+  const handleSave = async () => {
+    const { tool: t, data } = currentData();
+    await occurrencesStore.upsert({
+      ...occurrence,
+      root_cause_tool: t,
+      root_cause_data: data,
+    });
+    toast.success("Análise de causa raiz salva", { description: TOOL_META[t].label });
+    setEditing(false);
+  };
+
+  const handleCancel = () => {
+    setFiveWhys(initial["5_whys"]);
+    setIshikawa(initial.ishikawa);
+    setBrainstorm(initial.brainstorm);
+    setTool(saved ?? "5_whys");
+    setEditing(!saved);
+  };
+
+  // Modo leitura
+  if (!editing && saved && occurrence.root_cause_data) {
+    const { Icon, label } = TOOL_META[saved];
+    return (
+      <section className="lg:col-span-2 bg-card border border-border rounded-lg p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold">Análise de causa raiz</h3>
+          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+            <Pencil className="size-3.5 mr-1" /> Editar
+          </Button>
+        </div>
+        <div className="inline-flex items-center gap-1.5 text-xs font-medium bg-primary/10 text-primary rounded-full px-3 py-1 mb-4">
+          <Icon className="size-3.5" /> {label}
+        </div>
+        {saved === "5_whys" && <FiveWhysView data={occurrence.root_cause_data as FiveWhysData} />}
+        {saved === "ishikawa" && <IshikawaView data={occurrence.root_cause_data as IshikawaData} />}
+        {saved === "brainstorm" && <BrainstormView data={occurrence.root_cause_data as BrainstormData} />}
+      </section>
+    );
+  }
+
+  // Modo edição
+  return (
+    <section className="lg:col-span-2 bg-card border border-border rounded-lg p-5 shadow-sm">
+      <h3 className="text-sm font-semibold mb-3">Análise de causa raiz</h3>
+      <Tabs value={tool} onValueChange={(v) => setTool(v as RootCauseTool)}>
+        <TabsList className="grid grid-cols-3 w-full">
+          <TabsTrigger value="5_whys">
+            <ListOrdered className="size-3.5 mr-1" /> 5 Porquês
+          </TabsTrigger>
+          <TabsTrigger value="ishikawa">
+            <Fish className="size-3.5 mr-1" /> Ishikawa
+          </TabsTrigger>
+          <TabsTrigger value="brainstorm">
+            <Lightbulb className="size-3.5 mr-1" /> Brainstorm
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="5_whys" className="pt-4">
+          <FiveWhysForm value={fiveWhys} onChange={setFiveWhys} />
+        </TabsContent>
+        <TabsContent value="ishikawa" className="pt-4">
+          <IshikawaForm value={ishikawa} onChange={setIshikawa} />
+        </TabsContent>
+        <TabsContent value="brainstorm" className="pt-4">
+          <BrainstormForm value={brainstorm} onChange={setBrainstorm} />
+        </TabsContent>
+      </Tabs>
+
+      <div className={cn("mt-6 flex justify-end gap-2", !saved && "")}>
+        {saved && (
+          <Button variant="outline" onClick={handleCancel}>
+            Cancelar
+          </Button>
+        )}
+        <Button onClick={handleSave}>Salvar análise</Button>
+      </div>
+    </section>
   );
 }
 
@@ -175,7 +449,7 @@ function Brainstorm() {
 function OccDetail() {
   const { id } = Route.useParams();
   const occurrences = useTableStore(occurrencesStore);
-  const o = occurrences.find(x => x.id === id);
+  const o = occurrences.find((x) => x.id === id);
   if (!o) {
     return (
       <>
@@ -191,45 +465,34 @@ function OccDetail() {
       <Link to="/occurrences" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
         <ArrowLeft className="size-4 mr-1" /> Voltar
       </Link>
-      <PageHeader title={o.description} description={`${o.id} · ${o.type} · Origem ${o.origin}`} actions={<StatusBadge>{o.status}</StatusBadge>} />
+      <PageHeader
+        title={o.description}
+        description={`${o.id} · ${o.type} · Origem ${o.origin}`}
+        actions={<StatusBadge>{o.status}</StatusBadge>}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <section className="lg:col-span-2 bg-card border border-border rounded-lg p-5 shadow-sm">
-          <h3 className="text-sm font-semibold mb-3">Análise de causa raiz</h3>
-          <Tabs defaultValue="five_whys">
-            <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full">
-              <TabsTrigger value="five_whys"><ListOrdered className="size-3.5 mr-1" /> 5 Porquês</TabsTrigger>
-              <TabsTrigger value="five_w2h"><FileQuestion className="size-3.5 mr-1" /> 5W2H</TabsTrigger>
-              <TabsTrigger value="ishikawa"><Fish className="size-3.5 mr-1" /> Ishikawa</TabsTrigger>
-              <TabsTrigger value="brainstorm"><Lightbulb className="size-3.5 mr-1" /> Brainstorm</TabsTrigger>
-            </TabsList>
-            <TabsContent value="five_whys" className="pt-4"><FiveWhys /></TabsContent>
-            <TabsContent value="five_w2h" className="pt-4"><FiveW2H /></TabsContent>
-            <TabsContent value="ishikawa" className="pt-4"><Ishikawa /></TabsContent>
-            <TabsContent value="brainstorm" className="pt-4"><Brainstorm /></TabsContent>
-          </Tabs>
-
-          <div className="mt-6 flex justify-end gap-2">
-            <Button variant="outline">Cancelar</Button>
-            <Button onClick={() => toast.success("Análise de causa salva", { description: `Ocorrência ${o.id}` })}>Salvar análise</Button>
-          </div>
-        </section>
+        <RootCauseSection occurrence={o} />
 
         <aside className="space-y-4">
           <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
             <h3 className="text-sm font-semibold mb-3">Dados</h3>
             <dl className="text-sm space-y-1.5">
-              <div className="flex justify-between"><dt className="text-muted-foreground">Severidade</dt><dd><StatusBadge>{o.severity}</StatusBadge></dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">Responsável</dt><dd>{o.responsible}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">Identificada</dt><dd>{o.date}</dd></div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Severidade</dt>
+                <dd>
+                  <StatusBadge>{o.severity}</StatusBadge>
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Responsável</dt>
+                <dd>{o.responsible ?? "—"}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Identificada</dt>
+                <dd>{o.date ?? "—"}</dd>
+              </div>
             </dl>
-          </section>
-          <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
-            <h3 className="text-sm font-semibold mb-3">Ações associadas</h3>
-            <ul className="text-sm space-y-1.5">
-              <li>• <span className="font-medium">Corretiva:</span> Tratar imediatamente o equipamento envolvido.</li>
-              <li>• <span className="font-medium">Preventiva:</span> Implantar painel de alertas no QualiLab.</li>
-            </ul>
           </section>
         </aside>
       </div>
