@@ -1,28 +1,62 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
-import { audits } from "@/lib/mock-data";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { useTableStore } from "@/lib/table-store";
+import { auditsStore, saveAudit, newId, type AuditRow } from "@/lib/audits-store";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/_app/audits")({ component: AuditsPage });
 
 function AuditsPage() {
+  const rows = useTableStore(auditsStore).filter((a) => !a.deleted_at);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const create = async () => {
+    const id = newId("AUD");
+    const a: AuditRow = {
+      id,
+      code: id,
+      type: "Interna",
+      scope: "Nova auditoria",
+      area: null,
+      auditor_id: user?.id ?? null,
+      auditor_name: user?.name ?? null,
+      planned_at: new Date().toISOString().slice(0, 10),
+      performed_at: null,
+      status: "planejada",
+      findings_count: 0,
+      notes: null,
+    };
+    await saveAudit(a);
+    navigate({ to: "/audits/$id", params: { id: a.id } });
+  };
+
   return (
     <>
-      <PageHeader title="Auditorias" description="Auditorias internas e externas com checklist e achados" />
+      <PageHeader
+        title="Auditorias"
+        description="Auditorias internas e externas com checklist e achados"
+        actions={<Button onClick={create}><Plus className="size-4" /> Nova auditoria</Button>}
+      />
       <DataTable
-        data={audits}
-        searchKeys={["id", "scope", "auditor", "area", "status", "type"]}
-        newLabel="Nova auditoria"
+        data={rows}
+        searchKeys={["id", "code", "scope", "auditor_name", "area", "status", "type"]}
+        hideNew
+        exportName="auditorias"
+        onRowClick={(r) => navigate({ to: "/audits/$id", params: { id: r.id } })}
         columns={[
-          { key: "id", header: "Código", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
+          { key: "code", header: "Código", render: (r) => <span className="font-mono text-xs">{r.code ?? r.id}</span> },
           { key: "type", header: "Tipo", render: (r) => <StatusBadge tone="info">{r.type}</StatusBadge> },
           { key: "scope", header: "Escopo", render: (r) => <span className="font-medium">{r.scope}</span> },
-          { key: "area", header: "Área" },
-          { key: "auditor", header: "Auditor" },
-          { key: "planned", header: "Planejada" },
-          { key: "performed", header: "Realizada" },
-          { key: "findings", header: "Achados" },
+          { key: "area", header: "Área", render: (r) => r.area ?? "—" },
+          { key: "auditor_name", header: "Auditor", render: (r) => r.auditor_name ?? "—" },
+          { key: "planned_at", header: "Planejada", render: (r) => r.planned_at ?? "—" },
+          { key: "performed_at", header: "Realizada", render: (r) => r.performed_at ?? "—" },
+          { key: "findings_count", header: "Achados" },
           { key: "status", header: "Status", render: (r) => <StatusBadge>{r.status}</StatusBadge> },
         ]}
       />
