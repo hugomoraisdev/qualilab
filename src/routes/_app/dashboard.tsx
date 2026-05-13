@@ -9,6 +9,8 @@ import {
   documents, equipments, calibrations, suppliers, occurrences, risks,
   actionPlans, audits, competencies, occurrencesByMonth,
 } from "@/lib/mock-data";
+import { suppliersStore, getEvaluationStatus } from "@/lib/suppliers-store";
+import { useTableStore } from "@/lib/table-store";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, Legend,
