@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, CalendarDays, ClipboardList, Forward, CheckCircle2, Plus } from "lucide-react";
+import { ArrowLeft, CalendarDays, ClipboardList, Forward, CheckCircle2, Plus, FileDown } from "lucide-react";
+import { exportMeetingMinutesPdf } from "@/lib/pdf-export";
 import {
   meetingsStore, agendaStore, saveMeeting, saveAgenda, findNextMeeting, newId,
   type AgendaRow, type AgendaStatus, type MeetingRow,
@@ -126,6 +127,17 @@ function MeetingDetail() {
         actions={
           <>
             <StatusBadge>{meeting.status}</StatusBadge>
+            <Button size="sm" variant="outline" onClick={() => exportMeetingMinutesPdf({
+              type: meeting.type,
+              meeting_date: meeting.meeting_date,
+              meeting_time: meeting.meeting_time,
+              participants: meeting.participants,
+              status: meeting.status,
+              notes: meeting.notes,
+              agenda: agenda.map((a) => ({ title: a.title, status: a.status, notes: a.notes })),
+            })}>
+              <FileDown className="size-4" /> Exportar ata (PDF)
+            </Button>
             {meeting.status !== "Realizada" && (
               <Button size="sm" variant="outline" onClick={finalize}>
                 <CheckCircle2 className="size-4" /> Marcar como realizada

@@ -2,8 +2,9 @@ import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/lib/auth";
-import { Bell, Search, Menu } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -37,10 +38,7 @@ function AppLayout() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input placeholder="Buscar em todo o sistema..." className="pl-9 h-9 bg-background" />
           </div>
-          <button className="relative rounded-md p-2 hover:bg-accent text-muted-foreground hover:text-foreground" title="Notificações">
-            <Bell className="size-5" />
-            <span className="absolute top-1 right-1 size-2 rounded-full bg-destructive" />
-          </button>
+          <NotificationBell />
         </header>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-[1400px] w-full mx-auto">
           <Outlet />
