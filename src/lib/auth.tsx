@@ -1,8 +1,11 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Session } from "@supabase/supabase-js";
 
 export type Role = "admin" | "gestor" | "tecnico" | "auditor" | "consulta";
 
 export interface User {
+  id: string;
   email: string;
   name: string;
   role: Role;
@@ -10,43 +13,89 @@ export interface User {
 
 interface AuthCtx {
   user: User | null;
+  session: Session | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  signup: (email: string, password: string, name: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const Ctx = createContext<AuthCtx | null>(null);
 
-const DEMO_USERS: Record<string, { password: string; user: User }> = {
-  "admin@qualilab.com": { password: "demo123", user: { email: "admin@qualilab.com", name: "Carla Administradora", role: "admin" } },
-  "gestor@qualilab.com": { password: "demo123", user: { email: "gestor@qualilab.com", name: "Roberto Gestor", role: "gestor" } },
-  "tecnico@qualilab.com": { password: "demo123", user: { email: "tecnico@qualilab.com", name: "Mariana Técnica", role: "tecnico" } },
-  "auditor@qualilab.com": { password: "demo123", user: { email: "auditor@qualilab.com", name: "Paulo Auditor", role: "auditor" } },
-};
+async function loadProfile(userId: string, fallbackEmail: string): Promise<User> {
+  const [{ data: profile }, { data: roleRow }] = await Promise.all([
+    supabase.from("profiles").select("id,email,name").eq("id", userId).maybeSingle(),
+    supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
+  ]);
+  return {
+    id: userId,
+    email: profile?.email ?? fallbackEmail,
+    name: profile?.name || fallbackEmail.split("@")[0],
+    role: (roleRow?.role as Role) ?? "consulta",
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const raw = localStorage.getItem("qualilab_user");
-    if (raw) setUser(JSON.parse(raw));
+    // 1. Listener PRIMEIRO (regra crítica do Supabase)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+      setSession(sess);
+      if (sess?.user) {
+        // Adia chamadas ao banco para fora do callback (evita deadlock)
+        setTimeout(() => {
+          loadProfile(sess.user.id, sess.user.email ?? "").then(setUser);
+        }, 0);
+      } else {
+        setUser(null);
+      }
+    });
+
+    // 2. Depois recupera sessão existente
+    supabase.auth.getSession().then(({ data: { session: sess } }) => {
+      setSession(sess);
+      if (sess?.user) {
+        loadProfile(sess.user.id, sess.user.email ?? "").then((u) => {
+          setUser(u);
+          setLoading(false);
+        });
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
-    const entry = DEMO_USERS[email.toLowerCase()];
-    if (!entry || entry.password !== password) {
-      throw new Error("Credenciais inválidas");
-    }
-    setUser(entry.user);
-    localStorage.setItem("qualilab_user", JSON.stringify(entry.user));
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message === "Invalid login credentials" ? "Credenciais inválidas" : error.message);
   };
 
-  const logout = () => {
+  const signup = async (email: string, password: string, name: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: redirectUrl, data: { name } },
+    });
+    if (error) throw new Error(error.message);
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem("qualilab_user");
+    setSession(null);
   };
 
-  return <Ctx.Provider value={{ user, login, logout }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ user, session, loading, login, signup, logout }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 export function useAuth() {
