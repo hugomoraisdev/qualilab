@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -8,15 +8,38 @@ import {
   getEvaluationStatus,
   evaluationStatusLabel,
 } from "@/lib/suppliers-store";
+import { supplierPortalStore, countPendingSubmissions } from "@/lib/supplier-portal-store";
 import { useTableStore } from "@/lib/table-store";
+import { Inbox } from "lucide-react";
 
 export const Route = createFileRoute("/_app/suppliers")({ component: SupPage });
 
 function SupPage() {
   const suppliers = useTableStore(suppliersStore);
+  useTableStore(supplierPortalStore);
+  const pending = countPendingSubmissions();
   return (
     <>
-      <PageHeader title="Fornecedores" description="Cadastro, qualificação e avaliação de desempenho" />
+      <PageHeader
+        title="Fornecedores"
+        description="Cadastro, qualificação e avaliação de desempenho"
+        actions={
+          <Link
+            to="/suppliers"
+            search={{} as never}
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+            title="Submissões via portal público"
+          >
+            <Inbox className="size-4" />
+            Portal de fornecedores
+            {pending > 0 && (
+              <span className="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-warning px-1.5 text-[10px] font-bold text-warning-foreground">
+                {pending}
+              </span>
+            )}
+          </Link>
+        }
+      />
       <DataTable
         data={suppliers}
         searchKeys={["code", "name", "cnpj", "category", "contact_name", "status"]}
