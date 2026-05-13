@@ -119,7 +119,7 @@ export function useNotifications(): NotificationItem[] {
     // Reuniões nos próximos 3 dias
     meetings.forEach((m) => {
       const d = daysUntil(m.meeting_date);
-      if (d < 0 || d > 3 || m.status === "Concluída") return;
+      if (d < 0 || d > 3 || m.status === "Realizada" || m.status === "Cancelada") return;
       out.push({
         id: `meet-${m.id}`,
         category: "meeting",
