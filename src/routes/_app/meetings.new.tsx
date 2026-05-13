@@ -37,7 +37,7 @@ function NewMeeting() {
       participants: participants.split(",").map((p) => p.trim()).filter(Boolean),
       agenda,
       status: "Agendada",
-      recurrence: recurring ? { frequency, occurrences } : undefined,
+      recurrence: recurring ? { frequency, until } : undefined,
     };
     const created = createMeetingSeries(base);
     toast.success(
@@ -93,21 +93,22 @@ function NewMeeting() {
                 <select
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={frequency}
-                  onChange={(e) => setFrequency(e.target.value as "weekly" | "biweekly" | "monthly")}
+                  onChange={(e) => setFrequency(e.target.value as "weekly" | "biweekly" | "monthly" | "quarterly")}
                 >
                   <option value="weekly">Semanal</option>
                   <option value="biweekly">Quinzenal</option>
                   <option value="monthly">Mensal</option>
+                  <option value="quarterly">Trimestral</option>
                 </select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Quantidade de ocorrências</Label>
-                <Input type="number" min={1} max={52}
-                  value={occurrences}
-                  onChange={(e) => setOccurrences(parseInt(e.target.value) || 1)} />
+                <Label className="text-xs">Repetir até</Label>
+                <Input type="date" min={date}
+                  value={until}
+                  onChange={(e) => setUntil(e.target.value)} />
               </div>
               <div className="text-xs text-muted-foreground">
-                Serão criadas {occurrences} reuniões com os mesmos participantes e pautas.
+                Serão criadas reuniões com a frequência escolhida até {until}.
               </div>
             </div>
           )}
