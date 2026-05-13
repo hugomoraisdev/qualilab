@@ -70,7 +70,7 @@ function ReportsPage() {
     {
       title: "Riscos por classificação",
       cols: ["Código", "Processo", "Descrição", "Probabilidade", "Impacto", "Classificação"],
-      build: () => risks.map((r) => [r.code, r.process, r.description, r.probability, r.impact, r.classification]),
+      build: () => risks.map((r) => [r.id, r.process, r.description, r.probability, r.impact, r.classification]),
     },
     {
       title: "Calibrações vencidas",
