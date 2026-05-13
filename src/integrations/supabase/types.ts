@@ -1042,6 +1042,42 @@ export type Database = {
           },
         ]
       }
+      supplier_evaluations: {
+        Row: {
+          created_at: string
+          evaluation_date: string
+          evaluator_id: string | null
+          evaluator_name: string | null
+          id: string
+          observations: string | null
+          score: number
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          evaluation_date?: string
+          evaluator_id?: string | null
+          evaluator_name?: string | null
+          id?: string
+          observations?: string | null
+          score: number
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          evaluation_date?: string
+          evaluator_id?: string | null
+          evaluator_name?: string | null
+          id?: string
+          observations?: string | null
+          score?: number
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       suppliers: {
         Row: {
           address: string | null
@@ -1052,8 +1088,11 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           email: string | null
+          evaluation_frequency_days: number | null
           id: string
+          last_evaluation_date: string | null
           name: string
+          next_evaluation_date: string | null
           notes: string | null
           phone: string | null
           qualified_until: string | null
@@ -1070,8 +1109,11 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           email?: string | null
+          evaluation_frequency_days?: number | null
           id?: string
+          last_evaluation_date?: string | null
           name: string
+          next_evaluation_date?: string | null
           notes?: string | null
           phone?: string | null
           qualified_until?: string | null
@@ -1088,8 +1130,11 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           email?: string | null
+          evaluation_frequency_days?: number | null
           id?: string
+          last_evaluation_date?: string | null
           name?: string
+          next_evaluation_date?: string | null
           notes?: string | null
           phone?: string | null
           qualified_until?: string | null
