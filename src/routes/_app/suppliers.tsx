@@ -8,15 +8,34 @@ import {
   getEvaluationStatus,
   evaluationStatusLabel,
 } from "@/lib/suppliers-store";
+import { supplierPortalStore, countPendingSubmissions } from "@/lib/supplier-portal-store";
 import { useTableStore } from "@/lib/table-store";
+import { Inbox } from "lucide-react";
 
 export const Route = createFileRoute("/_app/suppliers")({ component: SupPage });
 
 function SupPage() {
   const suppliers = useTableStore(suppliersStore);
+  useTableStore(supplierPortalStore);
+  const pending = countPendingSubmissions();
   return (
     <>
-      <PageHeader title="Fornecedores" description="Cadastro, qualificação e avaliação de desempenho" />
+      <PageHeader
+        title="Fornecedores"
+        description="Cadastro, qualificação e avaliação de desempenho"
+        actions={
+          <span
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium"
+            title="Submissões recebidas pelo portal público aguardando análise"
+          >
+            <Inbox className="size-4" />
+            Portal: {pending} pendente{pending === 1 ? "" : "s"}
+            {pending > 0 && (
+              <span className="ml-1 inline-flex size-2 rounded-full bg-warning" />
+            )}
+          </span>
+        }
+      />
       <DataTable
         data={suppliers}
         searchKeys={["code", "name", "cnpj", "category", "contact_name", "status"]}

@@ -24,9 +24,16 @@ import {
   supplierEvaluationsStore,
   listEvaluationsForSupplier,
 } from "@/lib/supplier-evaluations-store";
+import {
+  supplierPortalStore,
+  listSubmissionsByCode,
+  statusLabel,
+  statusTone,
+  type SubmissionStatus,
+} from "@/lib/supplier-portal-store";
 import { useTableStore } from "@/lib/table-store";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, Star } from "lucide-react";
+import { ArrowLeft, Star, ExternalLink, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/suppliers/$id")({ component: SupDetail });
@@ -35,6 +42,7 @@ function SupDetail() {
   const { id } = Route.useParams();
   const suppliers = useTableStore(suppliersStore);
   useTableStore(supplierEvaluationsStore);
+  useTableStore(supplierPortalStore);
   const { user } = useAuth();
   const s = suppliers.find((x) => x.id === id);
 
@@ -102,6 +110,22 @@ function SupDetail() {
       setSaving(false);
     }
   };
+
+  const updateSubmissionStatus = async (subId: string, status: SubmissionStatus) => {
+    const sub = supplierPortalStore.list().find((x) => x.id === subId);
+    if (!sub) return;
+    await supplierPortalStore.upsert({
+      ...sub,
+      status,
+      reviewed_by: user?.id ?? null,
+      reviewed_at: new Date().toISOString(),
+      linked_supplier_id: sub.linked_supplier_id ?? s.id,
+    });
+    toast.success(`Documento ${status === "aprovado" ? "aprovado" : status === "reprovado" ? "reprovado" : "atualizado"}`);
+  };
+
+  const submissions = s.code ? listSubmissionsByCode(s.code) : [];
+  const pendingSubmissions = submissions.filter((x) => x.status === "recebido").length;
 
   return (
     <>
@@ -223,6 +247,76 @@ function SupDetail() {
             </Table>
           )}
         </div>
+      </section>
+
+      <section className="bg-card border border-border rounded-lg p-5 shadow-sm mt-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+          <div>
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <FileText className="size-4" /> Documentos recebidos
+              {pendingSubmissions > 0 && (
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-warning px-1.5 text-[10px] font-bold text-warning-foreground">
+                  {pendingSubmissions}
+                </span>
+              )}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Submissões enviadas pelo fornecedor via portal público (código <span className="font-mono">{s.code ?? "—"}</span>).
+            </p>
+          </div>
+        </div>
+
+        {!s.code ? (
+          <p className="text-xs text-muted-foreground">Defina um código para este fornecedor para receber documentos via portal.</p>
+        ) : submissions.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Nenhum documento recebido até o momento.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Protocolo</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Arquivo</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {submissions.map((sub) => (
+                <TableRow key={sub.id}>
+                  <TableCell className="font-mono text-xs">{sub.protocol}</TableCell>
+                  <TableCell className="text-xs">{sub.created_at?.slice(0, 10) ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{sub.document_type}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-xs truncate" title={sub.description ?? ""}>
+                    {sub.description ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    {sub.file_url ? (
+                      <a href={sub.file_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary underline">
+                        Abrir <ExternalLink className="size-3" />
+                      </a>
+                    ) : <span className="text-xs text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge tone={statusTone(sub.status)}>{statusLabel(sub.status)}</StatusBadge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="inline-flex gap-1">
+                      {sub.status !== "aprovado" && (
+                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => updateSubmissionStatus(sub.id, "aprovado")}>Aprovar</Button>
+                      )}
+                      {sub.status !== "reprovado" && (
+                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => updateSubmissionStatus(sub.id, "reprovado")}>Reprovar</Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </section>
     </>
   );

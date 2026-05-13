@@ -14,6 +14,7 @@ import { Route as SacRouteImport } from './routes/sac'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SuppliersPortalRouteImport } from './routes/suppliers.portal'
 import { Route as AppUsersRouteImport } from './routes/_app/users'
 import { Route as AppSuppliersRouteImport } from './routes/_app/suppliers'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
@@ -75,6 +76,11 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuppliersPortalRoute = SuppliersPortalRouteImport.update({
+  id: '/suppliers/portal',
+  path: '/suppliers/portal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppUsersRoute = AppUsersRouteImport.update({
@@ -297,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/suppliers': typeof AppSuppliersRouteWithChildren
   '/users': typeof AppUsersRoute
+  '/suppliers/portal': typeof SuppliersPortalRoute
   '/audits/$id': typeof AppAuditsIdRoute
   '/customer-service/$id': typeof AppCustomerServiceIdRoute
   '/customer-service/new': typeof AppCustomerServiceNewRoute
@@ -341,6 +348,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/suppliers': typeof AppSuppliersRouteWithChildren
   '/users': typeof AppUsersRoute
+  '/suppliers/portal': typeof SuppliersPortalRoute
   '/audits/$id': typeof AppAuditsIdRoute
   '/customer-service/$id': typeof AppCustomerServiceIdRoute
   '/customer-service/new': typeof AppCustomerServiceNewRoute
@@ -387,6 +395,7 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/suppliers': typeof AppSuppliersRouteWithChildren
   '/_app/users': typeof AppUsersRoute
+  '/suppliers/portal': typeof SuppliersPortalRoute
   '/_app/audits/$id': typeof AppAuditsIdRoute
   '/_app/customer-service/$id': typeof AppCustomerServiceIdRoute
   '/_app/customer-service/new': typeof AppCustomerServiceNewRoute
@@ -433,6 +442,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/suppliers'
     | '/users'
+    | '/suppliers/portal'
     | '/audits/$id'
     | '/customer-service/$id'
     | '/customer-service/new'
@@ -477,6 +487,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/suppliers'
     | '/users'
+    | '/suppliers/portal'
     | '/audits/$id'
     | '/customer-service/$id'
     | '/customer-service/new'
@@ -522,6 +533,7 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/suppliers'
     | '/_app/users'
+    | '/suppliers/portal'
     | '/_app/audits/$id'
     | '/_app/customer-service/$id'
     | '/_app/customer-service/new'
@@ -544,6 +556,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SacRoute: typeof SacRoute
   SignupRoute: typeof SignupRoute
+  SuppliersPortalRoute: typeof SuppliersPortalRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -581,6 +594,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/suppliers/portal': {
+      id: '/suppliers/portal'
+      path: '/suppliers/portal'
+      fullPath: '/suppliers/portal'
+      preLoaderRoute: typeof SuppliersPortalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/users': {
@@ -1040,6 +1060,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   SacRoute: SacRoute,
   SignupRoute: SignupRoute,
+  SuppliersPortalRoute: SuppliersPortalRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
