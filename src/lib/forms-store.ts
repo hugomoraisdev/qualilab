@@ -1,6 +1,5 @@
-// Formulários personalizados e respostas com aprovação — Lovable Cloud.
-
-import { createCloudStore } from "./cloud-store";
+// Formulários personalizados e respostas — Fase 2B (tabelas dedicadas).
+import { createTableStore } from "./table-store";
 
 export type FieldType = "text" | "textarea" | "number" | "date" | "select" | "checkbox" | "radio";
 
@@ -13,67 +12,52 @@ export interface FormField {
   placeholder?: string;
 }
 
-export interface FormResponse {
-  id: string;
-  formId: string;
-  values: Record<string, any>;
-  submittedBy: string;
-  submittedAt: string;
-  approvalStatus: "n/a" | "pending" | "approved" | "rejected";
-  approver?: string;
-  approvedAt?: string;
-}
-
-export interface CustomForm {
+export interface FormRow {
   id: string;
   title: string;
-  description: string;
-  responsible: string;
+  description: string | null;
+  responsible_id: string | null;
   fields: FormField[];
-  requiresApproval: boolean;
+  requires_approval: boolean;
   approvers: string[];
-  createdAt: string;
-  status: "draft" | "active";
+  status: string;
+  deleted_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
-const KEY_FORMS = "qualilab_custom_forms";
-const KEY_RESPONSES = "qualilab_form_responses";
-
-const formsStore = createCloudStore<CustomForm[]>(KEY_FORMS, []);
-const responsesStore = createCloudStore<FormResponse[]>(KEY_RESPONSES, []);
-
-export function listForms(): CustomForm[] {
-  return formsStore.get();
+export interface FormResponseRow {
+  id: string;
+  form_id: string;
+  values: Record<string, any>;
+  submitted_by: string | null;
+  submitted_by_name: string | null;
+  submitted_at: string;
+  approval_status: "n/a" | "pending" | "approved" | "rejected";
+  approver_id: string | null;
+  approved_at: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export function getForm(id: string): CustomForm | undefined {
-  return formsStore.get().find((f) => f.id === id);
-}
+export const formsStore = createTableStore<FormRow>("forms", "created_at", false);
+export const responsesStore = createTableStore<FormResponseRow>("form_responses", "submitted_at", false);
 
-export function saveForm(form: CustomForm) {
-  const all = formsStore.get().filter((f) => f.id !== form.id);
-  all.unshift(form);
-  void formsStore.set(all);
-}
+export const listForms = () => formsStore.list();
+export const getForm = (id: string) => formsStore.list().find((f) => f.id === id);
+export const saveForm = (f: FormRow) => formsStore.upsert(f);
+export const deleteForm = (id: string) => formsStore.remove(id);
 
-export function deleteForm(id: string) {
-  void formsStore.set(formsStore.get().filter((f) => f.id !== id));
-}
-
-export function listResponses(formId?: string): FormResponse[] {
-  const all = responsesStore.get();
-  return formId ? all.filter((r) => r.formId === formId) : all;
-}
-
-export function saveResponse(resp: FormResponse) {
-  const all = [resp, ...responsesStore.get()];
-  void responsesStore.set(all);
-}
-
-export function updateResponse(id: string, patch: Partial<FormResponse>) {
-  const all = responsesStore.get().map((r) => (r.id === id ? { ...r, ...patch } : r));
-  void responsesStore.set(all);
-}
+export const listResponses = (formId?: string) => {
+  const all = responsesStore.list();
+  return formId ? all.filter((r) => r.form_id === formId) : all;
+};
+export const saveResponse = (r: FormResponseRow) => responsesStore.upsert(r);
+export const updateResponse = (id: string, patch: Partial<FormResponseRow>) => {
+  const cur = responsesStore.list().find((r) => r.id === id);
+  if (!cur) return;
+  responsesStore.upsert({ ...cur, ...patch });
+};
 
 export function newId(prefix: string) {
   return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
