@@ -24,9 +24,16 @@ import {
   supplierEvaluationsStore,
   listEvaluationsForSupplier,
 } from "@/lib/supplier-evaluations-store";
+import {
+  supplierPortalStore,
+  listSubmissionsByCode,
+  statusLabel,
+  statusTone,
+  type SubmissionStatus,
+} from "@/lib/supplier-portal-store";
 import { useTableStore } from "@/lib/table-store";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, Star } from "lucide-react";
+import { ArrowLeft, Star, ExternalLink, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/suppliers/$id")({ component: SupDetail });
