@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { FlaskConical, Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,6 @@ import logo from "@/assets/logo.png";
 export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
-
-const DEMO_OPTIONS = [
-  { email: "admin@qualilab.com", role: "Administrador" },
-  { email: "gestor@qualilab.com", role: "Gestor da Qualidade" },
-  { email: "tecnico@qualilab.com", role: "Técnico de Laboratório" },
-  { email: "auditor@qualilab.com", role: "Auditor" },
-];
 
 function LoginPage() {
   const { login } = useAuth();
