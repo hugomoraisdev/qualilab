@@ -1078,6 +1078,63 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_portal_submissions: {
+        Row: {
+          contact_email: string | null
+          created_at: string
+          description: string | null
+          document_type: string
+          file_url: string | null
+          id: string
+          linked_supplier_id: string | null
+          origin: string
+          protocol: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          supplier_code: string
+          supplier_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string
+          description?: string | null
+          document_type: string
+          file_url?: string | null
+          id?: string
+          linked_supplier_id?: string | null
+          origin?: string
+          protocol: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          supplier_code: string
+          supplier_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string
+          description?: string | null
+          document_type?: string
+          file_url?: string | null
+          id?: string
+          linked_supplier_id?: string | null
+          origin?: string
+          protocol?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          supplier_code?: string
+          supplier_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       suppliers: {
         Row: {
           address: string | null
@@ -1295,6 +1352,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      next_supplier_doc_protocol: { Args: never; Returns: string }
       next_ticket_protocol: { Args: never; Returns: string }
     }
     Enums: {
