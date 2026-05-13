@@ -2,11 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
-import { actionPlans } from "@/lib/mock-data";
+import { actionPlansStore } from "@/lib/action-plans-store";
+import { useTableStore } from "@/lib/table-store";
 
 export const Route = createFileRoute("/_app/action-plans")({ component: APPage });
 
 function APPage() {
+  const actionPlans = useTableStore(actionPlansStore);
   return (
     <>
       <PageHeader title="Planos de Ação" description="Ações vinculadas a ocorrências, riscos, auditorias, fornecedores e calibrações" />
