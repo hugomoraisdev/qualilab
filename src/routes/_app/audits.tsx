@@ -43,6 +43,7 @@ function AuditsPage() {
         description="Auditorias internas e externas com checklist e achados"
         actions={<Button onClick={create}><Plus className="size-4" /> Nova auditoria</Button>}
       />
+      <OfflineBanner stores={[auditsStore, auditFindingsStore]} />
       <DataTable
         data={rows}
         searchKeys={["id", "code", "scope", "auditor_name", "area", "status", "type"]}
