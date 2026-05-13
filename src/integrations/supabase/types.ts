@@ -814,6 +814,8 @@ export type Database = {
           origin: string
           responsible_id: string | null
           root_cause: string | null
+          root_cause_data: Json | null
+          root_cause_tool: string | null
           severity: string
           status: string
           type: string
@@ -832,6 +834,8 @@ export type Database = {
           origin: string
           responsible_id?: string | null
           root_cause?: string | null
+          root_cause_data?: Json | null
+          root_cause_tool?: string | null
           severity?: string
           status?: string
           type: string
@@ -850,6 +854,8 @@ export type Database = {
           origin?: string
           responsible_id?: string | null
           root_cause?: string | null
+          root_cause_data?: Json | null
+          root_cause_tool?: string | null
           severity?: string
           status?: string
           type?: string
