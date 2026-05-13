@@ -2,7 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
-import { suppliersStore, ratingToClassification } from "@/lib/suppliers-store";
+import {
+  suppliersStore,
+  ratingToClassification,
+  getEvaluationStatus,
+  evaluationStatusLabel,
+} from "@/lib/suppliers-store";
 import { useTableStore } from "@/lib/table-store";
 
 export const Route = createFileRoute("/_app/suppliers")({ component: SupPage });
@@ -23,6 +28,23 @@ function SupPage() {
           { key: "category", header: "Categoria", render: (r) => r.category ?? "—" },
           { key: "contact_name", header: "Contato", render: (r) => r.contact_name ?? "—" },
           { key: "rating", header: "Classificação", render: (r) => <StatusBadge>{ratingToClassification(r.rating)}</StatusBadge> },
+          {
+            key: "next_evaluation_date",
+            header: "Próxima avaliação",
+            render: (r) => {
+              const st = getEvaluationStatus(r);
+              const tone =
+                st === "em_dia" ? "success" :
+                st === "a_vencer" ? "warning" :
+                st === "vencida" ? "destructive" : "muted";
+              return (
+                <div className="flex flex-col gap-0.5">
+                  <StatusBadge tone={tone}>{evaluationStatusLabel(st)}</StatusBadge>
+                  <span className="text-[11px] text-muted-foreground">{r.next_evaluation_date ?? "—"}</span>
+                </div>
+              );
+            },
+          },
           { key: "status", header: "Status", render: (r) => <StatusBadge>{r.status}</StatusBadge> },
         ]}
       />
