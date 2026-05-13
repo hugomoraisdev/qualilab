@@ -325,6 +325,60 @@ export type Database = {
           },
         ]
       }
+      competency_history: {
+        Row: {
+          action: string
+          area: string | null
+          certified_at: string | null
+          changed_at: string
+          changed_by: string | null
+          changed_by_name: string | null
+          competency_id: string
+          evidence: string | null
+          expires_at: string | null
+          id: string
+          level: string | null
+          notes: string | null
+          skill: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          area?: string | null
+          certified_at?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_name?: string | null
+          competency_id: string
+          evidence?: string | null
+          expires_at?: string | null
+          id?: string
+          level?: string | null
+          notes?: string | null
+          skill?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          area?: string | null
+          certified_at?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_name?: string | null
+          competency_id?: string
+          evidence?: string | null
+          expires_at?: string | null
+          id?: string
+          level?: string | null
+          notes?: string | null
+          skill?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       document_reads: {
         Row: {
           confirmed_at: string
