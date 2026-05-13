@@ -5,13 +5,14 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, FileDown } from "lucide-react";
 import { useTableStore } from "@/lib/table-store";
 import {
   auditsStore, auditFindingsStore, saveAudit, saveFinding, deleteFinding, newId,
   type AuditFindingRow,
 } from "@/lib/audits-store";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { exportAuditReportPdf } from "@/lib/pdf-export";
 
 export const Route = createFileRoute("/_app/audits/$id")({ component: AuditDetail });
 
@@ -65,7 +66,29 @@ function AuditDetail() {
       <Link to="/audits" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
         <ArrowLeft className="size-4 mr-1" /> Voltar
       </Link>
-      <PageHeader title={a.scope} description={`${a.code ?? a.id} · ${a.type}${a.area ? " · Área " + a.area : ""}`} actions={<StatusBadge>{a.status}</StatusBadge>} />
+      <PageHeader
+        title={a.scope}
+        description={`${a.code ?? a.id} · ${a.type}${a.area ? " · Área " + a.area : ""}`}
+        actions={
+          <>
+            <StatusBadge>{a.status}</StatusBadge>
+            <Button size="sm" variant="outline" onClick={() => exportAuditReportPdf({
+              code: a.code ?? a.id,
+              type: a.type,
+              scope: a.scope,
+              area: a.area,
+              auditor: a.auditor_name,
+              planned_at: a.planned_at,
+              performed_at: a.performed_at,
+              status: a.status,
+              notes: a.notes,
+              findings: findings.map((f) => ({ requirement: f.requirement, result: f.result, severity: f.severity, observation: f.observation })),
+            })}>
+              <FileDown className="size-4" /> Exportar PDF
+            </Button>
+          </>
+        }
+      />
       <OfflineBanner stores={[auditsStore, auditFindingsStore]} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
