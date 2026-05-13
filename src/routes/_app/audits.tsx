@@ -5,8 +5,9 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useTableStore } from "@/lib/table-store";
-import { auditsStore, saveAudit, newId, type AuditRow } from "@/lib/audits-store";
+import { auditsStore, auditFindingsStore, saveAudit, newId, type AuditRow } from "@/lib/audits-store";
 import { useAuth } from "@/lib/auth";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 export const Route = createFileRoute("/_app/audits")({ component: AuditsPage });
 
