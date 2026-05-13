@@ -190,7 +190,7 @@ function MeetingDetail() {
                 <dd className="text-xs">{meeting.participants.join(", ")}</dd></div>
               {meeting.recurrence && (
                 <div><dt className="text-xs text-muted-foreground">Recorrência</dt>
-                  <dd>{meeting.recurrence.frequency} · {meeting.recurrence.occurrences}x</dd></div>
+                  <dd>{meeting.recurrence.frequency} · até {meeting.recurrence.until}</dd></div>
               )}
               {meeting.recurrenceParentId && (
                 <div><dt className="text-xs text-muted-foreground">Origem da série</dt>
