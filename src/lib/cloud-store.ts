@@ -35,7 +35,7 @@ class CloudStore<T> {
         // primeira execução — semeia banco com initial
         await supabase.from(TABLE).upsert({
           key: this.key,
-          value: this.initial as unknown as object,
+          value: this.initial as never,
         });
       }
     } catch (err) {
@@ -78,7 +78,7 @@ class CloudStore<T> {
     this.notify();
     const { error } = await supabase
       .from(TABLE)
-      .upsert({ key: this.key, value: value as unknown as object });
+      .upsert({ key: this.key, value: value as never });
     if (error) {
       console.error(`[cloud-store] set ${this.key} falhou:`, error.message);
     }

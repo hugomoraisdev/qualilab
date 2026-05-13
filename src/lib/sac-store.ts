@@ -1,4 +1,6 @@
-// Store de tickets de SAC (atendimento ao cliente) em localStorage.
+// Store de tickets de SAC (atendimento ao cliente) — Lovable Cloud.
+
+import { createCloudStore } from "./cloud-store";
 
 export type TicketType = "reclamacao" | "sugestao" | "elogio" | "duvida";
 export type TicketStatus = "aberto" | "em_andamento" | "aguardando_cliente" | "encerrado";
@@ -72,41 +74,24 @@ const SEED: CustomerTicket[] = [
   },
 ];
 
-function read(): CustomerTicket[] {
-  if (typeof window === "undefined") return SEED;
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) {
-      localStorage.setItem(KEY, JSON.stringify(SEED));
-      return SEED;
-    }
-    return JSON.parse(raw);
-  } catch {
-    return SEED;
-  }
-}
-
-function write(value: CustomerTicket[]) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(KEY, JSON.stringify(value));
-}
+const store = createCloudStore<CustomerTicket[]>(KEY, SEED);
 
 export function listTickets(): CustomerTicket[] {
-  return read();
+  return store.get();
 }
 
 export function getTicket(id: string): CustomerTicket | undefined {
-  return read().find((t) => t.id === id);
+  return store.get().find((t) => t.id === id);
 }
 
 export function saveTicket(t: CustomerTicket) {
-  const all = read().filter((x) => x.id !== t.id);
+  const all = store.get().filter((x) => x.id !== t.id);
   all.unshift(t);
-  write(all);
+  void store.set(all);
 }
 
 export function nextProtocol(): string {
   const year = new Date().getFullYear();
-  const count = read().filter((t) => t.protocol.includes(String(year))).length + 1;
+  const count = store.get().filter((t) => t.protocol.includes(String(year))).length + 1;
   return `SAC-${year}-${String(count).padStart(3, "0")}`;
 }

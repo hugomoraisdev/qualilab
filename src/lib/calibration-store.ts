@@ -1,13 +1,14 @@
-// Store de calibrações com múltiplos pontos por equipamento (POC).
-// Persistido em localStorage. Cada calibração possui N pontos individuais.
+// Store de calibrações com múltiplos pontos por equipamento — Lovable Cloud.
+
+import { createCloudStore } from "./cloud-store";
 
 export interface CalibrationPoint {
   id: string;
-  label: string;          // ex: "0% da escala"
-  nominal: number;        // valor de referência
-  measured: number;       // valor encontrado
-  uncertainty: number;    // incerteza
-  maxError: number;       // limite máximo permitido
+  label: string;
+  nominal: number;
+  measured: number;
+  uncertainty: number;
+  maxError: number;
   unit: string;
 }
 
@@ -25,25 +26,16 @@ export interface CalibrationRecord {
 }
 
 const KEY = "qualilab_calibrations_v2";
+const store = createCloudStore<CalibrationRecord[]>(KEY, []);
 
-function read(): CalibrationRecord[] {
-  if (typeof window === "undefined") return [];
-  try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
-}
-function write(all: CalibrationRecord[]) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(KEY, JSON.stringify(all));
-  window.dispatchEvent(new Event(`storage:${KEY}`));
-}
-
-export function listCalibrations(): CalibrationRecord[] { return read(); }
+export function listCalibrations(): CalibrationRecord[] { return store.get(); }
 export function saveCalibration(rec: CalibrationRecord) {
-  const all = read().filter((r) => r.id !== rec.id);
+  const all = store.get().filter((r) => r.id !== rec.id);
   all.unshift(rec);
-  write(all);
+  void store.set(all);
 }
 export function deleteCalibration(id: string) {
-  write(read().filter((r) => r.id !== id));
+  void store.set(store.get().filter((r) => r.id !== id));
 }
 
 export function evaluatePoint(p: CalibrationPoint) {
