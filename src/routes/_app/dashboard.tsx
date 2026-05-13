@@ -9,6 +9,8 @@ import {
   documents, equipments, calibrations, suppliers, occurrences, risks,
   actionPlans, audits, competencies, occurrencesByMonth,
 } from "@/lib/mock-data";
+import { suppliersStore, getEvaluationStatus } from "@/lib/suppliers-store";
+import { useTableStore } from "@/lib/table-store";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, Legend,
@@ -57,6 +59,11 @@ function Dashboard() {
   const calNear = calibrations.filter(c => c.status === "Próxima do vencimento").length;
   const supActive = suppliers.filter(s => s.status === "Ativo").length;
   const supPending = suppliers.filter(s => s.status === "Em avaliação" || s.status === "Suspenso").length;
+  const realSuppliers = useTableStore(suppliersStore);
+  const supEvalAlerts = realSuppliers.filter((sp) => {
+    const st = getEvaluationStatus(sp);
+    return st === "vencida" || st === "a_vencer";
+  }).length;
   const occOpen = occurrences.filter(o => o.status !== "Concluída" && o.status !== "Cancelada").length;
   const ncCritical = occurrences.filter(o => o.severity === "Alta").length;
   const risksHigh = risks.filter(r => r.classification === "Alto" || r.classification === "Crítico").length;
@@ -93,6 +100,7 @@ function Dashboard() {
         <KpiCard label="Calibrações vencidas" value={calExpired} hint="Atenção imediata" icon={Gauge} tone="destructive" to="/calibrations" />
         <KpiCard label="Calibrações a vencer" value={calNear} hint="Próximas do vencimento" icon={Gauge} tone="warning" to="/calibrations" />
         <KpiCard label="Fornecedores ativos" value={supActive} hint={`${supPending} em avaliação`} icon={Truck} tone="info" to="/suppliers" />
+        <KpiCard label="Avaliação de fornecedor" value={supEvalAlerts} hint="Vencidas ou a vencer" icon={Truck} tone="warning" to="/suppliers" />
         <KpiCard label="Ocorrências abertas" value={occOpen} hint={`${ncCritical} críticas`} icon={AlertTriangle} tone="warning" to="/occurrences" />
         <KpiCard label="Riscos altos / críticos" value={risksHigh} hint={`${risks.length} mapeados`} icon={ShieldAlert} tone="destructive" to="/risks" />
         <KpiCard label="Planos de ação pendentes" value={apPending} icon={ListChecks} tone="warning" to="/action-plans" />
