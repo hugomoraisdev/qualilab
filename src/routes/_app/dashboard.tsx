@@ -100,6 +100,7 @@ function Dashboard() {
         <KpiCard label="Calibrações vencidas" value={calExpired} hint="Atenção imediata" icon={Gauge} tone="destructive" to="/calibrations" />
         <KpiCard label="Calibrações a vencer" value={calNear} hint="Próximas do vencimento" icon={Gauge} tone="warning" to="/calibrations" />
         <KpiCard label="Fornecedores ativos" value={supActive} hint={`${supPending} em avaliação`} icon={Truck} tone="info" to="/suppliers" />
+        <KpiCard label="Avaliação de fornecedor" value={supEvalAlerts} hint="Vencidas ou a vencer" icon={Truck} tone="warning" to="/suppliers" />
         <KpiCard label="Ocorrências abertas" value={occOpen} hint={`${ncCritical} críticas`} icon={AlertTriangle} tone="warning" to="/occurrences" />
         <KpiCard label="Riscos altos / críticos" value={risksHigh} hint={`${risks.length} mapeados`} icon={ShieldAlert} tone="destructive" to="/risks" />
         <KpiCard label="Planos de ação pendentes" value={apPending} icon={ListChecks} tone="warning" to="/action-plans" />
