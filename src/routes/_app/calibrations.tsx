@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
-import { calibrations, equipments } from "@/lib/mock-data";
 import { CalendarDays, Calculator, CheckCircle2, XCircle, Plus, Trash2, Layers } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,9 +10,11 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  type CalibrationPoint, type CalibrationRecord,
-  evaluatePoint, evaluateRecord, listCalibrations, saveCalibration, newId,
-} from "@/lib/calibration-store";
+  type CalibrationPoint, type CalibrationRow,
+  evaluatePoint, evaluateRecord, calibrationsStore, saveCalibration, newCalibrationId,
+} from "@/lib/calibrations-store";
+import { equipmentsStore } from "@/lib/equipments-store";
+import { useTableStore } from "@/lib/table-store";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/_app/calibrations")({ component: CalPage });
@@ -47,16 +48,23 @@ function emptyPoint(equipCode: string, idx: number): CalibrationPoint {
 
 function MultiPointForm({ onSaved }: { onSaved: () => void }) {
   const { user } = useAuth();
-  const [equipCode, setEquipCode] = useState("BAL-001");
-  const [lab, setLab] = useState("INMETRO");
+  const equipments = useTableStore(equipmentsStore);
+  const firstCode = equipments[0]?.code ?? "";
+  const [equipCode, setEquipCode] = useState(firstCode);
+  const [provider, setProvider] = useState("INMETRO");
   const [certificate, setCertificate] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [validity, setValidity] = useState("");
   const [points, setPoints] = useState<CalibrationPoint[]>(() => [
-    emptyPoint("BAL-001", 0),
-    emptyPoint("BAL-001", 1),
-    emptyPoint("BAL-001", 2),
+    emptyPoint(firstCode, 0),
+    emptyPoint(firstCode, 1),
+    emptyPoint(firstCode, 2),
   ]);
+
+  // Quando os equipamentos terminam de carregar, seleciona o primeiro.
+  useEffect(() => {
+    if (!equipCode && equipments.length) setEquipCode(equipments[0].code);
+  }, [equipments, equipCode]);
 
   const equip = equipments.find((e) => e.code === equipCode);
   const cfg = LIMITS[equipCode] ?? { maxError: 1, unit: "—" };
@@ -80,25 +88,31 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
   }, [points]);
 
   function handleSave() {
+    if (!equip) { toast.error("Selecione um equipamento."); return; }
     if (!certificate.trim() || !date || !validity) {
       toast.error("Preencha certificado, data e validade.");
       return;
     }
     if (!points.length) { toast.error("Adicione ao menos um ponto."); return; }
-    const rec: CalibrationRecord = {
-      id: newId("CAL"),
-      equipmentCode: equipCode,
-      equipmentName: equip?.name ?? equipCode,
-      date, validity, lab, certificate,
-      responsible: user?.name ?? "—",
+    const status = evaluateRecord({ points });
+    const rec: CalibrationRow = {
+      id: newCalibrationId(),
+      equipment_id: equip.id,
+      certificate_number: certificate,
+      provider,
+      performed_at: date,
+      next_due_date: validity,
+      result: status === "Aprovada" ? "aprovado" : "reprovado",
+      uncertainty: null,
       points,
-      createdAt: new Date().toISOString(),
+      certificate_url: null,
+      notes: null,
+      responsible_id: user?.id ?? null,
     };
-    saveCalibration(rec);
-    const status = evaluateRecord(rec);
+    void saveCalibration(rec);
     toast[status === "Aprovada" ? "success" : "error"](
       `Calibração ${status}`,
-      { description: `${rec.id} · ${equipCode} · ${points.length} ponto(s)` },
+      { description: `${equip.code} · ${points.length} ponto(s)` },
     );
     setCertificate("");
     onSaved();
@@ -124,17 +138,18 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
             onChange={(e) => setEquipCode(e.target.value)}
             className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
+            {equipments.length === 0 && <option value="">— Cadastre um equipamento —</option>}
             {equipments.map((e) => (
-              <option key={e.code} value={e.code}>{e.code} — {e.name}</option>
+              <option key={e.id} value={e.code}>{e.code} — {e.name}</option>
             ))}
           </select>
           <div className="text-[11px] text-muted-foreground">
-            {equip?.location} · limite máximo configurado ± {cfg.maxError} {cfg.unit}
+            {equip?.location ?? "—"} · limite máximo configurado ± {cfg.maxError} {cfg.unit}
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Laboratório</Label>
-          <Input value={lab} onChange={(e) => setLab(e.target.value)} />
+          <Label className="text-xs">Provedor</Label>
+          <Input value={provider} onChange={(e) => setProvider(e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Data</Label>
@@ -173,24 +188,13 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
             const ev = evaluatePoint(p);
             return (
               <div key={p.id} className="grid grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_auto_auto] gap-2 px-3 py-2 items-center">
-                <Input
-                  className="h-9"
-                  value={p.label}
-                  onChange={(e) => updatePoint(p.id, { label: e.target.value })}
-                  placeholder={`Ponto ${idx + 1}`}
-                />
-                <Input className="h-9" type="number" step="0.0001"
-                  value={p.nominal}
-                  onChange={(e) => updatePoint(p.id, { nominal: parseFloat(e.target.value) || 0 })} />
-                <Input className="h-9" type="number" step="0.0001"
-                  value={p.measured}
-                  onChange={(e) => updatePoint(p.id, { measured: parseFloat(e.target.value) || 0 })} />
+                <Input className="h-9" value={p.label} onChange={(e) => updatePoint(p.id, { label: e.target.value })} placeholder={`Ponto ${idx + 1}`} />
+                <Input className="h-9" type="number" step="0.0001" value={p.nominal} onChange={(e) => updatePoint(p.id, { nominal: parseFloat(e.target.value) || 0 })} />
+                <Input className="h-9" type="number" step="0.0001" value={p.measured} onChange={(e) => updatePoint(p.id, { measured: parseFloat(e.target.value) || 0 })} />
                 <div className="h-9 rounded-md border border-dashed border-border bg-muted/40 px-3 flex items-center text-xs font-mono">
                   {ev.error.toFixed(4)}
                 </div>
-                <Input className="h-9" type="number" step="0.0001"
-                  value={p.uncertainty}
-                  onChange={(e) => updatePoint(p.id, { uncertainty: parseFloat(e.target.value) || 0 })} />
+                <Input className="h-9" type="number" step="0.0001" value={p.uncertainty} onChange={(e) => updatePoint(p.id, { uncertainty: parseFloat(e.target.value) || 0 })} />
                 <span className={cn(
                   "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold border",
                   ev.approved ? "bg-success/15 text-success border-success/40" : "bg-destructive/15 text-destructive border-destructive/40"
@@ -198,11 +202,7 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
                   {ev.approved ? <CheckCircle2 className="size-3" /> : <XCircle className="size-3" />}
                   {ev.approved ? "Conforme" : "Não conforme"}
                 </span>
-                <button
-                  onClick={() => removePoint(p.id)}
-                  className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-muted"
-                  aria-label="Remover ponto"
-                >
+                <button onClick={() => removePoint(p.id)} className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-muted" aria-label="Remover ponto">
                   <Trash2 className="size-3.5" />
                 </button>
               </div>
@@ -233,73 +233,19 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-function SavedCalibrations() {
-  const [items, setItems] = useState<CalibrationRecord[]>([]);
-  useEffect(() => {
-    const refresh = () => setItems(listCalibrations());
-    refresh();
-    const handler = () => refresh();
-    window.addEventListener(`storage:qualilab_calibrations_v2`, handler);
-    return () => window.removeEventListener(`storage:qualilab_calibrations_v2`, handler);
-  }, []);
-
-  if (!items.length) return null;
-  return (
-    <section className="bg-card border border-border rounded-lg p-5 shadow-sm mb-6">
-      <h3 className="text-sm font-semibold mb-3">Calibrações registradas nesta sessão (multi-pontos)</h3>
-      <div className="space-y-3">
-        {items.map((rec) => {
-          const status = evaluateRecord(rec);
-          return (
-            <details key={rec.id} className="border border-border rounded-md">
-              <summary className="cursor-pointer px-3 py-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="font-mono text-xs">{rec.id}</span>
-                  <span className="font-medium">{rec.equipmentCode}</span>
-                  <span className="text-muted-foreground text-xs">{rec.points.length} ponto(s) · cert. {rec.certificate}</span>
-                </div>
-                <StatusBadge>{status}</StatusBadge>
-              </summary>
-              <div className="px-3 pb-3">
-                <table className="w-full text-xs">
-                  <thead className="text-muted-foreground">
-                    <tr className="text-left">
-                      <th className="py-1.5">Ponto</th><th>Nominal</th><th>Medido</th>
-                      <th>Erro</th><th>Incerteza</th><th>Resultado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rec.points.map((p) => {
-                      const ev = evaluatePoint(p);
-                      return (
-                        <tr key={p.id} className="border-t border-border">
-                          <td className="py-1.5">{p.label}</td>
-                          <td>{p.nominal} {p.unit}</td>
-                          <td>{p.measured} {p.unit}</td>
-                          <td className="font-mono">{ev.error.toFixed(4)}</td>
-                          <td>{p.uncertainty} {p.unit}</td>
-                          <td>
-                            <StatusBadge>{ev.approved ? "Conforme" : "Não conforme"}</StatusBadge>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </details>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 function CalPage() {
   const [refreshTick, setRefreshTick] = useState(0);
+  const calibrations = useTableStore(calibrationsStore);
+  const equipments = useTableStore(equipmentsStore);
+
+  const equipLabel = (id: string) => {
+    const e = equipments.find((x) => x.id === id);
+    return e ? `${e.code} — ${e.name}` : id.slice(0, 8);
+  };
+
   const upcoming = [...calibrations]
-    .filter((c) => c.status !== "Vencida" && c.status !== "Reprovada")
-    .sort((a, b) => a.validity.localeCompare(b.validity))
+    .filter((c) => c.next_due_date)
+    .sort((a, b) => (a.next_due_date ?? "").localeCompare(b.next_due_date ?? ""))
     .slice(0, 6);
 
   return (
@@ -307,37 +253,36 @@ function CalPage() {
       <PageHeader title="Calibrações" description="Cronograma, certificados, rastreabilidade metrológica e múltiplos pontos por equipamento" />
 
       <MultiPointForm onSaved={() => setRefreshTick((t) => t + 1)} />
-      <SavedCalibrations key={refreshTick} />
 
-      <div className="bg-card border border-border rounded-lg p-5 shadow-sm mb-6">
-        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><CalendarDays className="size-4" /> Próximas calibrações</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          {upcoming.map((c) => (
-            <div key={c.id} className="border border-border rounded-md p-3 bg-background">
-              <div className="text-xs font-mono text-muted-foreground">{c.id}</div>
-              <div className="text-sm font-medium truncate">{c.equipment.split(" — ")[0]}</div>
-              <div className="text-xs text-muted-foreground mt-1">Vence em {c.validity}</div>
-              <div className="mt-1.5"><StatusBadge>{c.status}</StatusBadge></div>
-            </div>
-          ))}
+      {upcoming.length > 0 && (
+        <div className="bg-card border border-border rounded-lg p-5 shadow-sm mb-6">
+          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><CalendarDays className="size-4" /> Próximas calibrações</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {upcoming.map((c) => (
+              <div key={c.id} className="border border-border rounded-md p-3 bg-background">
+                <div className="text-xs font-mono text-muted-foreground">{c.certificate_number ?? c.id.slice(0, 8)}</div>
+                <div className="text-sm font-medium truncate">{equipLabel(c.equipment_id)}</div>
+                <div className="text-xs text-muted-foreground mt-1">Vence em {c.next_due_date}</div>
+                <div className="mt-1.5"><StatusBadge>{c.points?.length ? evaluateRecord(c) : c.result}</StatusBadge></div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <DataTable
+        key={refreshTick}
         data={calibrations}
-        searchKeys={["id", "equipment", "lab", "certificate", "status", "result"]}
+        searchKeys={["certificate_number", "provider", "result"]}
         newLabel="Nova calibração"
         exportName="calibracoes"
         columns={[
-          { key: "id", header: "Código", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
-          { key: "equipment", header: "Equipamento" },
-          { key: "date", header: "Data" },
-          { key: "validity", header: "Validade" },
-          { key: "lab", header: "Laboratório" },
-          { key: "certificate", header: "Certificado", render: (r) => <span className="font-mono text-xs">{r.certificate}</span> },
-          { key: "uncertainty", header: "Incerteza" },
-          { key: "result", header: "Resultado", render: (r) => <StatusBadge>{r.result}</StatusBadge> },
-          { key: "status", header: "Status", render: (r) => <StatusBadge>{r.status}</StatusBadge> },
+          { key: "certificate_number", header: "Certificado", render: (r) => <span className="font-mono text-xs">{r.certificate_number ?? "—"}</span> },
+          { key: "equipment_id", header: "Equipamento", render: (r) => equipLabel(r.equipment_id) },
+          { key: "performed_at", header: "Data" },
+          { key: "next_due_date", header: "Validade", render: (r) => r.next_due_date ?? "—" },
+          { key: "provider", header: "Provedor", render: (r) => r.provider ?? "—" },
+          { key: "result", header: "Resultado", render: (r) => <StatusBadge>{r.points?.length ? evaluateRecord(r) : r.result}</StatusBadge> },
         ]}
       />
     </>
