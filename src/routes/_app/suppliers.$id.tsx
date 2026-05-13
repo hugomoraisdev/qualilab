@@ -42,6 +42,7 @@ function SupDetail() {
   const { id } = Route.useParams();
   const suppliers = useTableStore(suppliersStore);
   useTableStore(supplierEvaluationsStore);
+  useTableStore(supplierPortalStore);
   const { user } = useAuth();
   const s = suppliers.find((x) => x.id === id);
 
