@@ -1,97 +1,61 @@
-// Store de tickets de SAC (atendimento ao cliente) — Lovable Cloud.
-
-import { createCloudStore } from "./cloud-store";
+// SAC — tickets e timeline (Fase 2B, tabelas dedicadas).
+import { supabase } from "@/integrations/supabase/client";
+import { createTableStore } from "./table-store";
 
 export type TicketType = "reclamacao" | "sugestao" | "elogio" | "duvida";
 export type TicketStatus = "aberto" | "em_andamento" | "aguardando_cliente" | "encerrado";
 export type TicketPriority = "baixa" | "media" | "alta" | "critica";
 
-export interface TicketTimelineEntry {
-  date: string;
-  action: string;
-  author: string;
-}
-
-export interface CustomerTicket {
+export interface TicketRow {
   id: string;
   protocol: string;
-  customerName: string;
-  contactEmail: string;
+  customer_name: string;
+  contact_email: string | null;
   type: TicketType;
   description: string;
   status: TicketStatus;
   priority: TicketPriority;
   origin: "interno" | "portal";
-  linkedOccurrenceId?: string;
-  satisfactionScore?: 1 | 2 | 3 | 4 | 5;
-  createdAt: string;
-  updatedAt: string;
-  assignedTo: string;
-  timeline: TicketTimelineEntry[];
+  linked_occurrence_id: string | null;
+  satisfaction_score: number | null;
+  assigned_to: string | null;
+  assigned_to_name: string | null;
+  deleted_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
-const KEY = "qualilab_sac_tickets";
-
-const SEED: CustomerTicket[] = [
-  {
-    id: "SAC-001", protocol: "SAC-2026-001",
-    customerName: "Indústria Alfa Ltda", contactEmail: "qualidade@alfa.com.br",
-    type: "reclamacao", description: "Atraso na entrega do laudo de análise #4521.",
-    status: "em_andamento", priority: "alta", origin: "interno",
-    linkedOccurrenceId: "OC-002",
-    createdAt: "2026-04-12 09:30", updatedAt: "2026-04-15 16:10",
-    assignedTo: "Carla Administradora",
-    timeline: [
-      { date: "2026-04-12 09:30", author: "Sistema", action: "Ticket aberto" },
-      { date: "2026-04-12 14:00", author: "Carla Administradora", action: "Investigação iniciada" },
-      { date: "2026-04-15 16:10", author: "Carla Administradora", action: "NC OC-002 vinculada" },
-    ],
-  },
-  {
-    id: "SAC-002", protocol: "SAC-2026-002",
-    customerName: "Beta Engenharia", contactEmail: "compras@beta.com.br",
-    type: "elogio", description: "Excelente atendimento da equipe técnica.",
-    status: "encerrado", priority: "baixa", origin: "interno",
-    satisfactionScore: 5,
-    createdAt: "2026-04-20 11:00", updatedAt: "2026-04-22 10:00",
-    assignedTo: "Roberto Gestor",
-    timeline: [
-      { date: "2026-04-20 11:00", author: "Sistema", action: "Ticket aberto" },
-      { date: "2026-04-22 10:00", author: "Roberto Gestor", action: "Encerrado com avaliação 5★" },
-    ],
-  },
-  {
-    id: "SAC-003", protocol: "SAC-2026-003",
-    customerName: "Gamma Indústria", contactEmail: "lab@gamma.com.br",
-    type: "duvida", description: "Dúvida sobre incerteza expressa em laudo.",
-    status: "aguardando_cliente", priority: "media", origin: "portal",
-    createdAt: "2026-05-02 08:15", updatedAt: "2026-05-04 09:00",
-    assignedTo: "Paulo Auditor",
-    timeline: [
-      { date: "2026-05-02 08:15", author: "Portal Público", action: "Ticket aberto via /sac" },
-      { date: "2026-05-04 09:00", author: "Paulo Auditor", action: "Resposta enviada — aguardando cliente" },
-    ],
-  },
-];
-
-const store = createCloudStore<CustomerTicket[]>(KEY, SEED);
-
-export function listTickets(): CustomerTicket[] {
-  return store.get();
+export interface TimelineRow {
+  id: string;
+  ticket_id: string;
+  author_id: string | null;
+  author_name: string;
+  action: string;
+  created_at?: string;
 }
 
-export function getTicket(id: string): CustomerTicket | undefined {
-  return store.get().find((t) => t.id === id);
+export const ticketsStore = createTableStore<TicketRow>("tickets", "created_at", false);
+export const timelineStore = createTableStore<TimelineRow>("ticket_timeline", "created_at", true);
+
+export const listTickets = () => ticketsStore.list();
+export const getTicket = (id: string) => ticketsStore.list().find((t) => t.id === id);
+export const saveTicket = (t: TicketRow) => ticketsStore.upsert(t);
+
+export const listTimeline = (ticketId: string) =>
+  timelineStore.list().filter((e) => e.ticket_id === ticketId)
+    .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+export const addTimeline = (e: TimelineRow) => timelineStore.upsert(e);
+
+export async function nextProtocol(): Promise<string> {
+  const { data, error } = await (supabase as any).rpc("next_ticket_protocol");
+  if (error || !data) {
+    const yr = new Date().getFullYear();
+    const cnt = listTickets().filter((t) => t.protocol?.includes(String(yr))).length + 1;
+    return `SAC-${yr}-${String(cnt).padStart(3, "0")}`;
+  }
+  return data as string;
 }
 
-export function saveTicket(t: CustomerTicket) {
-  const all = store.get().filter((x) => x.id !== t.id);
-  all.unshift(t);
-  void store.set(all);
-}
-
-export function nextProtocol(): string {
-  const year = new Date().getFullYear();
-  const count = store.get().filter((t) => t.protocol.includes(String(year))).length + 1;
-  return `SAC-${year}-${String(count).padStart(3, "0")}`;
+export function newId(prefix: string) {
+  return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
 }

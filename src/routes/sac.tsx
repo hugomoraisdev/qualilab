@@ -3,7 +3,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { saveTicket, nextProtocol, type CustomerTicket, type TicketType } from "@/lib/sac-store";
+import {
+  saveTicket, addTimeline, nextProtocol, newId,
+  type TicketRow, type TicketType, type TimelineRow,
+} from "@/lib/sac-store";
 import { CheckCircle2 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -24,19 +27,34 @@ function SacPublic() {
   const [description, setDescription] = useState("");
   const [protocol, setProtocol] = useState<string | null>(null);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim() || !description.trim() || !contactEmail.trim()) return;
-    const now = new Date().toISOString().slice(0, 16).replace("T", " ");
-    const proto = nextProtocol();
-    const t: CustomerTicket = {
-      id: "SAC-" + Date.now().toString(36).toUpperCase(),
-      protocol: proto, customerName, contactEmail, type,
-      description, status: "aberto", priority: "media", origin: "portal",
-      createdAt: now, updatedAt: now, assignedTo: "—",
-      timeline: [{ date: now, author: "Portal Público", action: "Ticket aberto via /sac" }],
+    const proto = await nextProtocol();
+    const t: TicketRow = {
+      id: newId("SAC"),
+      protocol: proto,
+      customer_name: customerName,
+      contact_email: contactEmail,
+      type,
+      description,
+      status: "aberto",
+      priority: "media",
+      origin: "portal",
+      linked_occurrence_id: null,
+      satisfaction_score: null,
+      assigned_to: null,
+      assigned_to_name: null,
     };
-    saveTicket(t);
+    await saveTicket(t);
+    const ev: TimelineRow = {
+      id: newId("TL"),
+      ticket_id: t.id,
+      author_id: null,
+      author_name: "Portal Público",
+      action: "Ticket aberto via /sac",
+    };
+    await addTimeline(ev);
     setProtocol(proto);
   };
 

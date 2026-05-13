@@ -1,14 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, CalendarDays, ClipboardList, Forward, CheckCircle2, Plus } from "lucide-react";
 import {
-  getMeeting, saveMeeting, listMeetings, findNextMeeting, newId,
-  type Meeting, type AgendaItem, type AgendaStatus,
+  meetingsStore, agendaStore, saveMeeting, saveAgenda, findNextMeeting, newId,
+  type AgendaRow, type AgendaStatus, type MeetingRow,
 } from "@/lib/meetings-store";
+import { useTableStore } from "@/lib/table-store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -19,16 +20,12 @@ const STATUSES: AgendaStatus[] = ["Pendente", "Abordada", "Postergada", "Cancela
 function MeetingDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
-  const [meeting, setMeeting] = useState<Meeting | undefined>();
+  const allMeetings = useTableStore(meetingsStore);
+  const allAgenda = useTableStore(agendaStore);
+  const meeting = allMeetings.find((m) => m.id === id);
+  const agenda = allAgenda.filter((a) => a.meeting_id === id).sort((a, b) => a.position - b.position);
   const [newAgenda, setNewAgenda] = useState("");
-  const [allMeetings, setAllMeetings] = useState<Meeting[]>([]);
   const [targetMeetingId, setTargetMeetingId] = useState<string>("");
-
-  function refresh() {
-    setMeeting(getMeeting(id));
-    setAllMeetings(listMeetings());
-  }
-  useEffect(() => { refresh(); }, [id]);
 
   if (!meeting) {
     return (
@@ -43,73 +40,79 @@ function MeetingDetail() {
     );
   }
 
-  function updateAgendaStatus(itemId: string, status: AgendaStatus) {
-    if (!meeting) return;
-    const updated: Meeting = {
-      ...meeting,
-      agenda: meeting.agenda.map((a) => (a.id === itemId ? { ...a, status } : a)),
-    };
-    saveMeeting(updated);
-    refresh();
+  async function updateAgendaStatus(item: AgendaRow, status: AgendaStatus) {
+    await saveAgenda({ ...item, status });
   }
 
-  function addAgenda() {
+  async function addAgendaItem() {
     if (!meeting || !newAgenda.trim()) return;
-    const item: AgendaItem = { id: newId("A"), title: newAgenda.trim(), status: "Pendente" };
-    saveMeeting({ ...meeting, agenda: [...meeting.agenda, item] });
+    const item: AgendaRow = {
+      id: newId("A"),
+      meeting_id: meeting.id,
+      title: newAgenda.trim(),
+      status: "Pendente",
+      from_meeting_id: null,
+      notes: null,
+      position: agenda.length,
+    };
+    await saveAgenda(item);
     setNewAgenda("");
-    refresh();
   }
 
-  function postponePending() {
+  async function postponePending() {
     if (!meeting) return;
-    const pending = meeting.agenda.filter((a) => a.status === "Pendente");
+    const pending = agenda.filter((a) => a.status === "Pendente");
     if (!pending.length) { toast.info("Nenhuma pauta pendente para postergar."); return; }
 
-    let target = targetMeetingId ? getMeeting(targetMeetingId) : findNextMeeting(meeting);
+    let target: MeetingRow | undefined =
+      targetMeetingId ? allMeetings.find((m) => m.id === targetMeetingId) : findNextMeeting(meeting);
+
     if (!target) {
-      // cria nova reunião automaticamente em +7 dias
-      const nextDate = new Date(meeting.date + "T00:00:00");
+      const nextDate = new Date(meeting.meeting_date + "T00:00:00");
       nextDate.setDate(nextDate.getDate() + 7);
-      const created: Meeting = {
+      const created: MeetingRow = {
         id: newId("RU"),
         type: meeting.type + " (continuação)",
-        date: nextDate.toISOString().slice(0, 10),
-        time: meeting.time,
+        meeting_date: nextDate.toISOString().slice(0, 10),
+        meeting_time: meeting.meeting_time,
         participants: meeting.participants,
-        agenda: [],
         status: "Agendada",
+        recurrence_parent_id: null,
+        recurrence_frequency: null,
+        recurrence_until: null,
+        notes: null,
       };
-      saveMeeting(created);
+      await saveMeeting(created);
       target = created;
       toast.success("Nova reunião criada para receber as pautas postergadas.");
     }
 
-    // marca no atual como Postergada e copia para o destino
-    const transferred: AgendaItem[] = pending.map((a) => ({
-      ...a, id: newId("A"), status: "Pendente", fromMeetingId: meeting.id,
-      notes: `Postergada da reunião ${meeting.id}`,
-    }));
-    saveMeeting({
-      ...target,
-      agenda: [...target.agenda, ...transferred],
-    });
-    saveMeeting({
-      ...meeting,
-      agenda: meeting.agenda.map((a) => (a.status === "Pendente" ? { ...a, status: "Postergada" } : a)),
-    });
+    const targetAgendaCount = allAgenda.filter((a) => a.meeting_id === target!.id).length;
+
+    for (let i = 0; i < pending.length; i++) {
+      const a = pending[i];
+      await saveAgenda({
+        id: newId("A"),
+        meeting_id: target.id,
+        title: a.title,
+        status: "Pendente",
+        from_meeting_id: meeting.id,
+        notes: `Postergada da reunião ${meeting.id}`,
+        position: targetAgendaCount + i,
+      });
+      await saveAgenda({ ...a, status: "Postergada" });
+    }
+
     toast.success(`${pending.length} pauta(s) postergadas para ${target.id}`);
-    refresh();
   }
 
-  function finalize() {
+  async function finalize() {
     if (!meeting) return;
-    saveMeeting({ ...meeting, status: "Realizada" });
+    await saveMeeting({ ...meeting, status: "Realizada" });
     toast.success("Reunião marcada como realizada.");
-    refresh();
   }
 
-  const otherMeetings = allMeetings.filter((m) => m.id !== meeting.id && m.date >= meeting.date);
+  const otherMeetings = allMeetings.filter((m) => m.id !== meeting.id && m.meeting_date >= meeting.meeting_date);
 
   return (
     <>
@@ -119,7 +122,7 @@ function MeetingDetail() {
 
       <PageHeader
         title={meeting.type}
-        description={`Código ${meeting.id} · ${meeting.date}${meeting.time ? " às " + meeting.time : ""}`}
+        description={`Código ${meeting.id} · ${meeting.meeting_date}${meeting.meeting_time ? " às " + meeting.meeting_time : ""}`}
         actions={
           <>
             <StatusBadge>{meeting.status}</StatusBadge>
@@ -135,11 +138,11 @@ function MeetingDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <section className="lg:col-span-2 bg-card border border-border rounded-lg p-5 shadow-sm">
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <ClipboardList className="size-4 text-primary" /> Pautas ({meeting.agenda.length})
+            <ClipboardList className="size-4 text-primary" /> Pautas ({agenda.length})
           </h3>
 
           <div className="space-y-2">
-            {meeting.agenda.map((a) => (
+            {agenda.map((a) => (
               <div key={a.id} className={cn(
                 "border border-border rounded-md p-3 flex flex-wrap items-center gap-3",
                 a.status === "Postergada" && "bg-warning/5",
@@ -147,15 +150,15 @@ function MeetingDetail() {
               )}>
                 <div className="flex-1 min-w-[200px]">
                   <div className="text-sm font-medium">{a.title}</div>
-                  {a.fromMeetingId && (
+                  {a.from_meeting_id && (
                     <div className="text-[11px] text-muted-foreground">
-                      <Forward className="size-3 inline mr-1" /> Postergada da reunião {a.fromMeetingId}
+                      <Forward className="size-3 inline mr-1" /> Postergada da reunião {a.from_meeting_id}
                     </div>
                   )}
                 </div>
                 <select
                   value={a.status}
-                  onChange={(e) => updateAgendaStatus(a.id, e.target.value as AgendaStatus)}
+                  onChange={(e) => updateAgendaStatus(a, e.target.value as AgendaStatus)}
                   className="h-8 rounded-md border border-input bg-background px-2 text-xs"
                 >
                   {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -163,7 +166,7 @@ function MeetingDetail() {
                 <StatusBadge>{a.status}</StatusBadge>
               </div>
             ))}
-            {!meeting.agenda.length && (
+            {!agenda.length && (
               <div className="text-sm text-muted-foreground italic text-center py-4">Sem pautas cadastradas.</div>
             )}
           </div>
@@ -173,9 +176,9 @@ function MeetingDetail() {
               placeholder="Adicionar nova pauta…"
               value={newAgenda}
               onChange={(e) => setNewAgenda(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addAgenda()}
+              onKeyDown={(e) => e.key === "Enter" && addAgendaItem()}
             />
-            <Button size="sm" variant="outline" onClick={addAgenda}><Plus className="size-4" /> Adicionar</Button>
+            <Button size="sm" variant="outline" onClick={addAgendaItem}><Plus className="size-4" /> Adicionar</Button>
           </div>
         </section>
 
@@ -185,16 +188,16 @@ function MeetingDetail() {
               <CalendarDays className="size-4" /> Informações
             </h3>
             <dl className="text-sm space-y-2">
-              <div><dt className="text-xs text-muted-foreground">Data</dt><dd>{meeting.date}{meeting.time && " às " + meeting.time}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Data</dt><dd>{meeting.meeting_date}{meeting.meeting_time && " às " + meeting.meeting_time}</dd></div>
               <div><dt className="text-xs text-muted-foreground">Participantes</dt>
                 <dd className="text-xs">{meeting.participants.join(", ")}</dd></div>
-              {meeting.recurrence && (
+              {meeting.recurrence_frequency && (
                 <div><dt className="text-xs text-muted-foreground">Recorrência</dt>
-                  <dd>{meeting.recurrence.frequency} · até {meeting.recurrence.until}</dd></div>
+                  <dd>{meeting.recurrence_frequency} · até {meeting.recurrence_until}</dd></div>
               )}
-              {meeting.recurrenceParentId && (
+              {meeting.recurrence_parent_id && (
                 <div><dt className="text-xs text-muted-foreground">Origem da série</dt>
-                  <dd className="font-mono text-xs">{meeting.recurrenceParentId}</dd></div>
+                  <dd className="font-mono text-xs">{meeting.recurrence_parent_id}</dd></div>
               )}
             </dl>
           </section>
@@ -215,7 +218,7 @@ function MeetingDetail() {
               >
                 <option value="">Próxima reunião disponível ou criar nova</option>
                 {otherMeetings.map((m) => (
-                  <option key={m.id} value={m.id}>{m.id} — {m.type} ({m.date})</option>
+                  <option key={m.id} value={m.id}>{m.id} — {m.type} ({m.meeting_date})</option>
                 ))}
               </select>
               <Button className="w-full" size="sm" onClick={postponePending}>

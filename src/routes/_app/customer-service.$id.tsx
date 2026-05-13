@@ -1,10 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ArrowLeft, Star, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getTicket, saveTicket, type CustomerTicket, type TicketStatus } from "@/lib/sac-store";
+import {
+  ticketsStore, timelineStore, saveTicket, addTimeline, newId,
+  type TicketRow, type TicketStatus, type TimelineRow,
+} from "@/lib/sac-store";
+import { useTableStore } from "@/lib/table-store";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -22,41 +26,45 @@ function TicketDetail() {
   const { id } = Route.useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [t, setT] = useState<CustomerTicket | undefined>();
+  const tickets = useTableStore(ticketsStore);
+  const timeline = useTableStore(timelineStore)
+    .filter((e) => e.ticket_id === id)
+    .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+  const t = tickets.find((x) => x.id === id);
   const [score, setScore] = useState<number>(0);
 
   useEffect(() => {
-    const found = getTicket(id);
-    setT(found);
-    setScore(found?.satisfactionScore ?? 0);
-  }, [id]);
+    setScore(t?.satisfaction_score ?? 0);
+  }, [t?.satisfaction_score]);
 
   if (!t) return <div className="text-sm text-muted-foreground">Atendimento não encontrado.</div>;
 
-  const update = (patch: Partial<CustomerTicket>, action: string) => {
-    const now = new Date().toISOString().slice(0, 16).replace("T", " ");
-    const next: CustomerTicket = {
-      ...t, ...patch, updatedAt: now,
-      timeline: [...t.timeline, { date: now, author: user?.name ?? "—", action }],
+  const update = async (patch: Partial<TicketRow>, action: string) => {
+    await saveTicket({ ...t, ...patch });
+    const ev: TimelineRow = {
+      id: newId("TL"),
+      ticket_id: t.id,
+      author_id: user?.id ?? null,
+      author_name: user?.name ?? "—",
+      action,
     };
-    saveTicket(next);
-    setT(next);
+    await addTimeline(ev);
   };
 
-  const setStatus = (status: TicketStatus) => {
-    update({ status }, `Status alterado para "${STATUS_LABEL[status]}"`);
+  const setStatus = async (status: TicketStatus) => {
+    await update({ status }, `Status alterado para "${STATUS_LABEL[status]}"`);
     toast.success("Status atualizado");
   };
 
-  const linkOccurrence = () => {
-    update({ linkedOccurrenceId: "OC-" + Math.floor(Math.random() * 900 + 100) }, "Não conformidade aberta a partir deste atendimento");
+  const linkOccurrence = async () => {
+    await update({ linked_occurrence_id: "OC-" + Math.floor(Math.random() * 900 + 100) }, "Não conformidade aberta a partir deste atendimento");
     toast.success("Não conformidade vinculada", { description: "Redirecionando para nova ocorrência…" });
     setTimeout(() => navigate({ to: "/occurrences" }), 800);
   };
 
-  const setSat = (n: number) => {
+  const setSat = async (n: number) => {
     setScore(n);
-    update({ satisfactionScore: n as 1 | 2 | 3 | 4 | 5 }, `Pesquisa de satisfação registrada: ${n}/5`);
+    await update({ satisfaction_score: n }, `Pesquisa de satisfação registrada: ${n}/5`);
   };
 
   return (
@@ -64,7 +72,7 @@ function TicketDetail() {
       <Link to="/customer-service" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"><ArrowLeft className="size-4 mr-1" /> Voltar</Link>
       <PageHeader
         title={`Protocolo ${t.protocol}`}
-        description={`${t.customerName} · ${TYPE_LABEL[t.type]}`}
+        description={`${t.customer_name} · ${TYPE_LABEL[t.type]}`}
         actions={<><StatusBadge>{t.priority}</StatusBadge><StatusBadge>{STATUS_LABEL[t.status]}</StatusBadge></>}
       />
 
@@ -81,26 +89,29 @@ function TicketDetail() {
               <Button size="sm" variant="outline" onClick={() => setStatus("em_andamento")}>Em andamento</Button>
               <Button size="sm" variant="outline" onClick={() => setStatus("aguardando_cliente")}>Aguardando cliente</Button>
               <Button size="sm" variant="outline" onClick={() => setStatus("encerrado")}>Encerrar</Button>
-              {!t.linkedOccurrenceId && (
+              {!t.linked_occurrence_id && (
                 <Button size="sm" onClick={linkOccurrence}><AlertTriangle className="size-4" /> Abrir Não Conformidade</Button>
               )}
             </div>
-            {t.linkedOccurrenceId && (
+            {t.linked_occurrence_id && (
               <div className="mt-3 text-xs">
-                Vinculado à ocorrência <span className="font-mono text-primary">{t.linkedOccurrenceId}</span>
+                Vinculado à ocorrência <span className="font-mono text-primary">{t.linked_occurrence_id}</span>
               </div>
             )}
           </div>
 
           <div className="bg-card border border-border rounded-lg p-5 shadow-sm">
-            <h3 className="text-sm font-semibold mb-3">Linha do tempo</h3>
+            <h3 className="text-sm font-semibold mb-3">Linha do tempo ({timeline.length})</h3>
             <ol className="space-y-2.5">
-              {t.timeline.map((e, i) => (
-                <li key={i} className="text-sm border-l-2 border-primary/30 pl-3">
-                  <div className="text-xs text-muted-foreground">{e.date} · {e.author}</div>
+              {timeline.map((e) => (
+                <li key={e.id} className="text-sm border-l-2 border-primary/30 pl-3">
+                  <div className="text-xs text-muted-foreground">
+                    {e.created_at ? new Date(e.created_at).toLocaleString("pt-BR") : "—"} · {e.author_name}
+                  </div>
                   <div>{e.action}</div>
                 </li>
               ))}
+              {!timeline.length && <li className="text-xs text-muted-foreground italic">Sem eventos.</li>}
             </ol>
           </div>
         </section>
@@ -109,12 +120,12 @@ function TicketDetail() {
           <div className="bg-card border border-border rounded-lg p-5 shadow-sm">
             <h3 className="text-sm font-semibold mb-3">Dados</h3>
             <dl className="text-sm space-y-1.5">
-              <div className="flex justify-between"><dt className="text-muted-foreground">Cliente</dt><dd>{t.customerName}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">E-mail</dt><dd className="text-xs">{t.contactEmail || "—"}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">Cliente</dt><dd>{t.customer_name}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">E-mail</dt><dd className="text-xs">{t.contact_email || "—"}</dd></div>
               <div className="flex justify-between"><dt className="text-muted-foreground">Origem</dt><dd>{t.origin === "portal" ? "Portal /sac" : "Interno"}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">Responsável</dt><dd>{t.assignedTo}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">Aberto em</dt><dd>{t.createdAt}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">Atualizado</dt><dd>{t.updatedAt}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">Responsável</dt><dd>{t.assigned_to_name ?? "—"}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">Aberto em</dt><dd className="text-xs">{t.created_at ? new Date(t.created_at).toLocaleString("pt-BR") : "—"}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">Atualizado</dt><dd className="text-xs">{t.updated_at ? new Date(t.updated_at).toLocaleString("pt-BR") : "—"}</dd></div>
             </dl>
           </div>
 

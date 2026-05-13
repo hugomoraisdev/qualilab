@@ -1,19 +1,25 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { listTickets, type CustomerTicket } from "@/lib/sac-store";
+import { useTableStore } from "@/lib/table-store";
+import { ticketsStore } from "@/lib/sac-store";
 import { Plus, Headset, MessageSquare, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/customer-service")({ component: SacPage });
 
+const STATUS_LABEL: Record<string, string> = {
+  aberto: "Aberto", em_andamento: "Em andamento", aguardando_cliente: "Aguardando cliente", encerrado: "Encerrado",
+};
+const TYPE_LABEL: Record<string, string> = {
+  reclamacao: "Reclamação", sugestao: "Sugestão", elogio: "Elogio", duvida: "Dúvida",
+};
+
 function SacPage() {
   const navigate = useNavigate();
-  const [tickets, setTickets] = useState<CustomerTicket[]>([]);
-
-  useEffect(() => { setTickets(listTickets()); }, []);
+  const tickets = useTableStore(ticketsStore).filter((t) => !t.deleted_at);
 
   const stats = useMemo(() => ({
     total: tickets.length,
@@ -21,13 +27,6 @@ function SacPage() {
     high: tickets.filter((t) => t.priority === "alta" || t.priority === "critica").length,
     closed: tickets.filter((t) => t.status === "encerrado").length,
   }), [tickets]);
-
-  const STATUS_LABEL: Record<string, string> = {
-    aberto: "Aberto", em_andamento: "Em andamento", aguardando_cliente: "Aguardando cliente", encerrado: "Encerrado",
-  };
-  const TYPE_LABEL: Record<string, string> = {
-    reclamacao: "Reclamação", sugestao: "Sugestão", elogio: "Elogio", duvida: "Dúvida",
-  };
 
   return (
     <>
@@ -46,19 +45,19 @@ function SacPage() {
 
       <DataTable
         data={tickets}
-        searchKeys={["protocol", "customerName", "type", "status", "assignedTo"]}
+        searchKeys={["protocol", "customer_name", "type", "status", "assigned_to_name"]}
         hideNew
         exportName="sac"
         onRowClick={(r) => navigate({ to: "/customer-service/$id", params: { id: r.id } })}
         columns={[
           { key: "protocol", header: "Protocolo", render: (r) => <span className="font-mono text-xs">{r.protocol}</span> },
-          { key: "customerName", header: "Cliente", render: (r) => <span className="font-medium">{r.customerName}</span> },
-          { key: "type", header: "Tipo", render: (r) => TYPE_LABEL[r.type] },
+          { key: "customer_name", header: "Cliente", render: (r) => <span className="font-medium">{r.customer_name}</span> },
+          { key: "type", header: "Tipo", render: (r) => TYPE_LABEL[r.type] ?? r.type },
           { key: "priority", header: "Prioridade", render: (r) => <StatusBadge>{r.priority}</StatusBadge> },
-          { key: "status", header: "Status", render: (r) => <StatusBadge>{STATUS_LABEL[r.status]}</StatusBadge> },
+          { key: "status", header: "Status", render: (r) => <StatusBadge>{STATUS_LABEL[r.status] ?? r.status}</StatusBadge> },
           { key: "origin", header: "Origem", render: (r) => <span className="text-xs">{r.origin === "portal" ? "Portal /sac" : "Interno"}</span> },
-          { key: "assignedTo", header: "Responsável" },
-          { key: "createdAt", header: "Aberto em" },
+          { key: "assigned_to_name", header: "Responsável", render: (r) => r.assigned_to_name ?? "—" },
+          { key: "created_at", header: "Aberto em", render: (r) => r.created_at ? new Date(r.created_at).toLocaleString("pt-BR") : "—" },
         ]}
       />
 

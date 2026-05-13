@@ -94,6 +94,112 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_findings: {
+        Row: {
+          audit_id: string
+          created_at: string
+          id: string
+          observation: string | null
+          position: number
+          requirement: string
+          result: string
+          severity: string | null
+          updated_at: string
+        }
+        Insert: {
+          audit_id: string
+          created_at?: string
+          id?: string
+          observation?: string | null
+          position?: number
+          requirement: string
+          result?: string
+          severity?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audit_id?: string
+          created_at?: string
+          id?: string
+          observation?: string | null
+          position?: number
+          requirement?: string
+          result?: string
+          severity?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_findings_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "audits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audits: {
+        Row: {
+          area: string | null
+          auditor_id: string | null
+          auditor_name: string | null
+          code: string | null
+          created_at: string
+          deleted_at: string | null
+          findings_count: number
+          id: string
+          notes: string | null
+          performed_at: string | null
+          planned_at: string | null
+          scope: string
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          area?: string | null
+          auditor_id?: string | null
+          auditor_name?: string | null
+          code?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          findings_count?: number
+          id?: string
+          notes?: string | null
+          performed_at?: string | null
+          planned_at?: string | null
+          scope: string
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string | null
+          auditor_id?: string | null
+          auditor_name?: string | null
+          code?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          findings_count?: number
+          id?: string
+          notes?: string | null
+          performed_at?: string | null
+          planned_at?: string | null
+          scope?: string
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audits_auditor_id_fkey"
+            columns: ["auditor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calibrations: {
         Row: {
           certificate_number: string | null
@@ -375,6 +481,321 @@ export type Database = {
             columns: ["responsible_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_responses: {
+        Row: {
+          approval_status: string
+          approved_at: string | null
+          approver_id: string | null
+          created_at: string
+          form_id: string
+          id: string
+          submitted_at: string
+          submitted_by: string | null
+          submitted_by_name: string | null
+          updated_at: string
+          values: Json
+        }
+        Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approver_id?: string | null
+          created_at?: string
+          form_id: string
+          id?: string
+          submitted_at?: string
+          submitted_by?: string | null
+          submitted_by_name?: string | null
+          updated_at?: string
+          values?: Json
+        }
+        Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approver_id?: string | null
+          created_at?: string
+          form_id?: string
+          id?: string
+          submitted_at?: string
+          submitted_by?: string | null
+          submitted_by_name?: string | null
+          updated_at?: string
+          values?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_responses_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forms: {
+        Row: {
+          approvers: string[] | null
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          fields: Json
+          id: string
+          requires_approval: boolean
+          responsible_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          approvers?: string[] | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          fields?: Json
+          id?: string
+          requires_approval?: boolean
+          responsible_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          approvers?: string[] | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          fields?: Json
+          id?: string
+          requires_approval?: boolean
+          responsible_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forms_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      indicator_results: {
+        Row: {
+          created_at: string
+          id: string
+          indicator_id: string
+          notes: string | null
+          period: string
+          status: string | null
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          indicator_id: string
+          notes?: string | null
+          period: string
+          status?: string | null
+          value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          indicator_id?: string
+          notes?: string | null
+          period?: string
+          status?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicator_results_indicator_id_fkey"
+            columns: ["indicator_id"]
+            isOneToOne: false
+            referencedRelation: "indicators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      indicators: {
+        Row: {
+          area: string | null
+          code: string | null
+          created_at: string
+          deleted_at: string | null
+          direction: string
+          frequency: string
+          id: string
+          name: string
+          notes: string | null
+          responsible_id: string | null
+          target: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          area?: string | null
+          code?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          direction?: string
+          frequency?: string
+          id?: string
+          name: string
+          notes?: string | null
+          responsible_id?: string | null
+          target?: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string | null
+          code?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          direction?: string
+          frequency?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          responsible_id?: string | null
+          target?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicators_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_agenda: {
+        Row: {
+          created_at: string
+          from_meeting_id: string | null
+          id: string
+          meeting_id: string
+          notes: string | null
+          position: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          from_meeting_id?: string | null
+          id?: string
+          meeting_id: string
+          notes?: string | null
+          position?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          from_meeting_id?: string | null
+          id?: string
+          meeting_id?: string
+          notes?: string | null
+          position?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_agenda_from_meeting_id_fkey"
+            columns: ["from_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_agenda_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meetings: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          id: string
+          meeting_date: string
+          meeting_time: string | null
+          notes: string | null
+          participants: string[]
+          recurrence_frequency: string | null
+          recurrence_parent_id: string | null
+          recurrence_until: string | null
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          meeting_date: string
+          meeting_time?: string | null
+          notes?: string | null
+          participants?: string[]
+          recurrence_frequency?: string | null
+          recurrence_parent_id?: string | null
+          recurrence_until?: string | null
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          meeting_date?: string
+          meeting_time?: string | null
+          notes?: string | null
+          participants?: string[]
+          recurrence_frequency?: string | null
+          recurrence_parent_id?: string | null
+          recurrence_until?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_recurrence_parent_id_fkey"
+            columns: ["recurrence_parent_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
             referencedColumns: ["id"]
           },
         ]
@@ -672,6 +1093,120 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_timeline: {
+        Row: {
+          action: string
+          author_id: string | null
+          author_name: string
+          created_at: string
+          id: string
+          ticket_id: string
+        }
+        Insert: {
+          action: string
+          author_id?: string | null
+          author_name: string
+          created_at?: string
+          id?: string
+          ticket_id: string
+        }
+        Update: {
+          action?: string
+          author_id?: string | null
+          author_name?: string
+          created_at?: string
+          id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_timeline_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_timeline_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          assigned_to: string | null
+          assigned_to_name: string | null
+          contact_email: string | null
+          created_at: string
+          customer_name: string
+          deleted_at: string | null
+          description: string
+          id: string
+          linked_occurrence_id: string | null
+          origin: string
+          priority: string
+          protocol: string
+          satisfaction_score: number | null
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          assigned_to_name?: string | null
+          contact_email?: string | null
+          created_at?: string
+          customer_name: string
+          deleted_at?: string | null
+          description: string
+          id?: string
+          linked_occurrence_id?: string | null
+          origin?: string
+          priority?: string
+          protocol: string
+          satisfaction_score?: number | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          assigned_to_name?: string | null
+          contact_email?: string | null
+          created_at?: string
+          customer_name?: string
+          deleted_at?: string | null
+          description?: string
+          id?: string
+          linked_occurrence_id?: string | null
+          origin?: string
+          priority?: string
+          protocol?: string
+          satisfaction_score?: number | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_linked_occurrence_id_fkey"
+            columns: ["linked_occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "occurrences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -709,6 +1244,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      next_ticket_protocol: { Args: never; Returns: string }
     }
     Enums: {
       app_role: "admin" | "gestor" | "tecnico" | "auditor" | "consulta"

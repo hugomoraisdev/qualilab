@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
-import { createMeetingSeries, type Meeting, type AgendaItem } from "@/lib/meetings-store";
+import { ArrowLeft } from "lucide-react";
+import { createMeetingSeries, type RecurrenceFrequency } from "@/lib/meetings-store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/meetings/new")({ component: NewMeeting });
@@ -20,26 +20,26 @@ function NewMeeting() {
   const [participants, setParticipants] = useState("Roberto Gestor, Mariana Técnica, Paulo Auditor");
   const [agendaText, setAgendaText] = useState("Revisão de indicadores\nStatus de auditorias\nAções corretivas em aberto");
   const [recurring, setRecurring] = useState(false);
-  const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "monthly" | "quarterly">("monthly");
+  const [frequency, setFrequency] = useState<RecurrenceFrequency>("monthly");
   const [until, setUntil] = useState(() => {
     const d = new Date(); d.setMonth(d.getMonth() + 6);
     return d.toISOString().slice(0, 10);
   });
 
-  function save() {
-    const agenda: AgendaItem[] = agendaText
+  async function save() {
+    const agenda = agendaText
       .split("\n")
       .map((s) => s.trim()).filter(Boolean)
-      .map((title, i) => ({ id: `A${i + 1}-${Date.now().toString(36)}`, title, status: "Pendente" as const }));
+      .map((title) => ({ title }));
 
-    const base: Omit<Meeting, "id"> = {
-      type, date, time,
+    const created = await createMeetingSeries({
+      type,
+      meeting_date: date,
+      meeting_time: time,
       participants: participants.split(",").map((p) => p.trim()).filter(Boolean),
       agenda,
-      status: "Agendada",
       recurrence: recurring ? { frequency, until } : undefined,
-    };
-    const created = createMeetingSeries(base);
+    });
     toast.success(
       recurring ? `${created.length} reuniões criadas (recorrência ${frequency})` : "Reunião criada",
       { description: `Primeira em ${date}` },
@@ -93,7 +93,7 @@ function NewMeeting() {
                 <select
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={frequency}
-                  onChange={(e) => setFrequency(e.target.value as "weekly" | "biweekly" | "monthly" | "quarterly")}
+                  onChange={(e) => setFrequency(e.target.value as RecurrenceFrequency)}
                 >
                   <option value="weekly">Semanal</option>
                   <option value="biweekly">Quinzenal</option>
