@@ -115,7 +115,7 @@ function NewRevisionDialog({
   doc,
   onArchived,
 }: {
-  doc: ReturnType<typeof useTableStore<any>>[number];
+  doc: DocumentRow;
   onArchived: () => void;
 }) {
   const { user } = useAuth();
