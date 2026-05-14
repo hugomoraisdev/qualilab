@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useAuth, type Role } from "@/lib/auth";
+import { useLabUnits, assignUserUnit } from "@/lib/lab-units-store";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, ShieldCheck, ShieldOff, UserPlus } from "lucide-react";
