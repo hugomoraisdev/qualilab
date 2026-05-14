@@ -14,6 +14,7 @@ import { risksStore } from "./risks-store";
 import type { DocumentMeta } from "./document-meta-store";
 import { emptyMeta, stageLabel } from "./document-meta-store";
 import { useAllRiskMeta } from "./risk-meta-store";
+import { useAllSupplierMeta, deriveDocumentStatus } from "./supplier-meta-store";
 
 export type NotificationLevel = "info" | "warning" | "danger";
 export type NotificationCategory =
