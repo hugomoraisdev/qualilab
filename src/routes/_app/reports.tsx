@@ -55,7 +55,7 @@ function ReportsPage() {
     {
       title: "Ocorrências por período",
       cols: ["Código", "Tipo", "Origem", "Data", "Responsável", "Status"],
-      build: () => occurrences.map((o) => [o.id, o.type, o.origin, o.date, o.responsible, o.status]),
+      build: () => occurrences.map((o) => [o.code ?? o.id, o.type, o.origin, o.occurred_at, o.responsible_id ?? "—", o.status]),
     },
     {
       title: "Não conformidades por severidade",

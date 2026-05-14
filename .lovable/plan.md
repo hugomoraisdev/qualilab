@@ -1,95 +1,65 @@
-# Fase 2B — Modelagem Relacional Completa
+## Análise (Status atual do módulo Ocorrências)
 
-A Fase 2A persistiu tudo em `app_data` (JSON). A Fase 2B troca isso por **tabelas dedicadas** com FKs, índices, RLS por papel e Realtime — em **3 lotes independentes**, cada um com migração + refactor de stores + manutenção de API pública.
-
----
-
-## Princípios
-
-1. **Stores mantêm a mesma assinatura pública** (`listX`, `saveX`, `deleteX`) — nenhum componente precisa mudar. Internamente passam a chamar Supabase ao invés do `CloudStore`.
-2. **RLS por papel** usando `has_role()` (já existe).
-3. **Soft delete** via coluna `deleted_at` para módulos auditáveis (NCs, riscos, auditorias).
-4. **Realtime** habilitado em todas as tabelas que a UI consome ao vivo.
-5. **Migração de dados:** seeds estáticos de `mock-data.ts` viram `INSERT` idempotentes (`ON CONFLICT DO NOTHING`) na primeira migração de cada lote.
-
----
-
-## Lote 1 — Núcleo da Qualidade (este turno)
-
-Módulos mais interconectados; valor imediato.
-
-| Tabela | Campos principais | RLS |
+| Requisito | Status | Onde |
 |---|---|---|
-| `documents` | code, title, category, version, status, validity, responsible_id, file_url | view: todos auth · write: admin/gestor |
-| `document_reads` | document_id (FK), user_id (FK), confirmed_at | view+insert: self · admin lê tudo |
-| `occurrences` | type, origin, description, date, severity, status, responsible_id, linked_* | view: auditor+ · write: tecnico+ |
-| `risks` | process, description, cause, consequence, probability, impact, level (gerada), classification (gerada), responsible_id, status | view: auditor+ · write: gestor+ |
-| `action_plans` | origin_type, origin_id, description, responsible_id, deadline, priority, status, progress | view: todos auth · write: gestor+ |
+| Registrar ocorrência / reclamação / NC | ✅ | `occurrences` + `tickets` |
+| Responsável | ✅ | `responsible_id` |
+| Prazo de tratamento | ❌ | sem coluna `deadline` |
+| 5 Porquês / Ishikawa / Brainstorm | ✅ | `RootCauseSection` |
+| 5W2H | ❌ | não existe |
+| Plano de ação | ✅ | `action_plans` (sem vínculo direto na UI da ocorrência) |
+| Notificações de prazo / vencidas | ✅ (ações) / ❌ (ocorrência) | `notifications.ts` |
+| Verificação de eficácia | ❌ | sem campo |
+| Vínculo a riscos | ❌ | só audit/documento |
+| Vínculo a fornecedores | ❌ | — |
+| Vínculo a auditorias | ✅ | `linked_audit_id` (não exposto) |
+| Anexos / evidências | ❌ | — |
+| Relatório / análise de tendência | ⚠️ parcial | apenas tabela |
+| Histórico completo | ⚠️ | `audit_logs` existe mas sem trigger em `occurrences` |
+| Etapas / acompanhamento | ⚠️ | só status |
+| Campos personalizados | ❌ | — |
 
-**Triggers:** `risks.level = probability * impact` calculado automaticamente; `set_updated_at` em todas; classificação derivada por trigger.
+## Plano de implementação
 
-**Refactor:** cria `src/lib/documents-store.ts`, `occurrences-store.ts`, `risks-store.ts`, `action-plans-store.ts`. Telas que hoje usam `mock-data.ts` passam a usar os novos stores. `document-reads-store.ts` migra de `app_data` → tabela.
+### 1. Migração
+Adicionar à tabela `occurrences`:
+- `deadline date`
+- `linked_risk_id uuid`, `linked_supplier_id uuid`
+- `effectiveness_status text`, `effectiveness_verified_at date`, `effectiveness_notes text`, `effectiveness_verified_by uuid`
+- `attachments jsonb default '[]'`
+- `custom_fields jsonb default '{}'`
+- `five_w2h jsonb` (What/Why/Where/When/Who/How/HowMuch)
+- Trigger `log_table_audit('ocorrencias','description')` → `audit_logs`
 
----
+### 2. Store
+Atualizar `occurrences-store.ts` com novos campos e tipos `FiveW2HData`, `Attachment`.
 
-## Lote 2 — Operação (próximo turno, sob aprovação)
+### 3. Detalhe da ocorrência (`occurrences.$id.tsx`)
+Reorganizar em abas:
+- **Visão geral**: edição inline de tipo, severidade, status, responsável, prazo, ação imediata, vínculos (risco / fornecedor / auditoria / documento), campos personalizados.
+- **Causa raiz**: 5 Porquês, Ishikawa, Brainstorm (mantido) + nova aba **5W2H**.
+- **Plano de ação**: lista filtrada de `action_plans` com `origin_type='occurrence'` + `origin_id`, botão "Nova ação" pré-preenchido.
+- **Eficácia**: registrar verificação (status, data, responsável, notas).
+- **Anexos**: lista de URLs/descrições.
+- **Histórico**: timeline lida de `audit_logs` (módulo `ocorrencias`).
 
-| Tabela | Função |
-|---|---|
-| `equipments` | Cadastro de equipamentos |
-| `calibrations` | Cabeçalho da calibração |
-| `calibration_points` | Pontos individuais (FK para calibrations) |
-| `suppliers` | Fornecedores + classificação |
-| `purchases` | Processos de compra |
-| `competencies` | Matriz colaborador × competência |
+### 4. Lista (`occurrences.tsx`)
+- Cards de KPIs: Abertas / Em análise / Atrasadas / Concluídas.
+- Mini-gráfico de tendência (últimos 6 meses, por tipo).
+- Filtros rápidos por status/tipo/severidade.
+- Botão "Nova ocorrência" abre dialog com campos completos.
 
-Substitui `calibration-store.ts` (hoje em CloudStore) e migra `equipments`, `suppliers`, `purchases`, `competencies` de `mock-data.ts`.
+### 5. Notificações
+Em `notifications.ts`, nova categoria `occurrence`: alerta quando `deadline` ≤ 7 dias ou vencida e status ≠ concluida.
 
----
+### 6. PDF
+Estender `pdf-export.ts` com `exportOccurrencesPdf` (lista + responsável + prazo + status + vínculos).
 
-## Lote 3 — Processos (turno final, sob aprovação)
-
-| Tabela | Função |
-|---|---|
-| `audits` + `audit_findings` | Auditorias com achados vinculados a NCs |
-| `meetings` + `meeting_agenda_items` | Reuniões com pauta normalizada (FK) |
-| `meeting_recurrences` | Série + frequência + limite |
-| `custom_forms` + `form_fields` + `form_responses` | Formulários e respostas com aprovação |
-| `audit_log` | Trilha de auditoria de ações administrativas |
-
-Substitui `meetings-store.ts`, `forms-store.ts` (CloudStore) e `audits`, `auditLog` (mock).
-
----
-
-## Detalhes técnicos do Lote 1 (a executar agora)
-
-### Migração SQL (resumo)
-
-- Cria 5 tabelas com `id uuid PK default gen_random_uuid()`, `created_at`, `updated_at`.
-- FKs: `responsible_id → profiles(id)`, `action_plans.origin_id → occurrences/risks/audits` (genérico via `origin_type` discriminador).
-- Generated columns: `risks.level GENERATED ALWAYS AS (probability * impact) STORED`.
-- RLS habilitado + policies por operação (SELECT/INSERT/UPDATE/DELETE).
-- Índices em colunas filtradas: `status`, `severity`, `validity`, `deadline`.
-- Trigger `set_updated_at` em todas.
-- Adição à publicação `supabase_realtime`.
-- Seeds: `INSERT … ON CONFLICT (code) DO NOTHING` para os documentos/equipamentos atuais; `responsible_id` = NULL inicialmente (texto preservado em coluna `responsible_name` legacy).
-
-### Refactor de código
-
-- 4 stores novos com a mesma forma das funções pré-existentes.
-- `documents.tsx`, `documents.$id.tsx`, `occurrences.tsx`, `occurrences.$id.tsx`, `risks.tsx`, `risks.$id.tsx`, `action-plans.tsx` passam a importar dos stores em vez de `mock-data.ts`.
-- `document-reads-store.ts` reescrito: lê/escreve direto na tabela, escuta Realtime.
-- Validação de role na UI permanece via `usePermission`; o RLS é a 2ª linha de defesa.
-
-### Compatibilidade
-
-- Stores expõem versão **assíncrona** (`async listOccurrences()`) onde necessário, e versão síncrona via cache para listas que são consultadas em loops de render.
-- Padrão idêntico ao `CloudStore`: hidrata na montagem, mantém cache, dispara `storage:KEY` para invalidação.
-
----
-
-## Confirmação
-
-Posso executar o **Lote 1 agora** (1 migração + 4 stores + ~7 telas refatoradas). Os Lotes 2 e 3 ficam para turnos seguintes, sob nova aprovação a cada um, para você revisar incrementalmente.
-
-Confirma seguir com o **Lote 1**?
+## Arquivos
+- migration SQL
+- `src/lib/occurrences-store.ts` (atualizar)
+- `src/routes/_app/occurrences.$id.tsx` (refatorar com abas)
+- `src/routes/_app/occurrences.tsx` (KPIs + dialog)
+- `src/lib/notifications.ts` (categoria occurrence)
+- `src/lib/pdf-export.ts` (export ocorrências)
+- `src/components/AuditLogTimeline.tsx` (componente reutilizável de histórico, se ainda não existir)

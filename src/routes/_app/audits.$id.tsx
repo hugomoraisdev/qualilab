@@ -139,13 +139,16 @@ function AuditDetail() {
     const f = actionDlg.finding;
     const ap: ActionPlanRow = {
       id: newId("AP"),
-      origin: `auditoria:${a.code ?? a.id}`,
+      code: null,
+      origin_type: "audit_finding",
+      origin_id: f.id,
       description: actDesc.trim(),
-      responsible: actResp.trim() || null,
+      responsible_id: actResp.trim() || null,
       deadline: actDeadline || null,
       priority: actPriority,
       status: "pendente",
       progress: 0,
+      notes: `Auditoria ${a.code ?? a.id}`,
     };
     await saveActionPlan(ap);
     await updateFindingMeta(f.id, (prev) => ({
@@ -193,7 +196,7 @@ function AuditDetail() {
                   evidence: m?.evidence_urls?.length
                     ? m.evidence_urls.join("\n") + (m.evidence_notes ? "\n" + m.evidence_notes : "")
                     : (m?.evidence_notes ?? null),
-                  responsible: ap?.responsible ?? m?.responsible ?? null,
+                  responsible: ap?.responsible_id ?? m?.responsible ?? null,
                   deadline: ap?.deadline ?? m?.deadline ?? null,
                   action_status: ap?.status ?? null,
                 };
@@ -307,7 +310,7 @@ function AuditDetail() {
                           className="inline-flex items-center gap-1 hover:text-foreground"
                         >
                           <ExternalLink className="size-3" />
-                          Plano: {ap.responsible ?? "sem responsável"} · {ap.deadline ?? "sem prazo"} · {ap.status}
+                          Plano: {ap.responsible_id ?? "sem responsável"} · {ap.deadline ?? "sem prazo"} · {ap.status}
                         </button>
                       )}
                     </div>
