@@ -196,7 +196,7 @@ function AuditDetail() {
                   evidence: m?.evidence_urls?.length
                     ? m.evidence_urls.join("\n") + (m.evidence_notes ? "\n" + m.evidence_notes : "")
                     : (m?.evidence_notes ?? null),
-                  responsible: ap?.responsible ?? m?.responsible ?? null,
+                  responsible: ap?.responsible_id ?? m?.responsible ?? null,
                   deadline: ap?.deadline ?? m?.deadline ?? null,
                   action_status: ap?.status ?? null,
                 };
