@@ -32,6 +32,16 @@ function ReportsPage() {
   const suppliers = useTableStore(suppliersStore);
   const competencies = useTableStore(competenciesStore);
   const audits = useTableStore(auditsStore);
+  const profiles = useTableStore(profilesStore);
+  const { roles } = useJobRoles();
+  const { map: assignments } = useAssignments();
+
+  const today_iso = today();
+  const isExpired = (iso: string | null | undefined) => !!iso && iso < today_iso;
+  const meets = (userId: string, area: string, skill: string, minLvl: string) =>
+    competencies.some((c) => c.user_id === userId && c.area === area && c.skill === skill
+      && c.status === "ativo" && !isExpired(c.expires_at)
+      && (LEVEL_RANK[c.level] ?? 0) >= (LEVEL_RANK[minLvl] ?? 0));
 
   const csv = (cols: string[], rows: (string | number | null | undefined)[][], name: string) => {
     const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
