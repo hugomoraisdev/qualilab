@@ -42,14 +42,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // 1. Listener PRIMEIRO (regra crítica do Supabase)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
       setSession(sess);
       if (sess?.user) {
         // Adia chamadas ao banco para fora do callback (evita deadlock)
         setTimeout(() => {
-          loadProfile(sess.user.id, sess.user.email ?? "").then(setUser);
+          loadProfile(sess.user.id, sess.user.email ?? "").then((u) => {
+            setUser(u);
+            // Log de acesso (login / refresh inicial)
+            if (event === "SIGNED_IN") {
+              void (supabase as any).from("audit_logs").insert({
+                actor_id: u.id, actor_name: u.name, actor_email: u.email,
+                module: "auth", action: "login", record_label: u.email,
+              });
+            }
+          });
         }, 0);
       } else {
+        if (event === "SIGNED_OUT" && user) {
+          void (supabase as any).from("audit_logs").insert({
+            actor_id: user.id, actor_name: user.name, actor_email: user.email,
+            module: "auth", action: "logout", record_label: user.email,
+          });
+        }
         setUser(null);
       }
     });
