@@ -16,6 +16,9 @@ import {
 import { equipmentsStore } from "@/lib/equipments-store";
 import { useTableStore } from "@/lib/table-store";
 import { useAuth } from "@/lib/auth";
+import { useAllEquipmentMeta } from "@/lib/equipment-meta-store";
+import { useServerFn } from "@tanstack/react-start";
+import { sendEmail } from "@/lib/send-email.functions";
 
 export const Route = createFileRoute("/_app/calibrations")({ component: CalPage });
 
@@ -49,10 +52,13 @@ function emptyPoint(equipCode: string, idx: number): CalibrationPoint {
 function MultiPointForm({ onSaved }: { onSaved: () => void }) {
   const { user } = useAuth();
   const equipments = useTableStore(equipmentsStore);
+  const equipMetaMap = useAllEquipmentMeta(equipments.map((e) => e.id));
+  const sendEmailFn = useServerFn(sendEmail);
   const firstCode = equipments[0]?.code ?? "";
   const [equipCode, setEquipCode] = useState(firstCode);
   const [provider, setProvider] = useState("INMETRO");
   const [certificate, setCertificate] = useState("");
+  const [certificateUrl, setCertificateUrl] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [validity, setValidity] = useState("");
   const [points, setPoints] = useState<CalibrationPoint[]>(() => [
@@ -67,13 +73,14 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
   }, [equipments, equipCode]);
 
   const equip = equipments.find((e) => e.code === equipCode);
-  const cfg = LIMITS[equipCode] ?? { maxError: 1, unit: "—" };
+  const customLimit = equip ? equipMetaMap[equip.id]?.calibration_limit : null;
+  const cfg = customLimit ?? LIMITS[equipCode] ?? { maxError: 1, unit: "—" };
 
   // Atualiza limites/unidade dos pontos quando o equipamento muda
   useEffect(() => {
     setPoints((pts) => pts.map((p) => ({ ...p, maxError: cfg.maxError, unit: cfg.unit })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [equipCode]);
+  }, [equipCode, cfg.maxError, cfg.unit]);
 
   const addPoint = () => setPoints((pts) => [...pts, emptyPoint(equipCode, pts.length)]);
   const removePoint = (id: string) => setPoints((pts) => pts.filter((p) => p.id !== id));
@@ -87,7 +94,7 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
     return { allOk, evals };
   }, [points]);
 
-  function handleSave() {
+  async function handleSave() {
     if (!equip) { toast.error("Selecione um equipamento."); return; }
     if (!certificate.trim() || !date || !validity) {
       toast.error("Preencha certificado, data e validade.");
@@ -105,7 +112,7 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
       result: status === "Aprovada" ? "aprovado" : "reprovado",
       uncertainty: null,
       points,
-      certificate_url: null,
+      certificate_url: certificateUrl.trim() || null,
       notes: null,
       responsible_id: user?.id ?? null,
     };
@@ -114,7 +121,29 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
       `Calibração ${status}`,
       { description: `${equip.code} · ${points.length} ponto(s)` },
     );
+
+    const recipients = equipMetaMap[equip.id]?.notification_recipients ?? [];
+    if (recipients.length > 0) {
+      try {
+        await sendEmailFn({
+          data: {
+            to: recipients,
+            subject: `[Qualilab] Calibração ${status} — ${equip.code}`,
+            html: `<p>Equipamento: <b>${equip.name}</b> (${equip.code})</p>
+                   <p>Certificado: <b>${certificate}</b> · Provedor: ${provider}</p>
+                   <p>Realizada em ${date} · Validade ${validity}</p>
+                   <p>Resultado: <b>${status}</b> em ${points.length} ponto(s)</p>`,
+          },
+        });
+        toast.success(`E-mail enviado para ${recipients.length} destinatário(s)`);
+      } catch (err) {
+        console.error("Falha ao enviar e-mail de calibração", err);
+        toast.error("Falha ao enviar e-mail (calibração foi salva)");
+      }
+    }
+
     setCertificate("");
+    setCertificateUrl("");
     onSaved();
   }
 
@@ -162,6 +191,10 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
         <div className="space-y-1.5 md:col-span-2 lg:col-span-2">
           <Label className="text-xs">Certificado</Label>
           <Input value={certificate} onChange={(e) => setCertificate(e.target.value)} placeholder="ex: CERT-2026-0001" />
+        </div>
+        <div className="space-y-1.5 md:col-span-2 lg:col-span-3">
+          <Label className="text-xs">URL do certificado (PDF/anexo)</Label>
+          <Input value={certificateUrl} onChange={(e) => setCertificateUrl(e.target.value)} placeholder="https://… (link do PDF/laudo)" />
         </div>
       </div>
 
@@ -278,10 +311,11 @@ function CalPage() {
         exportName="calibracoes"
         columns={[
           { key: "certificate_number", header: "Certificado", render: (r) => <span className="font-mono text-xs">{r.certificate_number ?? "—"}</span> },
-          { key: "equipment_id", header: "Equipamento", render: (r) => equipLabel(r.equipment_id) },
+          { key: "equipment_id", header: "Equipamento", accessor: (r) => equipLabel(r.equipment_id), render: (r) => equipLabel(r.equipment_id) },
           { key: "performed_at", header: "Data" },
           { key: "next_due_date", header: "Validade", render: (r) => r.next_due_date ?? "—" },
           { key: "provider", header: "Provedor", render: (r) => r.provider ?? "—" },
+          { key: "certificate_url", header: "Anexo", render: (r) => r.certificate_url ? <a href={r.certificate_url} target="_blank" rel="noreferrer" className="text-primary text-xs hover:underline">abrir</a> : <span className="text-muted-foreground text-xs">—</span> },
           { key: "result", header: "Resultado", render: (r) => <StatusBadge>{r.points?.length ? evaluateRecord(r) : r.result}</StatusBadge> },
         ]}
       />
