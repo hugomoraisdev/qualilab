@@ -22,6 +22,10 @@ export function OfflineIndicator() {
       setPending(fromOutbox + fromStores);
     };
     void refresh();
+    // Drena fila residual do localStorage na montagem inicial (itens presos de sessões anteriores)
+    if (navigator.onLine) {
+      void Promise.all(offlineStores.map((s) => s.flushQueue())).then(() => flushOutbox()).then(() => refresh());
+    }
     const unsub = subscribe(() => { void refresh(); });
     const storeHandlers = offlineStores.map((s) => {
       const h = () => { void refresh(); };
