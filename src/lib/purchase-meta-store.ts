@@ -85,5 +85,5 @@ export const inspectionStatusLabel: Record<PurchaseReceivingInspection["status"]
 
 export const inspectionStatusTone = (
   s: PurchaseReceivingInspection["status"],
-): "success" | "warning" | "danger" | "muted" =>
-  s === "aprovado" ? "success" : s === "aprovado_restricao" ? "warning" : s === "reprovado" ? "danger" : "muted";
+): "success" | "warning" | "destructive" | "muted" =>
+  s === "aprovado" ? "success" : s === "aprovado_restricao" ? "warning" : s === "reprovado" ? "destructive" : "muted";
