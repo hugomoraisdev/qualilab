@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { documentsStore, saveDocument } from "@/lib/documents-store";
+import { documentsStore, saveDocument, type DocumentRow } from "@/lib/documents-store";
 import { useTableStore } from "@/lib/table-store";
 import {
   ArrowLeft, FileText, Download, History, MessageSquare, CheckCircle2,
