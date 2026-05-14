@@ -57,6 +57,7 @@ export function DataTable<T extends Record<string, any>>({
   const [q, setQ] = useState("");
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [detailRow, setDetailRow] = useState<T | null>(null);
 
   const visibleColumns = useMemo(() => columns.filter((c) => !hidden[c.key]), [columns, hidden]);
 
