@@ -73,13 +73,14 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
   }, [equipments, equipCode]);
 
   const equip = equipments.find((e) => e.code === equipCode);
-  const cfg = LIMITS[equipCode] ?? { maxError: 1, unit: "—" };
+  const customLimit = equip ? equipMetaMap[equip.id]?.calibration_limit : null;
+  const cfg = customLimit ?? LIMITS[equipCode] ?? { maxError: 1, unit: "—" };
 
   // Atualiza limites/unidade dos pontos quando o equipamento muda
   useEffect(() => {
     setPoints((pts) => pts.map((p) => ({ ...p, maxError: cfg.maxError, unit: cfg.unit })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [equipCode]);
+  }, [equipCode, cfg.maxError, cfg.unit]);
 
   const addPoint = () => setPoints((pts) => [...pts, emptyPoint(equipCode, pts.length)]);
   const removePoint = (id: string) => setPoints((pts) => pts.filter((p) => p.id !== id));
@@ -93,7 +94,7 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
     return { allOk, evals };
   }, [points]);
 
-  function handleSave() {
+  async function handleSave() {
     if (!equip) { toast.error("Selecione um equipamento."); return; }
     if (!certificate.trim() || !date || !validity) {
       toast.error("Preencha certificado, data e validade.");
@@ -111,7 +112,7 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
       result: status === "Aprovada" ? "aprovado" : "reprovado",
       uncertainty: null,
       points,
-      certificate_url: null,
+      certificate_url: certificateUrl.trim() || null,
       notes: null,
       responsible_id: user?.id ?? null,
     };
@@ -120,7 +121,29 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
       `Calibração ${status}`,
       { description: `${equip.code} · ${points.length} ponto(s)` },
     );
+
+    const recipients = equipMetaMap[equip.id]?.notification_recipients ?? [];
+    if (recipients.length > 0) {
+      try {
+        await sendEmailFn({
+          data: {
+            to: recipients,
+            subject: `[Qualilab] Calibração ${status} — ${equip.code}`,
+            html: `<p>Equipamento: <b>${equip.name}</b> (${equip.code})</p>
+                   <p>Certificado: <b>${certificate}</b> · Provedor: ${provider}</p>
+                   <p>Realizada em ${date} · Validade ${validity}</p>
+                   <p>Resultado: <b>${status}</b> em ${points.length} ponto(s)</p>`,
+          },
+        });
+        toast.success(`E-mail enviado para ${recipients.length} destinatário(s)`);
+      } catch (err) {
+        console.error("Falha ao enviar e-mail de calibração", err);
+        toast.error("Falha ao enviar e-mail (calibração foi salva)");
+      }
+    }
+
     setCertificate("");
+    setCertificateUrl("");
     onSaved();
   }
 
