@@ -189,13 +189,13 @@ function ProcessDetailPage() {
           <div className="space-y-4">
             <LinkPicker
               title="Documentos vinculados" icon={FileText}
-              options={documents.filter((d) => !d.deleted_at).map((d) => ({ id: d.id, label: `${d.code} — ${d.title}` }))}
+              options={documents.map((d) => ({ id: d.id, label: `${d.code} — ${d.title}` }))}
               selected={draft.linked_document_ids}
               onToggle={(id) => toggleLink("linked_document_ids", id)}
             />
             <LinkPicker
               title="Riscos vinculados" icon={AlertTriangle}
-              options={risks.filter((r) => !r.deleted_at).map((r) => ({ id: r.id, label: `${r.code ?? r.id} — ${r.description}` }))}
+              options={risks.map((r) => ({ id: r.id, label: `${r.code ?? r.id} — ${r.description}` }))}
               selected={draft.linked_risk_ids}
               onToggle={(id) => toggleLink("linked_risk_ids", id)}
             />
@@ -217,7 +217,7 @@ function ProcessDetailPage() {
         <TabsContent value="actions">
           <LinkPicker
             title="Planos de ação relacionados" icon={Activity}
-            options={actions.filter((a) => !a.deleted_at).map((a) => ({ id: a.id, label: `${a.code ?? a.id} — ${a.description.slice(0, 80)} (${a.status})` }))}
+            options={actions.map((a) => ({ id: a.id, label: `${a.code ?? a.id} — ${a.description.slice(0, 80)} (${a.status})` }))}
             selected={draft.linked_action_ids}
             onToggle={(id) => toggleLink("linked_action_ids", id)}
           />

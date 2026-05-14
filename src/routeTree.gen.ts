@@ -42,6 +42,7 @@ import { Route as AppMeetingsIndexRouteImport } from './routes/_app/meetings.ind
 import { Route as AppSuppliersIdRouteImport } from './routes/_app/suppliers.$id'
 import { Route as AppRisksIdRouteImport } from './routes/_app/risks.$id'
 import { Route as AppPurchasesIdRouteImport } from './routes/_app/purchases.$id'
+import { Route as AppProcessMapIdRouteImport } from './routes/_app/process-map.$id'
 import { Route as AppPocVarreduraRouteImport } from './routes/_app/poc.varredura'
 import { Route as AppPocRoteiroRouteImport } from './routes/_app/poc.roteiro'
 import { Route as AppOccurrencesIdRouteImport } from './routes/_app/occurrences.$id'
@@ -219,6 +220,11 @@ const AppPurchasesIdRoute = AppPurchasesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppPurchasesRoute,
 } as any)
+const AppProcessMapIdRoute = AppProcessMapIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppProcessMapRoute,
+} as any)
 const AppPocVarreduraRoute = AppPocVarreduraRouteImport.update({
   id: '/varredura',
   path: '/varredura',
@@ -300,7 +306,7 @@ export interface FileRoutesByFullPath {
   '/occurrences': typeof AppOccurrencesRouteWithChildren
   '/poc': typeof AppPocRouteWithChildren
   '/poc-checklist': typeof AppPocChecklistRoute
-  '/process-map': typeof AppProcessMapRoute
+  '/process-map': typeof AppProcessMapRouteWithChildren
   '/projects': typeof AppProjectsRoute
   '/purchases': typeof AppPurchasesRouteWithChildren
   '/reports': typeof AppReportsRoute
@@ -321,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/occurrences/$id': typeof AppOccurrencesIdRoute
   '/poc/roteiro': typeof AppPocRoteiroRoute
   '/poc/varredura': typeof AppPocVarreduraRoute
+  '/process-map/$id': typeof AppProcessMapIdRoute
   '/purchases/$id': typeof AppPurchasesIdRoute
   '/risks/$id': typeof AppRisksIdRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
@@ -346,7 +353,7 @@ export interface FileRoutesByTo {
   '/occurrences': typeof AppOccurrencesRouteWithChildren
   '/poc': typeof AppPocRouteWithChildren
   '/poc-checklist': typeof AppPocChecklistRoute
-  '/process-map': typeof AppProcessMapRoute
+  '/process-map': typeof AppProcessMapRouteWithChildren
   '/projects': typeof AppProjectsRoute
   '/purchases': typeof AppPurchasesRouteWithChildren
   '/reports': typeof AppReportsRoute
@@ -367,6 +374,7 @@ export interface FileRoutesByTo {
   '/occurrences/$id': typeof AppOccurrencesIdRoute
   '/poc/roteiro': typeof AppPocRoteiroRoute
   '/poc/varredura': typeof AppPocVarreduraRoute
+  '/process-map/$id': typeof AppProcessMapIdRoute
   '/purchases/$id': typeof AppPurchasesIdRoute
   '/risks/$id': typeof AppRisksIdRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
@@ -394,7 +402,7 @@ export interface FileRoutesById {
   '/_app/occurrences': typeof AppOccurrencesRouteWithChildren
   '/_app/poc': typeof AppPocRouteWithChildren
   '/_app/poc-checklist': typeof AppPocChecklistRoute
-  '/_app/process-map': typeof AppProcessMapRoute
+  '/_app/process-map': typeof AppProcessMapRouteWithChildren
   '/_app/projects': typeof AppProjectsRoute
   '/_app/purchases': typeof AppPurchasesRouteWithChildren
   '/_app/reports': typeof AppReportsRoute
@@ -415,6 +423,7 @@ export interface FileRoutesById {
   '/_app/occurrences/$id': typeof AppOccurrencesIdRoute
   '/_app/poc/roteiro': typeof AppPocRoteiroRoute
   '/_app/poc/varredura': typeof AppPocVarreduraRoute
+  '/_app/process-map/$id': typeof AppProcessMapIdRoute
   '/_app/purchases/$id': typeof AppPurchasesIdRoute
   '/_app/risks/$id': typeof AppRisksIdRoute
   '/_app/suppliers/$id': typeof AppSuppliersIdRoute
@@ -463,6 +472,7 @@ export interface FileRouteTypes {
     | '/occurrences/$id'
     | '/poc/roteiro'
     | '/poc/varredura'
+    | '/process-map/$id'
     | '/purchases/$id'
     | '/risks/$id'
     | '/suppliers/$id'
@@ -509,6 +519,7 @@ export interface FileRouteTypes {
     | '/occurrences/$id'
     | '/poc/roteiro'
     | '/poc/varredura'
+    | '/process-map/$id'
     | '/purchases/$id'
     | '/risks/$id'
     | '/suppliers/$id'
@@ -556,6 +567,7 @@ export interface FileRouteTypes {
     | '/_app/occurrences/$id'
     | '/_app/poc/roteiro'
     | '/_app/poc/varredura'
+    | '/_app/process-map/$id'
     | '/_app/purchases/$id'
     | '/_app/risks/$id'
     | '/_app/suppliers/$id'
@@ -804,6 +816,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPurchasesIdRouteImport
       parentRoute: typeof AppPurchasesRoute
     }
+    '/_app/process-map/$id': {
+      id: '/_app/process-map/$id'
+      path: '/$id'
+      fullPath: '/process-map/$id'
+      preLoaderRoute: typeof AppProcessMapIdRouteImport
+      parentRoute: typeof AppProcessMapRoute
+    }
     '/_app/poc/varredura': {
       id: '/_app/poc/varredura'
       path: '/varredura'
@@ -979,6 +998,18 @@ const AppPocRouteChildren: AppPocRouteChildren = {
 const AppPocRouteWithChildren =
   AppPocRoute._addFileChildren(AppPocRouteChildren)
 
+interface AppProcessMapRouteChildren {
+  AppProcessMapIdRoute: typeof AppProcessMapIdRoute
+}
+
+const AppProcessMapRouteChildren: AppProcessMapRouteChildren = {
+  AppProcessMapIdRoute: AppProcessMapIdRoute,
+}
+
+const AppProcessMapRouteWithChildren = AppProcessMapRoute._addFileChildren(
+  AppProcessMapRouteChildren,
+)
+
 interface AppPurchasesRouteChildren {
   AppPurchasesIdRoute: typeof AppPurchasesIdRoute
 }
@@ -1031,7 +1062,7 @@ interface AppRouteChildren {
   AppOccurrencesRoute: typeof AppOccurrencesRouteWithChildren
   AppPocRoute: typeof AppPocRouteWithChildren
   AppPocChecklistRoute: typeof AppPocChecklistRoute
-  AppProcessMapRoute: typeof AppProcessMapRoute
+  AppProcessMapRoute: typeof AppProcessMapRouteWithChildren
   AppProjectsRoute: typeof AppProjectsRoute
   AppPurchasesRoute: typeof AppPurchasesRouteWithChildren
   AppReportsRoute: typeof AppReportsRoute
@@ -1060,7 +1091,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppOccurrencesRoute: AppOccurrencesRouteWithChildren,
   AppPocRoute: AppPocRouteWithChildren,
   AppPocChecklistRoute: AppPocChecklistRoute,
-  AppProcessMapRoute: AppProcessMapRoute,
+  AppProcessMapRoute: AppProcessMapRouteWithChildren,
   AppProjectsRoute: AppProjectsRoute,
   AppPurchasesRoute: AppPurchasesRouteWithChildren,
   AppReportsRoute: AppReportsRoute,
