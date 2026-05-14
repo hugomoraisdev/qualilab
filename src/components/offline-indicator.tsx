@@ -85,12 +85,11 @@ export function OfflineIndicator() {
               type="button"
               onClick={async () => {
                 setSyncing(true);
+                await Promise.all(offlineStores.map((s) => s.flushQueue()));
                 const { sent } = await flushOutbox();
                 setSyncing(false);
-                if (sent > 0) {
-                  toast.success(`${sent} ${sent === 1 ? "registro enviado" : "registros enviados"}.`);
-                  qc.invalidateQueries();
-                }
+                toast.success(sent > 0 ? `${sent} registro(s) enviado(s).` : "Sincronização concluída.");
+                qc.invalidateQueries();
               }}
               className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30"
             >
