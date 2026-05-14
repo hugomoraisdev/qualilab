@@ -59,7 +59,7 @@ function ReportsPage() {
   const indResults = useTableStore(indicatorResultsStore);
   const { getExtra: getIndExtra } = useIndicatorMeta();
   const meetings = useTableStore(meetingsStore);
-  const agenda = useTableStore(meetingAgendaStore);
+  const agenda = useTableStore(agendaStore);
 
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState<string>("Todos");
