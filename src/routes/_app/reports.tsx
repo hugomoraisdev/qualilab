@@ -13,6 +13,9 @@ import { equipmentsStore } from "@/lib/equipments-store";
 import { suppliersStore } from "@/lib/suppliers-store";
 import { competenciesStore } from "@/lib/competencies-store";
 import { auditsStore } from "@/lib/audits-store";
+import { profilesStore, profileName } from "@/lib/profiles-store";
+import { useJobRoles, LEVEL_LABEL, LEVEL_RANK } from "@/lib/job-roles-store";
+import { useAssignments } from "@/lib/role-assignments-store";
 import { exportTablePdf } from "@/lib/pdf-export";
 
 export const Route = createFileRoute("/_app/reports")({ component: ReportsPage });
@@ -29,6 +32,16 @@ function ReportsPage() {
   const suppliers = useTableStore(suppliersStore);
   const competencies = useTableStore(competenciesStore);
   const audits = useTableStore(auditsStore);
+  const profiles = useTableStore(profilesStore);
+  const { roles } = useJobRoles();
+  const { map: assignments } = useAssignments();
+
+  const today_iso = today();
+  const isExpired = (iso: string | null | undefined) => !!iso && iso < today_iso;
+  const meets = (userId: string, area: string, skill: string, minLvl: string) =>
+    competencies.some((c) => c.user_id === userId && c.area === area && c.skill === skill
+      && c.status === "ativo" && !isExpired(c.expires_at)
+      && (LEVEL_RANK[c.level] ?? 0) >= (LEVEL_RANK[minLvl] ?? 0));
 
   const csv = (cols: string[], rows: (string | number | null | undefined)[][], name: string) => {
     const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
@@ -106,6 +119,35 @@ function ReportsPage() {
       title: "Competências vencidas",
       cols: ["Área", "Competência", "Nível", "Certificado em", "Vence em", "Status"],
       build: () => competencies.filter((c) => c.expires_at && c.expires_at < today_).map((c) => [c.area, c.skill, c.level, c.certified_at, c.expires_at, c.status]),
+    },
+    {
+      title: "Capacitações por colaborador",
+      cols: ["Colaborador", "Área", "Competência", "Nível", "Certificado em", "Validade", "Status"],
+      build: () => competencies.map((c) => [profileName(c.user_id), c.area, c.skill, c.level, c.certified_at, c.expires_at, c.status]),
+    },
+    {
+      title: "Aptidão por função",
+      cols: ["Colaborador", "Função", "Requisitos", "Atendidos", "Lacunas", "Apto"],
+      build: () => Object.entries(assignments).map(([userId, roleId]) => {
+        const role = roles.find((r) => r.id === roleId);
+        if (!role) return null;
+        const ok = role.requirements.filter((r) => meets(userId, r.area, r.skill, r.min_level)).length;
+        const gaps = role.requirements.filter((r) => !meets(userId, r.area, r.skill, r.min_level));
+        return [
+          profileName(userId), role.name, role.requirements.length, ok,
+          gaps.map((g) => `${g.skill} ≥ ${LEVEL_LABEL[g.min_level]}`).join("; ") || "—",
+          role.requirements.length > 0 && gaps.length === 0 ? "Sim" : "Não",
+        ];
+      }).filter((r): r is (string | number)[] => !!r),
+    },
+    {
+      title: "Quadro de colaboradores",
+      cols: ["Nome", "E-mail", "Função", "Cadastro"],
+      build: () => profiles.map((p) => {
+        const roleId = assignments[p.id];
+        const role = roles.find((r) => r.id === roleId);
+        return [p.name, p.email, role?.name ?? "—", p.created_at?.slice(0, 10) ?? ""];
+      }),
     },
     {
       title: "Auditorias realizadas",
