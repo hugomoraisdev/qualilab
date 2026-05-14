@@ -192,6 +192,10 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
           <Label className="text-xs">Certificado</Label>
           <Input value={certificate} onChange={(e) => setCertificate(e.target.value)} placeholder="ex: CERT-2026-0001" />
         </div>
+        <div className="space-y-1.5 md:col-span-2 lg:col-span-3">
+          <Label className="text-xs">URL do certificado (PDF/anexo)</Label>
+          <Input value={certificateUrl} onChange={(e) => setCertificateUrl(e.target.value)} placeholder="https://… (link do PDF/laudo)" />
+        </div>
       </div>
 
       <div className="border border-border rounded-md overflow-hidden">
