@@ -99,6 +99,7 @@ function RootComponent() {
       host.includes("lovable.dev");
     if (inIframe || isPreview) {
       navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
+      caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
     } else {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("/sw.js").catch(() => {});
