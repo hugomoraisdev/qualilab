@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { documentsStore, saveDocument, type DocumentRow } from "@/lib/documents-store";
@@ -560,6 +561,7 @@ function TaxonomyCard({ doc }: { doc: DocumentRow }) {
 /* ───────────── Página ───────────── */
 
 function DocumentDetail() {
+  useAuditAccess("documents");
   const { user } = useAuth();
   const { id } = Route.useParams();
   const documents = useTableStore(documentsStore);

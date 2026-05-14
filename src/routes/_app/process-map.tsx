@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_app/process-map")({ component: PMapPage });
 
 function PMapPage() {
+  useAuditAccess("process_map");
   const { list, loading } = useProcesses();
   const profiles = useTableStore(profilesStore);
   const [showForm, setShowForm] = useState(false);

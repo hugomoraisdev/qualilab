@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_app/customer-service/new")({ component: NewTicket });
 
 function NewTicket() {
+  useAuditAccess("customer_service");
   const navigate = useNavigate();
   const { user } = useAuth();
   const [customerName, setCustomerName] = useState("");

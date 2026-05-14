@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -38,6 +39,7 @@ const uid = () => (crypto.randomUUID?.() ?? `id-${Date.now().toString(36)}-${Mat
 const isExpired = (iso: string | null | undefined) => !!iso && iso < today();
 
 function CompPage() {
+  useAuditAccess("competencies");
   const competencies = useTableStore(competenciesStore);
   useTableStore(profilesStore);
   const history = useTableStore(competencyHistoryStore);

@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
@@ -858,6 +859,7 @@ function HistorySection({ events }: { events: any[] }) {
 // Página
 // ============================================================================
 function OccDetail() {
+  useAuditAccess("occurrences");
   const { id } = Route.useParams();
   const occurrences = useTableStore(occurrencesStore);
   const o = occurrences.find((x) => x.id === id);

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_app/process-map/$id")({ component: ProcessDetailPage });
 
 function ProcessDetailPage() {
+  useAuditAccess("process_map");
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { get, loading, reload } = useProcesses();

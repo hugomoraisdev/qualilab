@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
@@ -205,6 +206,7 @@ function RiskFormDialog({ trigger, initial, onSaved }: { trigger: React.ReactNod
 }
 
 function RisksPage() {
+  useAuditAccess("risks");
   const risks = useTableStore(risksStore);
   const navigate = useNavigate();
   const ids = useMemo(() => risks.map((r) => r.id), [risks]);

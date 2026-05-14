@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
@@ -50,6 +51,7 @@ function isOverdue(deadline: string | null, status: string) {
 }
 
 function RiskDetail() {
+  useAuditAccess("risks");
   const { id } = Route.useParams();
   const risks = useTableStore(risksStore);
   const r = risks.find((x) => x.id === id);

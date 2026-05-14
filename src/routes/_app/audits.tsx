@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -12,6 +13,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 export const Route = createFileRoute("/_app/audits")({ component: AuditsPage });
 
 function AuditsPage() {
+  useAuditAccess("audits");
   const rows = useTableStore(auditsStore).filter((a) => !a.deleted_at);
   const navigate = useNavigate();
   const { user } = useAuth();

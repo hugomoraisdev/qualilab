@@ -11,6 +11,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { logAudit } from "@/lib/audit";
 
 type QueueOp<T> =
   | { kind: "upsert"; row: T; ts: number }
@@ -141,9 +142,13 @@ export class TableStore<T extends { id: string }> {
   }
 
   async upsert(row: T): Promise<void> {
+    const isCreate = !this.cache.some((r) => r.id === row.id);
     this.cache = [row, ...this.cache.filter((r) => r.id !== row.id)];
     this.persistCache();
     this.notify();
+    const r = row as Record<string, unknown>;
+    const label = String(r.name ?? r.title ?? r.description ?? r.code ?? row.id ?? "");
+    logAudit({ module: this.table, action: isCreate ? "created" : "updated", record_id: row.id, record_label: label || null });
     if (this.isOffline()) {
       this.enqueue({ kind: "upsert", row, ts: Date.now() });
       return;
@@ -156,9 +161,12 @@ export class TableStore<T extends { id: string }> {
   }
 
   async remove(id: string): Promise<void> {
+    const existing = this.cache.find((r) => r.id === id) as Record<string, unknown> | undefined;
+    const label = existing ? String(existing.name ?? existing.title ?? existing.description ?? existing.code ?? id) : id;
     this.cache = this.cache.filter((r) => r.id !== id);
     this.persistCache();
     this.notify();
+    logAudit({ module: this.table, action: "deleted", record_id: id, record_label: label });
     if (this.isOffline()) {
       this.enqueue({ kind: "delete", id, ts: Date.now() });
       return;

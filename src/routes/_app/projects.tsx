@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,7 @@ const STATUS_BAR: Record<Status, string> = {
 export const Route = createFileRoute("/_app/projects")({ component: ProjectsPage });
 
 function ProjectsPage() {
+  useAuditAccess("projects");
   const [projects, setProjects] = useState<Project[]>(SEED);
   const [showForm, setShowForm] = useState(false);
   const [view, setView] = useState<"kanban" | "gantt">("kanban");

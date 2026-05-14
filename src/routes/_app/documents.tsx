@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -146,6 +147,7 @@ function NewDocumentDialog({
 }
 
 function DocumentsPage() {
+  useAuditAccess("documents");
   const documents = useTableStore(documentsStore);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);

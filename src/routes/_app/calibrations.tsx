@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -267,6 +268,7 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
 }
 
 function CalPage() {
+  useAuditAccess("calibrations");
   const [refreshTick, setRefreshTick] = useState(0);
   const calibrations = useTableStore(calibrationsStore);
   const equipments = useTableStore(equipmentsStore);

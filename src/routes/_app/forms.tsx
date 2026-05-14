@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { useTableStore } from "@/lib/table-store";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/_app/forms")({ component: FormsPage });
 
 function FormsPage() {
+  useAuditAccess("forms");
   const navigate = useNavigate();
   const forms = useTableStore(formsStore).filter((f) => !f.deleted_at);
   const responses = useTableStore(responsesStore);

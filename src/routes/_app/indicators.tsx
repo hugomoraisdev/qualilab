@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ const emptyDraft = (): DraftIndicator => ({
 });
 
 function IndicatorsPage() {
+  useAuditAccess("indicators");
   const list = useTableStore(indicatorsStore).filter((i) => !i.deleted_at);
   const allResults = useTableStore(indicatorResultsStore);
   const profiles = useTableStore(profilesStore);

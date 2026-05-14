@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ const RESULTS = ["conforme", "nao_conforme", "nao_aplicavel", "observacao"];
 const SEVERITIES = ["—", "menor", "maior", "critica"];
 
 function AuditDetail() {
+  useAuditAccess("audits");
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { user } = useAuth();

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ interface UserRow {
 }
 
 function UsersPage() {
+  useAuditAccess("users");
   const { user } = useAuth();
   const { units } = useLabUnits();
   const isAdmin = user?.role === "admin";

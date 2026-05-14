@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export const Route = createFileRoute("/_app/meetings/$id")({ component: MeetingD
 const STATUSES: AgendaStatus[] = ["Pendente", "Abordada", "Postergada", "Cancelada"];
 
 function MeetingDetail() {
+  useAuditAccess("meetings");
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { user } = useAuth();

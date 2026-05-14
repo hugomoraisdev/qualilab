@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
@@ -53,6 +54,7 @@ function KpiCard({ label, value, hint, tone, icon: Icon, to }: {
 }
 
 function Dashboard() {
+  useAuditAccess("dashboard");
   const docExpired = documents.filter(d => d.status === "Vencido" || d.status === "Em revisão").length;
   const docActive = documents.filter(d => d.status === "Aprovado").length;
   const calExpired = calibrations.filter(c => c.status === "Vencida" || c.status === "Reprovada").length;

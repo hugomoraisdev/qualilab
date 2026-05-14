@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ArrowLeft, Star, AlertTriangle } from "lucide-react";
@@ -23,6 +24,7 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 function TicketDetail() {
+  useAuditAccess("customer_service");
   const { id } = Route.useParams();
   const { user } = useAuth();
   const navigate = useNavigate();

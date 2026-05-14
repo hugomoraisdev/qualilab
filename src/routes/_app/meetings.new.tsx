@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_app/meetings/new")({ component: NewMeeting });
 
 function NewMeeting() {
+  useAuditAccess("meetings");
   const navigate = useNavigate();
   const [type, setType] = useState("Análise Crítica pela Direção");
   const [sector, setSector] = useState("Qualidade");

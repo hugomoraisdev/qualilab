@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { Building2, FlaskConical, Tag, AlertTriangle, ShieldAlert, Truck, Gauge, ListChecks, Users, Shield, ScrollText, Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -74,6 +75,7 @@ function EmailTestCard() {
 }
 
 function SettingsPage() {
+  useAuditAccess("settings");
   return (
     <>
       <PageHeader title="Configurações" description="Parâmetros gerais do sistema QualiLab" />

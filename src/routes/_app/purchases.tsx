@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -9,6 +10,7 @@ import { useTableStore } from "@/lib/table-store";
 export const Route = createFileRoute("/_app/purchases")({ component: PurchasesPage });
 
 function PurchasesPage() {
+  useAuditAccess("purchases");
   const purchases = useTableStore(purchasesStore);
   const suppliers = useTableStore(suppliersStore);
   const navigate = useNavigate();

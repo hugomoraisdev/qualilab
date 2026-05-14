@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,7 @@ const MODULES: { key: string; label: string }[] = [
 ];
 
 function LabUnitsPage() {
+  useAuditAccess("lab_units");
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const { units, moduleRestrictions, loading } = useLabUnits();

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
+import { setAuditUser, logAudit } from "@/lib/audit";
 
 export type Role = "admin" | "gestor" | "tecnico" | "auditor" | "consulta";
 
@@ -53,24 +54,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           loadProfile(sess.user.id, sess.user.email ?? "").then((u) => {
             setUser(u);
             userRef.current = u;
+            setAuditUser(u);
             if (event === "SIGNED_IN") setLoading(false);
             if (event === "SIGNED_IN") {
-              void (supabase as any).from("audit_logs").insert({
-                actor_id: u.id, actor_name: u.name, actor_email: u.email,
-                module: "auth", action: "login", record_label: u.email,
-              });
+              logAudit({ module: "auth", action: "login", record_label: u.email });
             }
           });
         }, 0);
       } else {
         const prev = userRef.current;
         if (event === "SIGNED_OUT" && prev) {
-          void (supabase as any).from("audit_logs").insert({
-            actor_id: prev.id, actor_name: prev.name, actor_email: prev.email,
-            module: "auth", action: "logout", record_label: prev.email,
-          });
+          logAudit({ module: "auth", action: "logout", record_label: prev.email });
         }
         userRef.current = null;
+        setAuditUser(null);
         setUser(null);
       }
     });
@@ -81,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (sess?.user) {
         loadProfile(sess.user.id, sess.user.email ?? "").then((u) => {
           setUser(u);
+          setAuditUser(u);
           setLoading(false);
         });
       } else {

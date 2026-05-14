@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -13,6 +14,7 @@ import { Plus, Repeat } from "lucide-react";
 export const Route = createFileRoute("/_app/meetings/")({ component: MeetPage });
 
 function MeetPage() {
+  useAuditAccess("meetings");
   const navigate = useNavigate();
   const meetings = useTableStore(meetingsStore).filter((m) => !m.deleted_at);
   const agenda = useTableStore(agendaStore);

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -21,6 +22,7 @@ function newId(prefix: string) {
 }
 
 function APPage() {
+  useAuditAccess("action_plans");
   const actionPlans = useTableStore(actionPlansStore);
   const profiles = useTableStore(profilesStore);
   const [open, setOpen] = useState(false);

@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_app/equipments/$id")({ component: EqDetail });
 
 function EqDetail() {
+  useAuditAccess("equipments");
   const { id } = Route.useParams();
   const { user } = useAuth();
   const equipments = useTableStore(equipmentsStore);

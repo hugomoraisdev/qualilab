@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { ArrowLeft, Plus, Trash2, GripVertical, Link2, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ const TYPE_LABELS: Record<FieldType, string> = {
 };
 
 function FormBuilder() {
+  useAuditAccess("forms");
   const navigate = useNavigate();
   const { user } = useAuth();
   const [title, setTitle] = useState("");

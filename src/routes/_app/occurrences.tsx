@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -51,6 +52,7 @@ function isOverdue(deadline: string | null, status: string) {
 }
 
 function OccPage() {
+  useAuditAccess("occurrences");
   const occurrences = useTableStore(occurrencesStore);
   useTableStore(profilesStore);
   const navigate = useNavigate();

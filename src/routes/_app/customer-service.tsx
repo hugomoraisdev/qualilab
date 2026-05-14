@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -18,6 +19,7 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 function SacPage() {
+  useAuditAccess("customer_service");
   const navigate = useNavigate();
   const tickets = useTableStore(ticketsStore).filter((t) => !t.deleted_at);
 

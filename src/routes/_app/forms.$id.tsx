@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { ArrowLeft, CheckCircle2, XCircle, Sparkles, Download, Link2, Clock, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/_app/forms/$id")({ component: FormDetail 
 type RecordOption = { id: string; label: string };
 
 function FormDetail() {
+  useAuditAccess("forms");
   const { id } = Route.useParams();
   const { user } = useAuth();
   const forms = useTableStore(formsStore);
