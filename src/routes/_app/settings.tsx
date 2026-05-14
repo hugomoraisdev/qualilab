@@ -4,7 +4,7 @@ import { Building2, FlaskConical, Tag, AlertTriangle, ShieldAlert, Truck, Gauge,
 
 const SECTIONS: { icon: any; title: string; desc: string; to?: string }[] = [
   { icon: Building2, title: "Dados da organização", desc: "Razão social, CNPJ, endereço e logo" },
-  { icon: FlaskConical, title: "Unidades / Laboratórios", desc: "Cadastro de filiais e laboratórios (restringe acesso por unidade)" },
+  { icon: FlaskConical, title: "Unidades / Setores", desc: "Cadastro de unidades e restrição de módulos por unidade", to: "/lab-units" },
   { icon: Tag, title: "Categorias de documentos", desc: "Manual, POP, Instrução, Política, Registro, Formulário" },
   { icon: AlertTriangle, title: "Tipos de ocorrência", desc: "NC, reclamação, desvio, oportunidade de melhoria" },
   { icon: ShieldAlert, title: "Tipos de risco", desc: "Categorização e taxonomia dos riscos" },
