@@ -74,9 +74,21 @@ const groups: { label: string; items: Item[] }[] = [
 export function AppSidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { user, logout } = useAuth();
+  const { currentUnitId, getAllowedModules } = useLabUnits();
+
+  const allowed = getAllowedModules(currentUnitId);
+  const isAdmin = user?.role === "admin";
+  const passesUnit = (to: string) => {
+    if (isAdmin || allowed.length === 0) return true;
+    const key = moduleKeyOf(to);
+    return !RESTRICTABLE.has(key) || allowed.includes(key);
+  };
 
   const visibleGroups = groups
-    .map((g) => ({ ...g, items: g.items.filter((it) => hasPermission(user?.role, it.perm)) }))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((it) => hasPermission(user?.role, it.perm) && passesUnit(it.to)),
+    }))
     .filter((g) => g.items.length > 0);
 
   return (
