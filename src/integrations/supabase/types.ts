@@ -789,6 +789,33 @@ export type Database = {
           },
         ]
       }
+      lab_units: {
+        Row: {
+          active: boolean
+          code: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meeting_agenda: {
         Row: {
           created_at: string
@@ -979,6 +1006,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          lab_unit_id: string | null
           name: string
           updated_at: string
         }
@@ -986,6 +1014,7 @@ export type Database = {
           created_at?: string
           email: string
           id: string
+          lab_unit_id?: string | null
           name?: string
           updated_at?: string
         }
@@ -993,10 +1022,19 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          lab_unit_id?: string | null
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_lab_unit_id_fkey"
+            columns: ["lab_unit_id"]
+            isOneToOne: false
+            referencedRelation: "lab_units"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchases: {
         Row: {
@@ -1437,6 +1475,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_user_unit: { Args: never; Returns: string }
       get_primary_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
