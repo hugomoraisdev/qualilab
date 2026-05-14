@@ -4,9 +4,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { countOutbox, flushOutbox, subscribe } from "@/lib/offline-outbox";
 import { occurrencesStore } from "@/lib/occurrences-store";
 import { calibrationsStore } from "@/lib/calibrations-store";
+import { auditsStore, auditFindingsStore } from "@/lib/audits-store";
 import { toast } from "sonner";
 
-const offlineStores = [occurrencesStore, calibrationsStore];
+const offlineStores = [occurrencesStore, calibrationsStore, auditsStore, auditFindingsStore];
 
 export function OfflineIndicator() {
   const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
