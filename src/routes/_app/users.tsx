@@ -51,16 +51,16 @@ function UsersPage() {
 
   async function load() {
     setLoading(true);
-    const { data: profiles, error: pErr } = await supabase
+    const { data: profiles, error: pErr } = await (supabase as any)
       .from("profiles")
-      .select("id,email,name,created_at")
+      .select("id,email,name,created_at,lab_unit_id")
       .order("created_at", { ascending: false });
     if (pErr) {
       toast.error("Erro ao carregar usuários: " + pErr.message);
       setLoading(false);
       return;
     }
-    const ids = (profiles ?? []).map((p) => p.id);
+    const ids = (profiles ?? []).map((p: any) => p.id);
     const { data: roles } = ids.length
       ? await supabase.from("user_roles").select("user_id,role").in("user_id", ids)
       : { data: [] as { user_id: string; role: Role }[] };
@@ -71,11 +71,12 @@ function UsersPage() {
       byUser.set(r.user_id, list);
     });
     setRows(
-      (profiles ?? []).map((p) => ({
+      (profiles ?? []).map((p: any) => ({
         id: p.id,
         email: p.email,
         name: p.name,
         created_at: p.created_at,
+        lab_unit_id: p.lab_unit_id ?? null,
         roles: byUser.get(p.id) ?? [],
       })),
     );
