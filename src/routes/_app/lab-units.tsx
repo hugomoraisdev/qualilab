@@ -12,8 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/auth";
 import {
-  useLabUnits, readUnits, writeUnits, readModuleRestrictions, writeModuleRestrictions,
-  type LabUnit,
+  useLabUnits, createUnit, updateUnit, deleteUnit,
+  readModuleRestrictions, writeModuleRestrictions,
 } from "@/lib/lab-units-store";
 import { toast } from "sonner";
 import { FlaskConical, Plus, Trash2, ShieldOff, Loader2 } from "lucide-react";
