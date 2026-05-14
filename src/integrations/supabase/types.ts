@@ -138,6 +138,48 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          actor_name: string | null
+          after: Json | null
+          before: Json | null
+          id: string
+          module: string
+          occurred_at: string
+          record_id: string | null
+          record_label: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          actor_name?: string | null
+          after?: Json | null
+          before?: Json | null
+          id?: string
+          module: string
+          occurred_at?: string
+          record_id?: string | null
+          record_label?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          actor_name?: string | null
+          after?: Json | null
+          before?: Json | null
+          id?: string
+          module?: string
+          occurred_at?: string
+          record_id?: string | null
+          record_label?: string | null
+        }
+        Relationships: []
+      }
       audits: {
         Row: {
           area: string | null
