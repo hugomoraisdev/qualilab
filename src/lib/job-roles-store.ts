@@ -1,6 +1,6 @@
 // Catálogo de cargos/funções e requisitos de competência por função.
 // Persistido em uma única chave `app_data` para evitar migração de schema.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface JobRoleRequirement {
@@ -52,13 +52,14 @@ export async function deleteJobRole(id: string): Promise<JobRole[]> {
 export function useJobRoles(): { roles: JobRole[]; loading: boolean; refresh: () => void } {
   const [roles, setRoles] = useState<JobRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const channelName = useRef(`job-roles:${Math.random().toString(36).slice(2)}`);
   const load = async () => { setLoading(true); setRoles(await readJobRoles()); setLoading(false); };
   useEffect(() => {
     void load();
     const handler = () => { void load(); };
     window.addEventListener(EVT, handler);
     const channel = supabase
-      .channel("job-roles")
+      .channel(channelName.current)
       .on("postgres_changes", { event: "*", schema: "public", table: "app_data", filter: `key=eq.${KEY}` }, () => { void load(); })
       .subscribe();
     return () => { window.removeEventListener(EVT, handler); supabase.removeChannel(channel); };

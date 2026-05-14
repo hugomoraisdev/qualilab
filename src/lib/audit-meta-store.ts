@@ -1,7 +1,7 @@
 // Metadados estendidos por achado de auditoria (evidências e link de plano de
 // ação) e templates de checklist reutilizáveis. Persistido em `app_data`,
 // seguindo o mesmo padrão do `document-meta-store`.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface AuditFindingMeta {
@@ -55,6 +55,7 @@ export async function updateFindingMeta(id: string, updater: (prev: AuditFinding
 export function useAllFindingMeta(findingIds: string[]): Record<string, AuditFindingMeta> {
   const [map, setMap] = useState<Record<string, AuditFindingMeta>>({});
   const joinKey = findingIds.join("|");
+  const channelName = useRef(`audit-finding-meta-bulk:${Math.random().toString(36).slice(2)}`);
 
   useEffect(() => {
     if (findingIds.length === 0) { setMap({}); return; }
@@ -74,7 +75,7 @@ export function useAllFindingMeta(findingIds: string[]): Record<string, AuditFin
     const onChange = () => { void load(); };
     findingIds.forEach((id) => window.addEventListener(`storage:audit-finding-meta:${id}`, onChange));
     const channel = supabase
-      .channel("audit-finding-meta-bulk")
+      .channel(channelName.current)
       .on("postgres_changes", { event: "*", schema: "public", table: "app_data" }, () => { void load(); })
       .subscribe();
     return () => {
@@ -117,6 +118,7 @@ export async function deleteTemplate(id: string) {
 
 export function useChecklistTemplates(): ChecklistTemplate[] {
   const [list, setList] = useState<ChecklistTemplate[]>([]);
+  const channelName2 = useRef(`audit-templates:${Math.random().toString(36).slice(2)}`);
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -127,7 +129,7 @@ export function useChecklistTemplates(): ChecklistTemplate[] {
     const handler = () => { void load(); };
     window.addEventListener("storage:audit-templates", handler);
     const channel = supabase
-      .channel("audit-templates")
+      .channel(channelName2.current)
       .on("postgres_changes", { event: "*", schema: "public", table: "app_data", filter: `key=eq.${TEMPLATES_KEY}` }, () => { void load(); })
       .subscribe();
     return () => {

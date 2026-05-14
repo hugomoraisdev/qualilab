@@ -2,7 +2,7 @@
 // anexos, campos personalizados, 5W2H, verificação de eficácia e histórico
 // de eventos). Persistido em `app_data` para evitar migração de schema,
 // seguindo o mesmo padrão do `audit-meta-store` e `document-meta-store`.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface FiveW2HData {
@@ -144,6 +144,7 @@ export function useOccurrenceMeta(id: string | undefined): {
 export function useAllOccurrenceMeta(ids: string[]): Record<string, OccurrenceMeta> {
   const [map, setMap] = useState<Record<string, OccurrenceMeta>>({});
   const joinKey = ids.join("|");
+  const channelName = useRef(`occ-meta-bulk:${Math.random().toString(36).slice(2)}`);
   useEffect(() => {
     if (ids.length === 0) { setMap({}); return; }
     let cancelled = false;
@@ -160,7 +161,7 @@ export function useAllOccurrenceMeta(ids: string[]): Record<string, OccurrenceMe
     };
     void load();
     const channel = supabase
-      .channel("occ-meta-bulk")
+      .channel(channelName.current)
       .on("postgres_changes", { event: "*", schema: "public", table: "app_data" }, () => { void load(); })
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };

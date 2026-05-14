@@ -1,7 +1,7 @@
 // Metadados estendidos do equipamento — limites de calibração configuráveis,
 // destinatários de notificação, campos personalizados e histórico.
 // Persistido em `app_data` (sem migração de schema), seguindo o padrão de supplier-meta.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface EquipmentCalibrationLimit {
@@ -105,6 +105,7 @@ export function useEquipmentMeta(id: string | undefined) {
 export function useAllEquipmentMeta(ids: string[]): Record<string, EquipmentMeta> {
   const [map, setMap] = useState<Record<string, EquipmentMeta>>({});
   const joinKey = ids.join("|");
+  const channelName = useRef(`equipment-meta-bulk:${Math.random().toString(36).slice(2)}`);
   useEffect(() => {
     if (ids.length === 0) { setMap({}); return; }
     let cancelled = false;
@@ -121,7 +122,7 @@ export function useAllEquipmentMeta(ids: string[]): Record<string, EquipmentMeta
     };
     void load();
     const channel = supabase
-      .channel("equipment-meta-bulk")
+      .channel(channelName.current)
       .on("postgres_changes", { event: "*", schema: "public", table: "app_data" }, () => { void load(); })
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };

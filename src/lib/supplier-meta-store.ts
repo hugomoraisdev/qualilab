@@ -2,7 +2,7 @@
 // internos com validade, solicitações de documentos, inspeções, mensagens
 // (comunicação estruturada), campos personalizados e histórico. Persistido
 // em `app_data` para evitar migração de schema.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type SupplierStrategicClassification = "critico" | "estrategico" | "operacional" | "nao_critico" | null;
@@ -156,6 +156,7 @@ export function useSupplierMeta(id: string | undefined): {
 export function useAllSupplierMeta(ids: string[]): Record<string, SupplierMeta> {
   const [map, setMap] = useState<Record<string, SupplierMeta>>({});
   const joinKey = ids.join("|");
+  const channelName = useRef(`supplier-meta-bulk:${Math.random().toString(36).slice(2)}`);
   useEffect(() => {
     if (ids.length === 0) { setMap({}); return; }
     let cancelled = false;
@@ -172,7 +173,7 @@ export function useAllSupplierMeta(ids: string[]): Record<string, SupplierMeta> 
     };
     void load();
     const channel = supabase
-      .channel("supplier-meta-bulk")
+      .channel(channelName.current)
       .on("postgres_changes", { event: "*", schema: "public", table: "app_data" }, () => { void load(); })
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };

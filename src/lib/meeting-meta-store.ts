@@ -1,7 +1,7 @@
 // Metadados estendidos da reunião — participantes internos/externos/extras,
 // presença, materiais prévios, decisões/deliberações, setor, configuração de
 // envio automático da ata, lembretes e histórico. Persistido em `app_data`.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type ParticipantOrigin = "interno" | "externo" | "extra_antes" | "extra_durante";
@@ -143,6 +143,7 @@ export function useMeetingMeta(id: string | undefined) {
 export function useAllMeetingMeta(ids: string[]): Record<string, MeetingMeta> {
   const [map, setMap] = useState<Record<string, MeetingMeta>>({});
   const joinKey = ids.join("|");
+  const channelName = useRef(`meeting-meta-bulk:${Math.random().toString(36).slice(2)}`);
   useEffect(() => {
     if (!ids.length) { setMap({}); return; }
     let cancelled = false;
@@ -159,7 +160,7 @@ export function useAllMeetingMeta(ids: string[]): Record<string, MeetingMeta> {
     };
     void load();
     const channel = supabase
-      .channel("meeting-meta-bulk")
+      .channel(channelName.current)
       .on("postgres_changes", { event: "*", schema: "public", table: "app_data" }, () => { void load(); })
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };

@@ -3,7 +3,7 @@
 // campos personalizados e histórico de alterações. Persistido em
 // `app_data` para evitar migração de schema, seguindo o padrão dos
 // demais meta-stores (audit-meta, occurrence-meta, document-meta).
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface RiskAttachment {
@@ -122,6 +122,8 @@ export function useRiskMeta(id: string | undefined): {
 export function useAllRiskMeta(ids: string[]): Record<string, RiskMeta> {
   const [map, setMap] = useState<Record<string, RiskMeta>>({});
   const joinKey = ids.join("|");
+  // Unique per hook instance to avoid channel name collision when used in multiple components
+  const channelName = useRef(`risk-meta-bulk:${Math.random().toString(36).slice(2)}`);
   useEffect(() => {
     if (ids.length === 0) { setMap({}); return; }
     let cancelled = false;
@@ -138,7 +140,7 @@ export function useAllRiskMeta(ids: string[]): Record<string, RiskMeta> {
     };
     void load();
     const channel = supabase
-      .channel("risk-meta-bulk")
+      .channel(channelName.current)
       .on("postgres_changes", { event: "*", schema: "public", table: "app_data" }, () => { void load(); })
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };
