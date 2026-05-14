@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/lib/auth";
+import { useEmailDigest } from "@/hooks/use-email-digest";
 import { Search, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -14,6 +15,7 @@ function AppLayout() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  useEmailDigest(!!user && !loading);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" });

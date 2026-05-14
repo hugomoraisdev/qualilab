@@ -20,6 +20,9 @@ import {
   type ChecklistTemplate,
 } from "@/lib/audit-meta-store";
 import { actionPlansStore, saveActionPlan, type ActionPlanRow } from "@/lib/action-plans-store";
+import { sendEmail } from "@/lib/send-email.functions";
+import { buildActionAssignedHtml } from "@/lib/email-templates";
+import { listProfiles } from "@/lib/profiles-store";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { exportAuditReportPdf } from "@/lib/pdf-export";
 import { useAuth } from "@/lib/auth";
@@ -151,6 +154,23 @@ function AuditDetail() {
       notes: `Auditoria ${a.code ?? a.id}`,
     };
     await saveActionPlan(ap);
+    if (actResp.trim()) {
+      const profile = listProfiles().find((p) => p.name === actResp.trim());
+      if (profile?.email) {
+        sendEmail({
+          data: {
+            to: profile.email,
+            subject: "Qualilab — Nova ação atribuída a você",
+            html: buildActionAssignedHtml({
+              description: ap.description,
+              responsible: profile.name,
+              originLabel: "Auditoria",
+              deadline: actDeadline || null,
+            }),
+          },
+        }).catch(console.warn);
+      }
+    }
     await updateFindingMeta(f.id, (prev) => ({
       ...prev, action_plan_id: ap.id, responsible: actResp.trim() || null, deadline: actDeadline || null,
     }));

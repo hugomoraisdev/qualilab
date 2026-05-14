@@ -29,6 +29,9 @@ import {
   type Stage,
 } from "@/lib/document-meta-store";
 import { toast } from "sonner";
+import { sendEmail } from "@/lib/send-email.functions";
+import { buildDocumentWorkflowHtml, buildDocumentReadReminderHtml } from "@/lib/email-templates";
+import { listProfiles } from "@/lib/profiles-store";
 
 export const Route = createFileRoute("/_app/documents/$id")({
   component: DocumentDetail,
@@ -180,13 +183,14 @@ function NewRevisionDialog({ doc }: { doc: DocumentRow }) {
 /* ───────────── Workflow ───────────── */
 
 function StageRow({
-  doc, stageKey, label, assignment, currentStage,
+  doc, stageKey, label, assignment, currentStage, onAfterSign,
 }: {
   doc: DocumentRow;
   stageKey: "elaboration" | "review" | "approval";
   label: string;
   assignment: { user_name: string | null; deadline: string | null; signed_at: string | null; signed_by_name: string | null };
   currentStage: Stage;
+  onAfterSign?: (stage: "elaboration" | "review" | "approval") => void;
 }) {
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
@@ -237,6 +241,24 @@ function StageRow({
               });
               setEditing(false);
               toast.success("Etapa atualizada");
+              if (name.trim()) {
+                const profile = listProfiles().find((p) => p.name === name.trim());
+                if (profile?.email) {
+                  sendEmail({
+                    data: {
+                      to: profile.email,
+                      subject: `Qualilab — Documento aguarda sua ação: ${label}`,
+                      html: buildDocumentWorkflowHtml({
+                        docCode: doc.code,
+                        docTitle: doc.title,
+                        stage: label,
+                        recipientName: profile.name,
+                        deadline: deadline || null,
+                      }),
+                    },
+                  }).catch(console.warn);
+                }
+              }
             }}>Salvar</Button>
           </div>
         </div>
@@ -259,12 +281,12 @@ function StageRow({
         <Button size="sm" disabled={!user || !isCurrent} onClick={async () => {
           if (!user) return;
           await signStage(doc.id, stageKey, user.name);
-          // se assinou aprovação, atualiza status do documento
           if (stageKey === "approval") {
             await saveDocument({ ...doc, status: "aprovado", updated_at: new Date().toISOString() });
           } else if (stageKey === "review") {
             await saveDocument({ ...doc, status: "em_revisao", updated_at: new Date().toISOString() });
           }
+          onAfterSign?.(stageKey);
           toast.success(`Etapa ${label.toLowerCase()} assinada`);
         }}>
           <ShieldCheck className="size-4" /> {isCurrent ? "Assinar" : "Aguardando etapa anterior"}
@@ -278,6 +300,52 @@ function WorkflowCard({ doc }: { doc: DocumentRow }) {
   const meta = useDocumentMeta(doc.id);
   const wf = meta.workflow;
 
+  function notifyNextStage(signedStage: "elaboration" | "review" | "approval") {
+    const stageToNext: Record<string, { key: "review" | "approval"; label: string } | null> = {
+      elaboration: { key: "review", label: "Revisão" },
+      review: { key: "approval", label: "Aprovação" },
+      approval: null,
+    };
+    const next = stageToNext[signedStage];
+    if (next) {
+      const nextAssignment = wf[next.key];
+      if (nextAssignment.user_name) {
+        const profile = listProfiles().find((p) => p.name === nextAssignment.user_name);
+        if (profile?.email) {
+          sendEmail({
+            data: {
+              to: profile.email,
+              subject: `Qualilab — Documento aguarda sua ação: ${next.label}`,
+              html: buildDocumentWorkflowHtml({
+                docCode: doc.code,
+                docTitle: doc.title,
+                stage: next.label,
+                recipientName: profile.name,
+                deadline: nextAssignment.deadline,
+              }),
+            },
+          }).catch(console.warn);
+        }
+      }
+    } else {
+      for (const p of listProfiles()) {
+        if (!p.email) continue;
+        sendEmail({
+          data: {
+            to: p.email,
+            subject: `Qualilab — Novo documento para leitura: ${doc.code}`,
+            html: buildDocumentReadReminderHtml({
+              docCode: doc.code,
+              docTitle: doc.title,
+              version: doc.version,
+              recipientName: p.name,
+            }),
+          },
+        }).catch(console.warn);
+      }
+    }
+  }
+
   return (
     <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
       <div className="flex items-center justify-between mb-3">
@@ -287,9 +355,9 @@ function WorkflowCard({ doc }: { doc: DocumentRow }) {
         <StatusBadge>{stageLabel[wf.stage]}</StatusBadge>
       </div>
       <div className="space-y-2">
-        <StageRow doc={doc} stageKey="elaboration" label="Elaboração" assignment={wf.elaboration} currentStage={wf.stage} />
-        <StageRow doc={doc} stageKey="review" label="Revisão" assignment={wf.review} currentStage={wf.stage} />
-        <StageRow doc={doc} stageKey="approval" label="Aprovação" assignment={wf.approval} currentStage={wf.stage} />
+        <StageRow doc={doc} stageKey="elaboration" label="Elaboração" assignment={wf.elaboration} currentStage={wf.stage} onAfterSign={notifyNextStage} />
+        <StageRow doc={doc} stageKey="review" label="Revisão" assignment={wf.review} currentStage={wf.stage} onAfterSign={notifyNextStage} />
+        <StageRow doc={doc} stageKey="approval" label="Aprovação" assignment={wf.approval} currentStage={wf.stage} onAfterSign={notifyNextStage} />
       </div>
       <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
         <span className="text-xs text-muted-foreground">

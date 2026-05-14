@@ -23,6 +23,8 @@ import {
 import { actionPlansStore, saveActionPlan } from "@/lib/action-plans-store";
 import { useTableStore } from "@/lib/table-store";
 import { sendEmail } from "@/lib/send-email.functions";
+import { buildActionAssignedHtml } from "@/lib/email-templates";
+import { listProfiles } from "@/lib/profiles-store";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -525,6 +527,23 @@ function ActionsPanel({ meetingId, onChange }: { meetingId: string; onChange: ()
       description: desc.trim(), responsible_id: resp.trim() || null,
       deadline: deadline || null, priority: "media", status: "Pendente", progress: 0, notes: null,
     });
+    if (resp.trim()) {
+      const profile = listProfiles().find((p) => p.name === resp.trim());
+      if (profile?.email) {
+        sendEmail({
+          data: {
+            to: profile.email,
+            subject: "Qualilab — Nova ação atribuída a você",
+            html: buildActionAssignedHtml({
+              description: desc.trim(),
+              responsible: profile.name,
+              originLabel: "Reunião",
+              deadline: deadline || null,
+            }),
+          },
+        }).catch(console.warn);
+      }
+    }
     await updateMeetingMeta(meetingId, (prev) => ({
       ...prev, action_links: [...prev.action_links, { id: genId("al"), action_id: id, title: desc.trim() }],
     }), { action: "action_added", detail: desc.trim() });
