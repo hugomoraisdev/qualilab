@@ -219,3 +219,88 @@ export function exportMeetingMinutesPdf(meeting: MeetingPdfOptions) {
   footer(doc);
   doc.save(`ata-${meeting.meeting_date}.pdf`);
 }
+
+interface RiskMatrixRow {
+  code: string;
+  process: string;
+  description: string;
+  probability: number;
+  impact: number;
+  level: number;
+  classification: string;
+  responsible?: string | null;
+  status: string;
+  deadline?: string | null;
+}
+
+export function exportRisksMatrixPdf(rows: RiskMatrixRow[]) {
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  header(doc, "Matriz de Riscos", `${rows.length} risco(s) cadastrado(s)`);
+
+  // Heat-map 5x5
+  let y = 46;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(20);
+  doc.text("Mapa de calor (Probabilidade × Impacto)", 14, y);
+  y += 4;
+
+  const cellW = 22;
+  const cellH = 14;
+  const startX = 30;
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  for (let i = 1; i <= 5; i++) {
+    doc.text(`Imp ${i}`, startX + (i - 1) * cellW + cellW / 2, y + 4, { align: "center" });
+  }
+  y += 6;
+  for (let p = 5; p >= 1; p--) {
+    doc.text(`Prob ${p}`, startX - 2, y + cellH / 2 + 1, { align: "right" });
+    for (let i = 1; i <= 5; i++) {
+      const score = p * i;
+      let fill: [number, number, number] = [220, 252, 231]; // success
+      if (score >= 15) fill = [254, 202, 202];
+      else if (score >= 10) fill = [254, 215, 170];
+      else if (score >= 6) fill = [253, 230, 138];
+      const x = startX + (i - 1) * cellW;
+      doc.setFillColor(...fill);
+      doc.setDrawColor(200);
+      doc.rect(x, y, cellW, cellH, "FD");
+      const items = rows.filter((r) => r.probability === p && r.impact === i);
+      doc.setTextColor(60);
+      doc.setFontSize(7);
+      doc.text(String(items.length), x + cellW - 3, y + 4, { align: "right" });
+      doc.setTextColor(20);
+      doc.setFontSize(7);
+      const labels = items.slice(0, 3).map((it) => it.code).join(", ");
+      if (labels) doc.text(labels.slice(0, 14), x + 1.5, y + 8);
+      if (items.length > 3) doc.text(`+${items.length - 3}`, x + 1.5, y + 12);
+    }
+    y += cellH;
+  }
+  y += 6;
+
+  autoTable(doc, {
+    startY: y,
+    head: [["Código", "Processo", "Descrição", "P", "I", "Nível", "Classificação", "Responsável", "Status", "Prazo"]],
+    body: rows.map((r) => [
+      r.code,
+      r.process,
+      r.description,
+      String(r.probability),
+      String(r.impact),
+      String(r.level),
+      r.classification,
+      r.responsible ?? "—",
+      r.status,
+      r.deadline ?? "—",
+    ]),
+    headStyles: { fillColor: QUALILAB_BLUE, textColor: 255 },
+    styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak" },
+    columnStyles: { 2: { cellWidth: 60 }, 3: { cellWidth: 8 }, 4: { cellWidth: 8 }, 5: { cellWidth: 14 } },
+    margin: { left: 14, right: 14 },
+  });
+
+  footer(doc);
+  doc.save(`matriz-de-riscos-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
