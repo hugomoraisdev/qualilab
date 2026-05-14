@@ -95,7 +95,7 @@ function RiskDetail() {
 
       {meta.treatment_deadline && isOverdue(meta.treatment_deadline, r.status) && (
         <div className="mb-4 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-          Tratamento atrasado em {Math.abs(overdueDays ?? 0)} dia(s) (prazo: {meta.treatment_deadline}).
+          Tratamento atrasado em {String(Math.abs(overdueDays ?? 0))} dia(s) (prazo: {meta.treatment_deadline}).
         </div>
       )}
 
