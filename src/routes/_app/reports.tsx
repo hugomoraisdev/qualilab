@@ -121,6 +121,35 @@ function ReportsPage() {
       build: () => competencies.filter((c) => c.expires_at && c.expires_at < today_).map((c) => [c.area, c.skill, c.level, c.certified_at, c.expires_at, c.status]),
     },
     {
+      title: "Capacitações por colaborador",
+      cols: ["Colaborador", "Área", "Competência", "Nível", "Certificado em", "Validade", "Status"],
+      build: () => competencies.map((c) => [profileName(c.user_id), c.area, c.skill, c.level, c.certified_at, c.expires_at, c.status]),
+    },
+    {
+      title: "Aptidão por função",
+      cols: ["Colaborador", "Função", "Requisitos", "Atendidos", "Lacunas", "Apto"],
+      build: () => Object.entries(assignments).map(([userId, roleId]) => {
+        const role = roles.find((r) => r.id === roleId);
+        if (!role) return null;
+        const ok = role.requirements.filter((r) => meets(userId, r.area, r.skill, r.min_level)).length;
+        const gaps = role.requirements.filter((r) => !meets(userId, r.area, r.skill, r.min_level));
+        return [
+          profileName(userId), role.name, role.requirements.length, ok,
+          gaps.map((g) => `${g.skill} ≥ ${LEVEL_LABEL[g.min_level]}`).join("; ") || "—",
+          role.requirements.length > 0 && gaps.length === 0 ? "Sim" : "Não",
+        ];
+      }).filter((r): r is (string | number)[] => !!r),
+    },
+    {
+      title: "Quadro de colaboradores",
+      cols: ["Nome", "E-mail", "Função", "Cadastro"],
+      build: () => profiles.map((p) => {
+        const roleId = assignments[p.id];
+        const role = roles.find((r) => r.id === roleId);
+        return [p.name, p.email, role?.name ?? "—", p.created_at?.slice(0, 10) ?? ""];
+      }),
+    },
+    {
       title: "Auditorias realizadas",
       cols: ["Código", "Tipo", "Escopo", "Auditor", "Realizada", "Achados", "Status"],
       build: () => audits.filter((a) => a.status === "concluida" || a.performed_at).map((a) => [a.code, a.type, a.scope, a.auditor_name, a.performed_at, a.findings_count, a.status]),
