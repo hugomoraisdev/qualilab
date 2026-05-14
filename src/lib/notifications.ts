@@ -10,8 +10,10 @@ import { competenciesStore } from "./competencies-store";
 import { meetingsStore } from "./meetings-store";
 import { documentsStore } from "./documents-store";
 import { suppliersStore } from "./suppliers-store";
+import { risksStore } from "./risks-store";
 import type { DocumentMeta } from "./document-meta-store";
 import { emptyMeta, stageLabel } from "./document-meta-store";
+import { useAllRiskMeta } from "./risk-meta-store";
 
 export type NotificationLevel = "info" | "warning" | "danger";
 export type NotificationCategory =
@@ -20,7 +22,8 @@ export type NotificationCategory =
   | "competency"
   | "meeting"
   | "document"
-  | "supplier";
+  | "supplier"
+  | "risk";
 
 export interface NotificationItem {
   id: string;
