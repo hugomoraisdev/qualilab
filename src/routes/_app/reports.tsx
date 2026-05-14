@@ -177,13 +177,13 @@ function ReportsPage() {
     {
       title: "Indicadores — resultados (histórico)",
       cols: ["Indicador", "Tipo", "Setor", "Período", "Valor", "Meta", "Status", "Notas"],
-      build: () => indResults.map((r) => {
+      build: () => indResults.flatMap((r) => {
         const i = indicators.find((x) => x.id === r.indicator_id);
-        if (!i) return null;
+        if (!i) return [];
         const ex = getIndExtra(i.id);
-        return [i.name, ex.kind, i.area ?? "—", r.period, `${r.value} ${i.unit}`,
-          `${i.direction === "maior" ? "≥" : "≤"} ${i.target}`, r.status ?? "", r.notes ?? ""];
-      }).filter((r): r is (string | number | null)[] => !!r),
+        return [[i.name, ex.kind, i.area ?? "—", r.period, `${r.value} ${i.unit}`,
+          `${i.direction === "maior" ? "≥" : "≤"} ${i.target}`, r.status ?? "", r.notes ?? ""]];
+      }),
     },
     {
       title: "Indicadores — análise de tendência",
