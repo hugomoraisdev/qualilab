@@ -36,6 +36,7 @@ interface UserRow {
   name: string;
   created_at: string;
   roles: Role[];
+  lab_unit_id: string | null;
 }
 
 function UsersPage() {
