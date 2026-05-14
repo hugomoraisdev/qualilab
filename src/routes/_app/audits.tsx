@@ -16,6 +16,14 @@ function AuditsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const today = new Date().toISOString().slice(0, 10);
+  const counts = {
+    planejada: rows.filter((r) => r.status === "planejada").length,
+    em_andamento: rows.filter((r) => r.status === "em_andamento").length,
+    concluida: rows.filter((r) => r.status === "concluida").length,
+    atrasada: rows.filter((r) => r.status !== "concluida" && r.status !== "cancelada" && r.planned_at && r.planned_at < today).length,
+  };
+
   const create = async () => {
     const id = newId("AUD");
     const a: AuditRow = {
