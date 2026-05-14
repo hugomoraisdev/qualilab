@@ -101,6 +101,10 @@ interface AuditPdfOptions {
     result: string;
     severity?: string | null;
     observation?: string | null;
+    evidence?: string | null;
+    responsible?: string | null;
+    deadline?: string | null;
+    action_status?: string | null;
   }>;
 }
 
