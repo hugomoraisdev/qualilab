@@ -1,6 +1,7 @@
 // Central de notificações in-app — derivada das stores existentes.
 // Calcula alertas em tempo real (sem precisar de e-mail/cron).
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useTableStore } from "./table-store";
 import { calibrationsStore } from "./calibrations-store";
 import { equipmentsStore } from "./equipments-store";
@@ -9,6 +10,8 @@ import { competenciesStore } from "./competencies-store";
 import { meetingsStore } from "./meetings-store";
 import { documentsStore } from "./documents-store";
 import { suppliersStore } from "./suppliers-store";
+import type { DocumentMeta } from "./document-meta-store";
+import { emptyMeta, stageLabel } from "./document-meta-store";
 
 export type NotificationLevel = "info" | "warning" | "danger";
 export type NotificationCategory =
@@ -39,6 +42,37 @@ const daysUntil = (iso: string) => {
 const levelFor = (days: number): NotificationLevel =>
   days < 0 ? "danger" : days <= 7 ? "warning" : "info";
 
+/** Carrega metadados de workflow de TODOS os documentos para gerar alertas de prazo por etapa. */
+function useDocumentMetaMap(documentIds: string[]): Record<string, DocumentMeta> {
+  const [map, setMap] = useState<Record<string, DocumentMeta>>({});
+  const joinKey = documentIds.join("|");
+
+  useEffect(() => {
+    if (documentIds.length === 0) { setMap({}); return; }
+    let cancelled = false;
+    const keys = documentIds.map((id) => `doc-meta:${id}`);
+    const load = async () => {
+      const { data } = await supabase.from("app_data").select("key,value").in("key", keys);
+      if (cancelled) return;
+      const out: Record<string, DocumentMeta> = {};
+      for (const id of documentIds) {
+        const row = data?.find((r) => r.key === `doc-meta:${id}`);
+        out[id] = row ? { ...emptyMeta(), ...(row.value as Partial<DocumentMeta>) } : emptyMeta();
+      }
+      setMap(out);
+    };
+    void load();
+    const channel = supabase
+      .channel("notifications:doc-meta")
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_data" }, () => { void load(); })
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [joinKey]);
+
+  return map;
+}
+
 export function useNotifications(): NotificationItem[] {
   const calibrations = useTableStore(calibrationsStore);
   const equipments = useTableStore(equipmentsStore);
@@ -47,6 +81,7 @@ export function useNotifications(): NotificationItem[] {
   const meetings = useTableStore(meetingsStore);
   const documents = useTableStore(documentsStore);
   const suppliers = useTableStore(suppliersStore);
+  const docMeta = useDocumentMetaMap(documents.map((d) => d.id));
 
   return useMemo(() => {
     const out: NotificationItem[] = [];
@@ -163,6 +198,33 @@ export function useNotifications(): NotificationItem[] {
       });
     });
 
+
+    // Prazos de elaboração / revisão / aprovação por documento
+    documents.forEach((doc) => {
+      const meta = docMeta[doc.id];
+      if (!meta) return;
+      const stages: { key: "elaboration" | "review" | "approval"; label: string }[] = [
+        { key: "elaboration", label: "Elaboração" },
+        { key: "review", label: "Revisão" },
+        { key: "approval", label: "Aprovação" },
+      ];
+      stages.forEach(({ key, label }) => {
+        const a = meta.workflow[key];
+        if (!a.deadline || a.signed_at) return;
+        const d = daysUntil(a.deadline);
+        if (d > 14) return;
+        out.push({
+          id: `doc-${doc.id}-${key}`,
+          category: "document",
+          level: levelFor(d),
+          title: d < 0 ? `${label} atrasada` : `${label} vence em ${d} dia(s)`,
+          description: `${doc.code} — ${doc.title} · etapa atual: ${stageLabel[meta.workflow.stage]}`,
+          date: a.deadline,
+          href: `/documents/${doc.id}`,
+        });
+      });
+    });
+
     return out.sort((a, b) => a.date.localeCompare(b.date));
-  }, [calibrations, equipments, actions, competencies, meetings, documents, suppliers]);
+  }, [calibrations, equipments, actions, competencies, meetings, documents, suppliers, docMeta]);
 }

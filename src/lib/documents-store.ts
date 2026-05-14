@@ -11,6 +11,8 @@ export interface DocumentRow {
   validity: string | null;
   responsible: string | null;
   attachment_url: string | null;
+  file_url?: string | null;
+  description?: string | null;
   created_at?: string;
   updated_at?: string;
 }

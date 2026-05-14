@@ -1,12 +1,89 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { equipmentsStore } from "@/lib/equipments-store";
+import { equipmentsStore, saveEquipment } from "@/lib/equipments-store";
 import { calibrationsStore, evaluateRecord } from "@/lib/calibrations-store";
 import { useTableStore } from "@/lib/table-store";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Bell, Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/equipments/$id")({ component: EqDetail });
+
+function RecipientsCard({ equipmentId }: { equipmentId: string }) {
+  const equipments = useTableStore(equipmentsStore);
+  const e = equipments.find((x) => x.id === equipmentId);
+  const recipients: string[] = e?.notification_recipients ?? [];
+
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const handleAdd = async () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || recipients.includes(trimmed)) { setEmail(""); return; }
+    setBusy(true);
+    try {
+      await saveEquipment({ ...e!, notification_recipients: [...recipients, trimmed] });
+      setEmail("");
+      toast.success("Destinatário adicionado");
+    } catch {
+      toast.error("Falha ao salvar");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemove = async (r: string) => {
+    if (!e) return;
+    await saveEquipment({ ...e, notification_recipients: recipients.filter((x) => x !== r) });
+    toast.success("Destinatário removido");
+  };
+
+  return (
+    <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
+      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+        <Bell className="size-4" /> Notificações de calibração
+      </h3>
+      <p className="text-xs text-muted-foreground mb-3">
+        Estes e-mails receberão alertas automáticos quando a calibração deste equipamento estiver próxima do vencimento.
+      </p>
+
+      {recipients.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic mb-3">Nenhum destinatário configurado. Alertas aparecerão apenas no painel.</p>
+      ) : (
+        <ul className="space-y-1.5 mb-3">
+          {recipients.map((r) => (
+            <li key={r} className="flex items-center justify-between gap-2 text-sm border border-border rounded-md px-3 py-1.5">
+              <span className="text-sm">{r}</span>
+              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => handleRemove(r)}>
+                <Trash2 className="size-3.5 text-muted-foreground hover:text-destructive" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="space-y-1">
+        <Label className="text-xs">Adicionar e-mail</Label>
+        <div className="flex gap-2">
+          <Input
+            type="email"
+            placeholder="colaborador@empresa.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(ev) => ev.key === "Enter" && handleAdd()}
+          />
+          <Button size="sm" onClick={handleAdd} disabled={busy || !email.trim()}>
+            <Plus className="size-4" /> Adicionar
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function EqDetail() {
   const { id } = Route.useParams();
@@ -34,16 +111,19 @@ function EqDetail() {
       </Link>
       <PageHeader title={e.name} description={`${e.code} · ${e.manufacturer ?? ""} ${e.model ?? ""}`.trim()} actions={<StatusBadge>{e.status}</StatusBadge>} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
-          <h3 className="text-sm font-semibold mb-3">Dados</h3>
-          <dl className="text-sm space-y-1.5">
-            <div className="flex justify-between"><dt className="text-muted-foreground">Categoria</dt><dd>{e.category ?? "—"}</dd></div>
-            <div className="flex justify-between"><dt className="text-muted-foreground">Série</dt><dd className="font-mono text-xs">{e.serial_number ?? "—"}</dd></div>
-            <div className="flex justify-between"><dt className="text-muted-foreground">Localização</dt><dd>{e.location ?? "—"}</dd></div>
-            <div className="flex justify-between"><dt className="text-muted-foreground">Aquisição</dt><dd>{e.acquisition_date ?? "—"}</dd></div>
-            <div className="flex justify-between"><dt className="text-muted-foreground">Próxima calibração</dt><dd>{e.next_calibration_date ?? "—"}</dd></div>
-          </dl>
-        </section>
+        <div className="space-y-4">
+          <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
+            <h3 className="text-sm font-semibold mb-3">Dados</h3>
+            <dl className="text-sm space-y-1.5">
+              <div className="flex justify-between"><dt className="text-muted-foreground">Categoria</dt><dd>{e.category ?? "—"}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">Série</dt><dd className="font-mono text-xs">{e.serial_number ?? "—"}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">Localização</dt><dd>{e.location ?? "—"}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">Aquisição</dt><dd>{e.acquisition_date ?? "—"}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">Próxima calibração</dt><dd>{e.next_calibration_date ?? "—"}</dd></div>
+            </dl>
+          </section>
+          <RecipientsCard equipmentId={e.id} />
+        </div>
         <section className="lg:col-span-2 bg-card border border-border rounded-lg p-5 shadow-sm">
           <h3 className="text-sm font-semibold mb-3">Histórico de calibrações</h3>
           <table className="w-full text-sm">

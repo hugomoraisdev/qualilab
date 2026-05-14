@@ -15,6 +15,7 @@ export interface EquipmentRow {
   responsible_id: string | null;
   next_calibration_date: string | null;
   notes: string | null;
+  notification_recipients?: string[] | null;
   deleted_at?: string | null;
   created_at?: string;
   updated_at?: string;
