@@ -146,17 +146,19 @@ export function exportAuditReportPdf(audit: AuditPdfOptions) {
 
   autoTable(doc, {
     startY: y,
-    head: [["#", "Requisito", "Resultado", "Severidade", "Evidência / Observação"]],
+    head: [["#", "Requisito", "Resultado", "Sev.", "Observação / Evidência", "Responsável", "Prazo"]],
     body: audit.findings.map((f, i) => [
       String(i + 1),
       f.requirement,
       f.result,
       f.severity ?? "—",
-      f.observation ?? "—",
+      [f.observation, f.evidence].filter(Boolean).join("\n") || "—",
+      f.responsible ?? "—",
+      [f.deadline, f.action_status].filter(Boolean).join(" · ") || "—",
     ]),
     headStyles: { fillColor: QUALILAB_BLUE, textColor: 255 },
-    styles: { fontSize: 8, cellPadding: 2 },
-    columnStyles: { 0: { cellWidth: 10 }, 2: { cellWidth: 22 }, 3: { cellWidth: 22 } },
+    styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak" },
+    columnStyles: { 0: { cellWidth: 8 }, 2: { cellWidth: 20 }, 3: { cellWidth: 14 }, 5: { cellWidth: 25 }, 6: { cellWidth: 24 } },
     margin: { left: 14, right: 14 },
   });
 
