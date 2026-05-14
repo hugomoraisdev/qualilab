@@ -190,8 +190,8 @@ export const classificationLabel: Record<NonNullable<SupplierStrategicClassifica
 
 export const classificationTone = (
   c: SupplierStrategicClassification,
-): "danger" | "warning" | "info" | "muted" =>
-  c === "critico" ? "danger" : c === "estrategico" ? "warning" : c === "operacional" ? "info" : "muted";
+): "destructive" | "warning" | "info" | "muted" =>
+  c === "critico" ? "destructive" : c === "estrategico" ? "warning" : c === "operacional" ? "info" : "muted";
 
 export function deriveDocumentStatus(d: Pick<SupplierDocument, "validity">): SupplierDocument["status"] {
   if (!d.validity) return "vigente";
