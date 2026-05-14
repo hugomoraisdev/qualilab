@@ -89,6 +89,8 @@ export function useNotifications(): NotificationItem[] {
   const docMeta = useDocumentMetaMap(documents.map((d) => d.id));
   const riskIds = useMemo(() => risks.map((r) => r.id), [risks]);
   const riskMeta = useAllRiskMeta(riskIds);
+  const supplierIds = useMemo(() => suppliers.map((s) => s.id), [suppliers]);
+  const supplierMeta = useAllSupplierMeta(supplierIds);
 
   return useMemo(() => {
     const out: NotificationItem[] = [];
