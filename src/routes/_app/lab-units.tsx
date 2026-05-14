@@ -71,16 +71,11 @@ function LabUnitsPage() {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      const list = await readUnits();
-      const next: LabUnit = {
-        id: crypto.randomUUID(),
-        name: name.trim(),
-        code: code.trim() || undefined,
-        active: true,
-      };
-      await writeUnits([...list, next]);
+      await createUnit({ name: name.trim(), code: code.trim() || undefined });
       setName(""); setCode("");
       toast.success("Unidade criada");
+      // força refresh do hook
+      window.dispatchEvent(new Event("storage:lab-units-modules"));
     } catch (err) {
       toast.error("Erro: " + (err as Error).message);
     } finally {
@@ -89,18 +84,25 @@ function LabUnitsPage() {
   }
 
   async function toggleActive(id: string, active: boolean) {
-    const list = await readUnits();
-    await writeUnits(list.map((u) => (u.id === id ? { ...u, active } : u)));
+    try {
+      await updateUnit(id, { active });
+      window.dispatchEvent(new Event("storage:lab-units-modules"));
+    } catch (err) {
+      toast.error("Erro: " + (err as Error).message);
+    }
   }
 
   async function remove(id: string) {
     if (!confirm("Excluir esta unidade? Usuários atribuídos a ela ficarão sem unidade.")) return;
-    const list = await readUnits();
-    await writeUnits(list.filter((u) => u.id !== id));
-    const mods = await readModuleRestrictions();
-    delete mods[id];
-    await writeModuleRestrictions(mods);
-    toast.success("Unidade excluída");
+    try {
+      await deleteUnit(id);
+      const mods = await readModuleRestrictions();
+      delete mods[id];
+      await writeModuleRestrictions(mods);
+      toast.success("Unidade excluída");
+    } catch (err) {
+      toast.error("Erro: " + (err as Error).message);
+    }
   }
 
   async function saveModules() {
