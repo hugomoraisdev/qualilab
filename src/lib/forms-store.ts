@@ -1,7 +1,7 @@
 // Formulários personalizados e respostas — Fase 2B (tabelas dedicadas).
 import { createTableStore } from "./table-store";
 
-export type FieldType = "text" | "textarea" | "number" | "date" | "select" | "checkbox" | "radio";
+export type FieldType = "text" | "textarea" | "number" | "date" | "select" | "checkbox" | "radio" | "file";
 
 export interface FormField {
   id: string;
