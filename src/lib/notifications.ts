@@ -1,6 +1,7 @@
 // Central de notificações in-app — derivada das stores existentes.
 // Calcula alertas em tempo real (sem precisar de e-mail/cron).
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useTableStore } from "./table-store";
 import { calibrationsStore } from "./calibrations-store";
 import { equipmentsStore } from "./equipments-store";
@@ -9,6 +10,8 @@ import { competenciesStore } from "./competencies-store";
 import { meetingsStore } from "./meetings-store";
 import { documentsStore } from "./documents-store";
 import { suppliersStore } from "./suppliers-store";
+import type { DocumentMeta } from "./document-meta-store";
+import { emptyMeta, stageLabel } from "./document-meta-store";
 
 export type NotificationLevel = "info" | "warning" | "danger";
 export type NotificationCategory =
