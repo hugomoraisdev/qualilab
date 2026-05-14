@@ -15,6 +15,7 @@ export interface ActionPlanRow {
   notes: string | null;
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string | null;
 }
 
 export const actionPlansStore = createTableStore<ActionPlanRow>("action_plans", "deadline", true);
