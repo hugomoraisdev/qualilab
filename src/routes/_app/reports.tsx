@@ -13,6 +13,9 @@ import { equipmentsStore } from "@/lib/equipments-store";
 import { suppliersStore } from "@/lib/suppliers-store";
 import { competenciesStore } from "@/lib/competencies-store";
 import { auditsStore } from "@/lib/audits-store";
+import { profilesStore, profileName } from "@/lib/profiles-store";
+import { useJobRoles, LEVEL_LABEL, LEVEL_RANK } from "@/lib/job-roles-store";
+import { useAssignments } from "@/lib/role-assignments-store";
 import { exportTablePdf } from "@/lib/pdf-export";
 
 export const Route = createFileRoute("/_app/reports")({ component: ReportsPage });
