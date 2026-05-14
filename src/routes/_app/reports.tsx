@@ -25,7 +25,7 @@ import { useJobRoles, LEVEL_LABEL, LEVEL_RANK } from "@/lib/job-roles-store";
 import { useAssignments } from "@/lib/role-assignments-store";
 import { indicatorsStore, indicatorResultsStore } from "@/lib/indicators-store";
 import { useIndicatorMeta } from "@/lib/indicator-meta-store";
-import { meetingsStore, meetingAgendaStore } from "@/lib/meetings-store";
+import { meetingsStore, agendaStore } from "@/lib/meetings-store";
 import { supabase } from "@/integrations/supabase/client";
 import { exportTablePdf } from "@/lib/pdf-export";
 
