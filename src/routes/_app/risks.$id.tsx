@@ -86,7 +86,7 @@ function RiskDetail() {
         description={`${r.code ?? r.id.slice(0, 8)} · Processo ${r.process}`}
         actions={
           <div className="flex items-center gap-2">
-            <StatusBadge tone={cls.tone === "danger" ? "destructive" : cls.tone}>{cls.label} ({score})</StatusBadge>
+            <StatusBadge tone={cls.tone === "danger" ? "destructive" : cls.tone}>{`${cls.label} (${score})`}</StatusBadge>
             <StatusBadge>{statusLabel(r.status)}</StatusBadge>
             <EditRiskDialog risk={r} />
           </div>
