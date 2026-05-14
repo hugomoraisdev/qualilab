@@ -201,6 +201,7 @@ function ReportsPage() {
           `${last.value} (${last.period})`, `${delta >= 0 ? "+" : ""}${delta.toFixed(2)}`, trend, `${pct}%`];
       }),
     },
+  ];
 
   return (
     <>
