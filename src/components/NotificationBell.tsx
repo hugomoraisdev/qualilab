@@ -1,4 +1,4 @@
-import { Bell, Gauge, ListChecks, GraduationCap, Users2, FileText, Truck } from "lucide-react";
+import { Bell, Gauge, ListChecks, GraduationCap, Users2, FileText, Truck, ShieldAlert } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNotifications, type NotificationItem, type NotificationCategory } from "@/lib/notifications";
@@ -11,6 +11,7 @@ const ICONS: Record<NotificationCategory, React.ComponentType<{ className?: stri
   meeting: Users2,
   document: FileText,
   supplier: Truck,
+  risk: ShieldAlert,
 };
 
 const LEVEL_DOT = {

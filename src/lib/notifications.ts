@@ -231,6 +231,24 @@ export function useNotifications(): NotificationItem[] {
       });
     });
 
+    // Riscos com prazo de tratamento próximo / vencido
+    risks.forEach((r) => {
+      const m = riskMeta[r.id];
+      if (!m?.treatment_deadline) return;
+      if (["mitigado", "encerrado", "aceito", "transferido"].includes(r.status)) return;
+      const d = daysUntil(m.treatment_deadline);
+      if (d > 14) return;
+      out.push({
+        id: `risk-${r.id}`,
+        category: "risk",
+        level: levelFor(d),
+        title: d < 0 ? "Tratamento de risco atrasado" : `Tratamento de risco vence em ${d} dia(s)`,
+        description: `${r.code ?? r.id.slice(0, 6)} — ${r.description.slice(0, 80)}`,
+        date: m.treatment_deadline,
+        href: `/risks/${r.id}`,
+      });
+    });
+
     return out.sort((a, b) => a.date.localeCompare(b.date));
-  }, [calibrations, equipments, actions, competencies, meetings, documents, suppliers, docMeta]);
+  }, [calibrations, equipments, actions, competencies, meetings, documents, suppliers, docMeta, risks, riskMeta]);
 }
