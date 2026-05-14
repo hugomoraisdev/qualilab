@@ -155,8 +155,7 @@ export class TableStore<T extends { id: string }> {
     }
     const { error } = await (supabase as any).from(this.table).upsert(row);
     if (error) {
-      console.warn(`[table-store] upsert ${this.table} (queued):`, error.message);
-      this.enqueue({ kind: "upsert", row, ts: Date.now() });
+      console.warn(`[table-store] upsert ${this.table}:`, error.message);
     }
   }
 
@@ -173,8 +172,7 @@ export class TableStore<T extends { id: string }> {
     }
     const { error } = await (supabase as any).from(this.table).delete().eq("id", id);
     if (error) {
-      console.warn(`[table-store] delete ${this.table} (queued):`, error.message);
-      this.enqueue({ kind: "delete", id, ts: Date.now() });
+      console.warn(`[table-store] delete ${this.table}:`, error.message);
     }
   }
 
@@ -196,8 +194,10 @@ export class TableStore<T extends { id: string }> {
           this.persistQueue();
           this.notify();
         } catch (err) {
-          console.warn(`[table-store] flush ${this.table} parou:`, err);
-          break; // mantém restantes na fila e tenta depois
+          console.warn(`[table-store] flush ${this.table} descartando item:`, err);
+          this.queue = this.queue.filter((q) => q !== op);
+          this.persistQueue();
+          this.notify();
         }
       }
     } finally {
