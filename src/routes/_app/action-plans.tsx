@@ -14,13 +14,13 @@ function APPage() {
       <PageHeader title="Planos de Ação" description="Ações vinculadas a ocorrências, riscos, auditorias, fornecedores e calibrações" />
       <DataTable
         data={actionPlans}
-        searchKeys={["id", "origin", "description", "responsible", "status", "priority"]}
+        searchKeys={["id", "origin_type", "description", "responsible_id", "status", "priority"]}
         newLabel="Novo plano"
         columns={[
           { key: "id", header: "Código", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
-          { key: "origin", header: "Origem", render: (r) => <span className="font-mono text-xs">{r.origin}</span> },
+          { key: "origin_type", header: "Origem", render: (r) => <span className="font-mono text-xs">{r.origin_type}</span> },
           { key: "description", header: "Ação", render: (r) => <span className="max-w-md truncate inline-block">{r.description}</span> },
-          { key: "responsible", header: "Responsável" },
+          { key: "responsible_id", header: "Responsável" },
           { key: "deadline", header: "Prazo" },
           { key: "priority", header: "Prioridade", render: (r) => <StatusBadge>{r.priority}</StatusBadge> },
           { key: "progress", header: "Progresso", render: (r) => (
