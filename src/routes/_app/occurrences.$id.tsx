@@ -12,7 +12,7 @@ import {
   type BrainstormData,
 } from "@/lib/occurrences-store";
 import { useTableStore } from "@/lib/table-store";
-import { ArrowLeft, Plus, Trash2, Lightbulb, Fish, ListOrdered, Pencil, Table2, CheckCircle2, XCircle, Link2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Lightbulb, Fish, ListOrdered, Pencil, Table2, Link2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -22,9 +22,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { risksStore } from "@/lib/risks-store";
 import { suppliersStore } from "@/lib/suppliers-store";
-import { auditsStore } from "@/lib/audits-store";
-import { saveOccurrence } from "@/lib/occurrences-store";
 import { useAuth } from "@/lib/auth";
+import { useOccurrenceMeta, updateOccurrenceMeta, effectivenessLabel, type OccurrenceEffectiveness } from "@/lib/occurrence-meta-store";
 
 export const Route = createFileRoute("/_app/occurrences/$id")({ component: OccDetail });
 
@@ -520,25 +519,43 @@ function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
 // ============================================================================
 // Verificação de Eficácia
 // ============================================================================
-function EfficacyCard({ occurrence }: { occurrence: OccurrenceRow }) {
+const STATUS_CFG: Record<OccurrenceEffectiveness["status"], { cls: string }> = {
+  pendente:   { cls: "bg-yellow-50 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300" },
+  eficaz:     { cls: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" },
+  nao_eficaz: { cls: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300" },
+  parcial:    { cls: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300" },
+};
+
+function EfficacyCard({ occurrenceId }: { occurrenceId: string }) {
   const { user } = useAuth();
-  const [editing, setEditing] = useState(!occurrence.efficacy_result);
-  const [result, setResult] = useState<"aprovada" | "reprovada">(
-    (occurrence.efficacy_result as "aprovada" | "reprovada") ?? "aprovada",
-  );
-  const [notes, setNotes] = useState(occurrence.efficacy_notes ?? "");
+  const { meta, loading } = useOccurrenceMeta(occurrenceId);
+  const eff = meta.effectiveness;
+  const [editing, setEditing] = useState(false);
+  const [status, setStatus] = useState<OccurrenceEffectiveness["status"]>("pendente");
+  const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setStatus(eff.status);
+    setNotes(eff.notes ?? "");
+  }, [eff.status, eff.notes]);
 
   const handleSave = async () => {
     setBusy(true);
     try {
-      await saveOccurrence({
-        ...occurrence,
-        efficacy_result: result,
-        efficacy_verified_at: new Date().toISOString(),
-        efficacy_verified_by: user?.name ?? null,
-        efficacy_notes: notes.trim() || null,
-      });
+      await updateOccurrenceMeta(
+        occurrenceId,
+        (prev) => ({
+          ...prev,
+          effectiveness: {
+            status,
+            verified_at: new Date().toISOString(),
+            verified_by: user?.name ?? null,
+            notes: notes.trim() || null,
+          },
+        }),
+        { action: "Eficácia verificada", actor: user?.name ?? null, detail: effectivenessLabel[status] },
+      );
       toast.success("Verificação de eficácia registrada");
       setEditing(false);
     } catch {
@@ -548,8 +565,16 @@ function EfficacyCard({ occurrence }: { occurrence: OccurrenceRow }) {
     }
   };
 
-  if (!editing && occurrence.efficacy_result) {
-    const approved = occurrence.efficacy_result === "aprovada";
+  if (loading) {
+    return (
+      <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
+        <h3 className="text-sm font-semibold mb-3">Verificação de Eficácia</h3>
+        <div className="text-xs text-muted-foreground">Carregando…</div>
+      </section>
+    );
+  }
+
+  if (!editing && eff.status !== "pendente") {
     return (
       <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
         <div className="flex items-center justify-between mb-3">
@@ -558,24 +583,13 @@ function EfficacyCard({ occurrence }: { occurrence: OccurrenceRow }) {
             <Pencil className="size-3.5 mr-1" /> Editar
           </Button>
         </div>
-        <div className={cn(
-          "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium",
-          approved
-            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-            : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
-        )}>
-          {approved
-            ? <CheckCircle2 className="size-4 shrink-0" />
-            : <XCircle className="size-4 shrink-0" />}
-          Ação {approved ? "eficaz — melhoria confirmada" : "ineficaz — revisão necessária"}
+        <div className={cn("rounded-md px-3 py-2 text-sm font-medium", STATUS_CFG[eff.status].cls)}>
+          {effectivenessLabel[eff.status]}
         </div>
-        {occurrence.efficacy_notes && (
-          <p className="text-xs text-muted-foreground mt-2">{occurrence.efficacy_notes}</p>
-        )}
-        {occurrence.efficacy_verified_at && (
+        {eff.notes && <p className="text-xs text-muted-foreground mt-2">{eff.notes}</p>}
+        {eff.verified_at && (
           <p className="text-[11px] text-muted-foreground mt-1">
-            Verificado por {occurrence.efficacy_verified_by ?? "—"} em{" "}
-            {new Date(occurrence.efficacy_verified_at).toLocaleString("pt-BR")}
+            Verificado por {eff.verified_by ?? "—"} em {new Date(eff.verified_at).toLocaleString("pt-BR")}
           </p>
         )}
       </section>
@@ -589,31 +603,20 @@ function EfficacyCard({ occurrence }: { occurrence: OccurrenceRow }) {
         Após a execução das ações corretivas, registre se a ocorrência foi efetivamente eliminada.
       </p>
       <div className="space-y-3">
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setResult("aprovada")}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors",
-              result === "aprovada"
-                ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                : "border-border hover:border-muted-foreground",
-            )}
-          >
-            <CheckCircle2 className="size-4" /> Aprovada (eficaz)
-          </button>
-          <button
-            type="button"
-            onClick={() => setResult("reprovada")}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors",
-              result === "reprovada"
-                ? "border-rose-500 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
-                : "border-border hover:border-muted-foreground",
-            )}
-          >
-            <XCircle className="size-4" /> Reprovada (ineficaz)
-          </button>
+        <div className="grid grid-cols-2 gap-2">
+          {(["eficaz", "parcial", "nao_eficaz", "pendente"] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatus(s)}
+              className={cn(
+                "rounded-md border px-3 py-2 text-xs font-medium transition-colors text-left",
+                status === s ? cn(STATUS_CFG[s].cls, "border-current") : "border-border hover:border-muted-foreground",
+              )}
+            >
+              {effectivenessLabel[s]}
+            </button>
+          ))}
         </div>
         <div>
           <Label className="text-xs">Observações</Label>
@@ -621,12 +624,12 @@ function EfficacyCard({ occurrence }: { occurrence: OccurrenceRow }) {
             rows={2}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Descreva as evidências que comprovam a eficácia (ou ineficácia)…"
+            placeholder="Descreva as evidências que comprovam a eficácia…"
           />
         </div>
       </div>
       <div className="flex justify-end gap-2 mt-4">
-        {occurrence.efficacy_result && (
+        {eff.status !== "pendente" && (
           <Button variant="outline" size="sm" onClick={() => setEditing(false)}>Cancelar</Button>
         )}
         <Button size="sm" onClick={handleSave} disabled={busy}>
@@ -641,25 +644,29 @@ function EfficacyCard({ occurrence }: { occurrence: OccurrenceRow }) {
 // ============================================================================
 // Vínculos entre módulos
 // ============================================================================
-function LinksCard({ occurrence }: { occurrence: OccurrenceRow }) {
+function LinksCard({ occurrenceId }: { occurrenceId: string }) {
+  const { user } = useAuth();
+  const { meta, loading } = useOccurrenceMeta(occurrenceId);
   const risks = useTableStore(risksStore);
   const suppliers = useTableStore(suppliersStore);
-  const audits = useTableStore(auditsStore);
 
-  const [riskId, setRiskId] = useState(occurrence.linked_risk_id ?? "");
-  const [supplierId, setSupplierId] = useState(occurrence.linked_supplier_id ?? "");
-  const [auditId, setAuditId] = useState(occurrence.linked_audit_id ?? "");
+  const [riskId, setRiskId] = useState("");
+  const [supplierId, setSupplierId] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setRiskId(meta.linked_risk_id ?? "");
+    setSupplierId(meta.linked_supplier_id ?? "");
+  }, [meta.linked_risk_id, meta.linked_supplier_id]);
 
   const handleSave = async () => {
     setBusy(true);
     try {
-      await saveOccurrence({
-        ...occurrence,
-        linked_risk_id: riskId || null,
-        linked_supplier_id: supplierId || null,
-        linked_audit_id: auditId || null,
-      });
+      await updateOccurrenceMeta(
+        occurrenceId,
+        (prev) => ({ ...prev, linked_risk_id: riskId || null, linked_supplier_id: supplierId || null }),
+        { action: "Vínculos atualizados", actor: user?.name ?? null },
+      );
       toast.success("Vínculos salvos");
     } catch {
       toast.error("Falha ao salvar vínculos");
@@ -673,53 +680,44 @@ function LinksCard({ occurrence }: { occurrence: OccurrenceRow }) {
       <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
         <Link2 className="size-4" /> Vínculos
       </h3>
-      <div className="space-y-3">
-        <div>
-          <Label className="text-xs">Risco relacionado</Label>
-          <select
-            value={riskId}
-            onChange={(e) => setRiskId(e.target.value)}
-            className="w-full mt-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            <option value="">— nenhum —</option>
-            {risks.map((r) => (
-              <option key={r.id} value={r.id}>{r.process} — {r.description.slice(0, 50)}</option>
-            ))}
-          </select>
+      {loading ? (
+        <div className="text-xs text-muted-foreground">Carregando…</div>
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs">Risco relacionado</Label>
+            <select
+              value={riskId}
+              onChange={(e) => setRiskId(e.target.value)}
+              className="w-full mt-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="">— nenhum —</option>
+              {risks.map((r) => (
+                <option key={r.id} value={r.id}>{r.process} — {r.description.slice(0, 50)}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label className="text-xs">Fornecedor relacionado</Label>
+            <select
+              value={supplierId}
+              onChange={(e) => setSupplierId(e.target.value)}
+              className="w-full mt-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="">— nenhum —</option>
+              {suppliers.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex justify-end">
+            <Button size="sm" onClick={handleSave} disabled={busy}>
+              {busy && <span className="size-3.5 animate-spin border-2 border-current border-t-transparent rounded-full mr-1" />}
+              Salvar vínculos
+            </Button>
+          </div>
         </div>
-        <div>
-          <Label className="text-xs">Fornecedor relacionado</Label>
-          <select
-            value={supplierId}
-            onChange={(e) => setSupplierId(e.target.value)}
-            className="w-full mt-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            <option value="">— nenhum —</option>
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label className="text-xs">Auditoria relacionada</Label>
-          <select
-            value={auditId}
-            onChange={(e) => setAuditId(e.target.value)}
-            className="w-full mt-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            <option value="">— nenhuma —</option>
-            {audits.map((a) => (
-              <option key={a.id} value={a.id}>{a.type} — {a.scope}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <div className="flex justify-end mt-3">
-        <Button size="sm" onClick={handleSave} disabled={busy}>
-          {busy && <span className="size-3.5 animate-spin border-2 border-current border-t-transparent rounded-full mr-1" />}
-          Salvar vínculos
-        </Button>
-      </div>
+      )}
     </section>
   );
 }
@@ -775,8 +773,8 @@ function OccDetail() {
               </div>
             </dl>
           </section>
-          <EfficacyCard occurrence={o} />
-          <LinksCard occurrence={o} />
+          <EfficacyCard occurrenceId={o.id} />
+          <LinksCard occurrenceId={o.id} />
         </aside>
       </div>
     </>

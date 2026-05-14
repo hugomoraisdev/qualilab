@@ -44,15 +44,6 @@ export interface OccurrenceRow {
   status: string;
   root_cause_tool?: RootCauseTool | null;
   root_cause_data?: RootCauseData | null;
-  // Verificação de eficácia
-  efficacy_result?: "aprovada" | "reprovada" | null;
-  efficacy_verified_at?: string | null;
-  efficacy_verified_by?: string | null;
-  efficacy_notes?: string | null;
-  // Vínculos entre módulos
-  linked_risk_id?: string | null;
-  linked_supplier_id?: string | null;
-  linked_audit_id?: string | null;
   created_at?: string;
   updated_at?: string;
 }

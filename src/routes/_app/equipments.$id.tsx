@@ -5,21 +5,23 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { equipmentsStore, saveEquipment } from "@/lib/equipments-store";
 import { calibrationsStore, evaluateRecord } from "@/lib/calibrations-store";
 import { useTableStore } from "@/lib/table-store";
-import { ArrowLeft, Bell, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Bell, Plus, Trash2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { sendEmail } from "@/lib/send-email.functions";
 
 export const Route = createFileRoute("/_app/equipments/$id")({ component: EqDetail });
 
-function RecipientsCard({ equipmentId }: { equipmentId: string }) {
+function RecipientsCard({ equipmentId, nextDueDate }: { equipmentId: string; nextDueDate: string | null }) {
   const equipments = useTableStore(equipmentsStore);
   const e = equipments.find((x) => x.id === equipmentId);
   const recipients: string[] = e?.notification_recipients ?? [];
 
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const handleAdd = async () => {
     const trimmed = email.trim().toLowerCase();
@@ -40,6 +42,36 @@ function RecipientsCard({ equipmentId }: { equipmentId: string }) {
     if (!e) return;
     await saveEquipment({ ...e, notification_recipients: recipients.filter((x) => x !== r) });
     toast.success("Destinatário removido");
+  };
+
+  const handleNotify = async () => {
+    if (!e || recipients.length === 0) return;
+    setSending(true);
+    try {
+      const dueInfo = nextDueDate
+        ? `próxima calibração em <strong>${new Date(nextDueDate).toLocaleDateString("pt-BR")}</strong>`
+        : "calibração com data de vencimento não cadastrada";
+      await sendEmail({ data: {
+        to: recipients,
+        subject: `[QualiLab] Lembrete de calibração — ${e.name} (${e.code})`,
+        html: `
+          <p>Olá,</p>
+          <p>Este é um lembrete automático do sistema QualiLab sobre o equipamento:</p>
+          <ul>
+            <li><strong>Equipamento:</strong> ${e.name} (${e.code})</li>
+            <li><strong>Localização:</strong> ${e.location ?? "—"}</li>
+            <li><strong>Situação:</strong> ${dueInfo}</li>
+          </ul>
+          <p>Acesse o sistema para registrar a calibração ou atualizar o status.</p>
+          <p>— QualiLab</p>
+        `,
+      } });
+      toast.success("Notificação enviada", { description: `${recipients.length} destinatário(s)` });
+    } catch (err) {
+      toast.error("Falha ao enviar e-mail", { description: String((err as Error)?.message ?? err) });
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -81,6 +113,23 @@ function RecipientsCard({ equipmentId }: { equipmentId: string }) {
           </Button>
         </div>
       </div>
+
+      {recipients.length > 0 && (
+        <div className="pt-3 border-t border-border mt-3">
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={handleNotify}
+            disabled={sending}
+          >
+            {sending
+              ? <span className="size-3.5 animate-spin border-2 border-current border-t-transparent rounded-full mr-1" />
+              : <Send className="size-4 mr-1" />}
+            Enviar lembrete agora
+          </Button>
+        </div>
+      )}
     </section>
   );
 }
@@ -122,7 +171,7 @@ function EqDetail() {
               <div className="flex justify-between"><dt className="text-muted-foreground">Próxima calibração</dt><dd>{e.next_calibration_date ?? "—"}</dd></div>
             </dl>
           </section>
-          <RecipientsCard equipmentId={e.id} />
+          <RecipientsCard equipmentId={e.id} nextDueDate={e.next_calibration_date} />
         </div>
         <section className="lg:col-span-2 bg-card border border-border rounded-lg p-5 shadow-sm">
           <h3 className="text-sm font-semibold mb-3">Histórico de calibrações</h3>
