@@ -65,7 +65,7 @@ function ReportsPage() {
     {
       title: "Planos de ação pendentes",
       cols: ["Descrição", "Responsável", "Prazo", "Prioridade", "Progresso", "Status"],
-      build: () => actions.filter((a) => a.status !== "concluida" && a.status !== "verificada").map((a) => [a.description, a.responsible, a.deadline, a.priority, `${a.progress}%`, a.status]),
+      build: () => actions.filter((a) => a.status !== "concluida" && a.status !== "verificada").map((a) => [a.description, a.responsible_id, a.deadline, a.priority, `${a.progress}%`, a.status]),
     },
     {
       title: "Riscos por classificação",
