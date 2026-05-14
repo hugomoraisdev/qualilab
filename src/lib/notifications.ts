@@ -160,18 +160,46 @@ export function useNotifications(): NotificationItem[] {
       });
     });
 
-    // Reuniões nos próximos 3 dias
+    // Reuniões: hoje (em andamento), atrasadas (não realizadas) e próximas
     meetings.forEach((m) => {
+      if (m.status === "Realizada" || m.status === "Cancelada" || m.deleted_at) return;
       const d = daysUntil(m.meeting_date);
-      if (d < 0 || d > 3 || m.status === "Realizada" || m.status === "Cancelada") return;
+      if (d < 0) {
+        out.push({
+          id: `meet-late-${m.id}`,
+          category: "meeting",
+          level: "danger",
+          title: `Reunião atrasada (${Math.abs(d)} dia(s))`,
+          description: `${m.type}${m.meeting_time ? " · " + m.meeting_time : ""}`,
+          date: m.meeting_date,
+          href: `/meetings/${m.id}`,
+        });
+      } else if (d <= 3) {
+        out.push({
+          id: `meet-${m.id}`,
+          category: "meeting",
+          level: d === 0 ? "warning" : d <= 1 ? "warning" : "info",
+          title: d === 0 ? "Reunião hoje" : `Reunião em ${d} dia(s)`,
+          description: `${m.type}${m.meeting_time ? " · " + m.meeting_time : ""}`,
+          date: m.meeting_date,
+          href: `/meetings/${m.id}`,
+        });
+      }
+    });
+
+    // Ações vinculadas a reuniões — cobrança automática quando atrasadas
+    actions.forEach((a) => {
+      if (a.origin_type !== "meeting" || !a.deadline || a.status === "Concluída") return;
+      const d = daysUntil(a.deadline);
+      if (d > 7) return;
       out.push({
-        id: `meet-${m.id}`,
-        category: "meeting",
-        level: d <= 1 ? "warning" : "info",
-        title: d === 0 ? "Reunião hoje" : `Reunião em ${d} dia(s)`,
-        description: `${m.type}${m.meeting_time ? " · " + m.meeting_time : ""}`,
-        date: m.meeting_date,
-        href: `/meetings/${m.id}`,
+        id: `meet-action-${a.id}`,
+        category: "action",
+        level: d < 0 ? "danger" : "warning",
+        title: d < 0 ? `Ação de reunião atrasada (${Math.abs(d)} dia(s))` : `Ação de reunião vence em ${d} dia(s)`,
+        description: a.description,
+        date: a.deadline,
+        href: a.origin_id ? `/meetings/${a.origin_id}` : "/action-plans",
       });
     });
 
