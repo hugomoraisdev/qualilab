@@ -41,6 +41,7 @@ interface UserRow {
 
 function UsersPage() {
   const { user } = useAuth();
+  const { units } = useLabUnits();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
