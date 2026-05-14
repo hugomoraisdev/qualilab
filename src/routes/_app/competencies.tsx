@@ -420,7 +420,7 @@ function CompetencyForm({ row, extras, onClose }: {
     <Dialog open={!!form} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{row && extras[row.id] !== undefined ? "Editar" : "Nova"} competência / treinamento</DialogTitle>
+          <DialogTitle>{row?.skill ? "Editar" : "Nova"} competência / treinamento</DialogTitle>
           <DialogDescription>Registro de qualificação, treinamento ou capacitação com validade e certificado.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 md:grid-cols-2">
