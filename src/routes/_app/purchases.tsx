@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -11,6 +11,7 @@ export const Route = createFileRoute("/_app/purchases")({ component: PurchasesPa
 function PurchasesPage() {
   const purchases = useTableStore(purchasesStore);
   const suppliers = useTableStore(suppliersStore);
+  const navigate = useNavigate();
   const supplierName = (id: string | null) =>
     suppliers.find((s) => s.id === id)?.name ?? "—";
 
@@ -21,6 +22,7 @@ function PurchasesPage() {
         data={purchases}
         searchKeys={["code", "description", "status"]}
         newLabel="Nova solicitação"
+        onRowClick={(r) => navigate({ to: "/purchases/$id", params: { id: r.id } })}
         columns={[
           { key: "code", header: "Código", render: (r) => <span className="font-mono text-xs">{r.code ?? r.id.slice(0, 8)}</span> },
           { key: "supplier_id", header: "Fornecedor", render: (r) => supplierName(r.supplier_id) },
