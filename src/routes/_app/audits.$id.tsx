@@ -310,7 +310,7 @@ function AuditDetail() {
                           className="inline-flex items-center gap-1 hover:text-foreground"
                         >
                           <ExternalLink className="size-3" />
-                          Plano: {ap.responsible ?? "sem responsável"} · {ap.deadline ?? "sem prazo"} · {ap.status}
+                          Plano: {ap.responsible_id ?? "sem responsável"} · {ap.deadline ?? "sem prazo"} · {ap.status}
                         </button>
                       )}
                     </div>
