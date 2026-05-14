@@ -14,6 +14,7 @@ export interface DocumentRow {
   description?: string | null;
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string | null;
 }
 
 export const documentsStore = createTableStore<DocumentRow>("documents", "code", true);
