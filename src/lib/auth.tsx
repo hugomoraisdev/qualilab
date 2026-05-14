@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const userRef = useRef<User | null>(null);
 
   useEffect(() => {
     // 1. Listener PRIMEIRO (regra crítica do Supabase)
@@ -49,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTimeout(() => {
           loadProfile(sess.user.id, sess.user.email ?? "").then((u) => {
             setUser(u);
-            // Log de acesso (login / refresh inicial)
+            userRef.current = u;
             if (event === "SIGNED_IN") {
               void (supabase as any).from("audit_logs").insert({
                 actor_id: u.id, actor_name: u.name, actor_email: u.email,
@@ -59,12 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
         }, 0);
       } else {
-        if (event === "SIGNED_OUT" && user) {
+        const prev = userRef.current;
+        if (event === "SIGNED_OUT" && prev) {
           void (supabase as any).from("audit_logs").insert({
-            actor_id: user.id, actor_name: user.name, actor_email: user.email,
-            module: "auth", action: "logout", record_label: user.email,
+            actor_id: prev.id, actor_name: prev.name, actor_email: prev.email,
+            module: "auth", action: "logout", record_label: prev.email,
           });
         }
+        userRef.current = null;
         setUser(null);
       }
     });
