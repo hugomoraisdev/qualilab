@@ -252,6 +252,40 @@ export function useNotifications(): NotificationItem[] {
       });
     });
 
+    // Documentos individuais de fornecedor vencidos / a vencer + solicitações pendentes
+    suppliers.forEach((s) => {
+      const m = supplierMeta[s.id];
+      if (!m) return;
+      m.documents.forEach((doc) => {
+        if (!doc.validity) return;
+        const d = daysUntil(doc.validity);
+        if (d > 30) return;
+        out.push({
+          id: `sup-doc-${s.id}-${doc.id}`,
+          category: "supplier",
+          level: levelFor(d),
+          title: deriveDocumentStatus(doc) === "vencido" ? `Doc. fornecedor vencido` : `Doc. fornecedor vence em ${d} dia(s)`,
+          description: `${s.name} — ${doc.type}`,
+          date: doc.validity,
+          href: `/suppliers/${s.id}`,
+        });
+      });
+      m.requested_documents.forEach((r) => {
+        if (r.status !== "pendente") return;
+        const days = Math.floor((Date.now() - new Date(r.requested_at).getTime()) / 86_400_000);
+        if (days < 7) return;
+        out.push({
+          id: `sup-req-${s.id}-${r.id}`,
+          category: "supplier",
+          level: days > 14 ? "danger" : "warning",
+          title: `Solicitação pendente há ${days} dia(s)`,
+          description: `${s.name} — ${r.document_type}`,
+          date: r.requested_at.slice(0, 10),
+          href: `/suppliers/${s.id}`,
+        });
+      });
+    });
+
     return out.sort((a, b) => a.date.localeCompare(b.date));
-  }, [calibrations, equipments, actions, competencies, meetings, documents, suppliers, docMeta, risks, riskMeta]);
+  }, [calibrations, equipments, actions, competencies, meetings, documents, suppliers, docMeta, risks, riskMeta, supplierMeta]);
 }
