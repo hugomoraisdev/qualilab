@@ -3,9 +3,10 @@ import { Wifi, WifiOff, RefreshCw, CloudUpload } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { countOutbox, flushOutbox, subscribe } from "@/lib/offline-outbox";
 import { occurrencesStore } from "@/lib/occurrences-store";
+import { calibrationsStore } from "@/lib/calibrations-store";
 import { toast } from "sonner";
 
-const offlineStores = [occurrencesStore];
+const offlineStores = [occurrencesStore, calibrationsStore];
 
 export function OfflineIndicator() {
   const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
