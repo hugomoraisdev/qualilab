@@ -183,7 +183,7 @@ function ReportsPage() {
         const ex = getIndExtra(i.id);
         return [i.name, ex.kind, i.area ?? "—", r.period, `${r.value} ${i.unit}`,
           `${i.direction === "maior" ? "≥" : "≤"} ${i.target}`, r.status ?? "", r.notes ?? ""];
-      }).filter((r): r is (string | number)[] => !!r),
+      }).filter((r): r is (string | number | null)[] => !!r),
     },
     {
       title: "Indicadores — análise de tendência",
