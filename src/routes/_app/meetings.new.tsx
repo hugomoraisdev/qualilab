@@ -123,6 +123,15 @@ function NewMeeting() {
               </div>
             </div>
           )}
+          <div className="border-t pt-3">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={autoSend} onCheckedChange={(v) => setAutoSend(!!v)} />
+              Enviar ata automaticamente ao encerrar
+            </label>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Os participantes com e-mail cadastrado receberão a ata assim que a reunião for encerrada.
+            </p>
+          </div>
           <Button className="w-full" onClick={save}>Criar reunião{recurring ? "s" : ""}</Button>
         </aside>
       </div>
