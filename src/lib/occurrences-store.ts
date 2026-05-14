@@ -1,11 +1,10 @@
-// Store de ocorrências / NCs — Fase 2B (tabela dedicada).
 import { createTableStore } from "./table-store";
+import { logAuditAction } from "./audit-log-store";
 
-export type RootCauseTool = "5_whys" | "ishikawa" | "brainstorm";
+export type RootCauseTool = "5_whys" | "ishikawa" | "5w2h" | "brainstorm";
 
-/** Estruturas serializadas em occurrences.root_cause_data (jsonb). */
 export interface FiveWhysData {
-  whys: string[]; // 5 strings
+  whys: string[];
   rootCause: string;
 }
 export interface IshikawaData {
@@ -19,11 +18,20 @@ export interface IshikawaData {
     measurement: string[];
   };
 }
+export interface FiveW2HData {
+  what: string;
+  why: string;
+  where: string;
+  when: string;
+  who: string;
+  how: string;
+  howMuch: string;
+}
 export interface BrainstormData {
   ideas: string[];
   selected: string;
 }
-export type RootCauseData = FiveWhysData | IshikawaData | BrainstormData;
+export type RootCauseData = FiveWhysData | IshikawaData | FiveW2HData | BrainstormData;
 
 export interface OccurrenceRow {
   id: string;
@@ -44,5 +52,16 @@ export const occurrencesStore = createTableStore<OccurrenceRow>("occurrences", "
 
 export const listOccurrences = () => occurrencesStore.list();
 export const getOccurrence = (id: string) => occurrencesStore.list().find((o) => o.id === id);
-export const saveOccurrence = (o: OccurrenceRow) => occurrencesStore.upsert(o);
-export const deleteOccurrence = (id: string) => occurrencesStore.remove(id);
+
+export const saveOccurrence = async (o: OccurrenceRow) => {
+  const result = await occurrencesStore.upsert(o);
+  void logAuditAction({ module: "Ocorrências", action: "Salvou", record_id: o.id, record_label: o.description });
+  return result;
+};
+
+export const deleteOccurrence = async (id: string) => {
+  const o = occurrencesStore.list().find((x) => x.id === id);
+  const result = await occurrencesStore.remove(id);
+  void logAuditAction({ module: "Ocorrências", action: "Excluiu", record_id: id, record_label: o?.description });
+  return result;
+};

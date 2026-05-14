@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useRef, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { documentsStore } from "@/lib/documents-store";
+import { documentsStore, type DocumentRow } from "@/lib/documents-store";
 import { useTableStore } from "@/lib/table-store";
-import { ArrowLeft, FileText, Download, History, MessageSquare, CheckCircle2, BookOpenCheck } from "lucide-react";
+import { ArrowLeft, FileText, Download, History, MessageSquare, CheckCircle2, BookOpenCheck, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { confirmRead, hasConfirmed, useDocumentReads } from "@/lib/document-reads-store";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/documents/$id")({
@@ -66,6 +68,84 @@ function ReadConfirmationCard({ documentId }: { documentId: string }) {
           ))}
         </ul>
       </div>
+    </section>
+  );
+}
+
+function AttachmentCard({ doc }: { doc: DocumentRow }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const safeName = file.name.replace(/[/\\.:]/g, "_");
+      const path = `${doc.id}/${safeName}`;
+      const { error } = await supabase.storage
+        .from("document-attachments")
+        .upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage
+        .from("document-attachments")
+        .getPublicUrl(path);
+      await documentsStore.upsert({ ...doc, attachment_url: data.publicUrl });
+      if (fileRef.current) fileRef.current.value = "";
+      toast.success("Arquivo anexado com sucesso");
+    } catch {
+      toast.error("Falha ao anexar arquivo");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
+      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+        <FileText className="size-4" /> Arquivo anexo
+      </h3>
+      {doc.attachment_url ? (
+        <div className="space-y-3">
+          <a
+            href={doc.attachment_url}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 text-sm text-primary hover:underline break-all"
+          >
+            <Download className="size-4 shrink-0" />
+            {decodeURIComponent(doc.attachment_url.split("/").pop() ?? "Arquivo")}
+          </a>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <Loader2 className="size-4 animate-spin mr-1" />
+            ) : (
+              <Upload className="size-4 mr-1" />
+            )}
+            Substituir arquivo
+          </Button>
+        </div>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+        >
+          {uploading ? (
+            <Loader2 className="size-4 animate-spin mr-1" />
+          ) : (
+            <Upload className="size-4 mr-1" />
+          )}
+          Anexar arquivo
+        </Button>
+      )}
+      <input ref={fileRef} type="file" className="hidden" onChange={handleUpload} />
     </section>
   );
 }
@@ -152,12 +232,7 @@ function DocumentDetail() {
         </div>
 
         <aside className="space-y-4">
-          <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
-            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><FileText className="size-4" /> Arquivo anexado</h3>
-            <div className="border border-dashed border-border rounded-md p-4 text-center text-sm text-muted-foreground">
-              {doc.code}-v{doc.version}.pdf<br/><span className="text-xs">2.3 MB · PDF/A</span>
-            </div>
-          </section>
+          <AttachmentCard doc={doc} />
           <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><CheckCircle2 className="size-4 text-success" /> Aprovações</h3>
             <ul className="space-y-2 text-sm">

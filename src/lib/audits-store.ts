@@ -1,5 +1,6 @@
 // Auditorias e achados — Fase 2B (tabelas dedicadas).
 import { createTableStore } from "./table-store";
+import { logAuditAction } from "./audit-log-store";
 
 export interface AuditRow {
   id: string;
@@ -36,8 +37,17 @@ export const auditFindingsStore = createTableStore<AuditFindingRow>("audit_findi
 
 export const listAudits = () => auditsStore.list();
 export const getAudit = (id: string) => auditsStore.list().find((a) => a.id === id);
-export const saveAudit = (a: AuditRow) => auditsStore.upsert(a);
-export const deleteAudit = (id: string) => auditsStore.remove(id);
+export const saveAudit = async (a: AuditRow) => {
+  const result = await auditsStore.upsert(a);
+  void logAuditAction({ module: "Auditorias", action: "Salvou", record_id: a.id, record_label: a.scope });
+  return result;
+};
+export const deleteAudit = async (id: string) => {
+  const a = auditsStore.list().find((x) => x.id === id);
+  const result = await auditsStore.remove(id);
+  void logAuditAction({ module: "Auditorias", action: "Excluiu", record_id: id, record_label: a?.scope });
+  return result;
+};
 
 export const listFindings = (auditId?: string) => {
   const all = auditFindingsStore.list();

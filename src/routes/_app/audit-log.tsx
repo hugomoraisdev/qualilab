@@ -1,16 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
-import { auditLogs } from "@/lib/mock-data";
+import { auditLogStore } from "@/lib/audit-log-store";
+import { useTableStore } from "@/lib/table-store";
 
 export const Route = createFileRoute("/_app/audit-log")({ component: AuditLogPage });
 
 function AuditLogPage() {
+  const logs = useTableStore(auditLogStore);
+
+  const rows = logs.map((l) => ({
+    id: l.id,
+    datetime: l.created_at
+      ? new Date(l.created_at).toLocaleString("pt-BR")
+      : "—",
+    user: l.user_name ?? "—",
+    module: l.module,
+    action: l.action,
+    record: l.record_label ?? l.record_id ?? "—",
+    before: l.before_data ?? "—",
+    after: l.after_data ?? "—",
+  }));
+
   return (
     <>
       <PageHeader title="Log de Auditoria" description="Rastreabilidade de todas as ações realizadas no sistema" />
       <DataTable
-        data={auditLogs}
+        data={rows}
         searchKeys={["user", "action", "module", "record"]}
         newLabel="Exportar log"
         columns={[
