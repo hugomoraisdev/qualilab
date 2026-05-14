@@ -23,12 +23,16 @@ const ACTION_LABEL: Record<string, string> = {
   created: "Criou",
   updated: "Editou",
   deleted: "Excluiu",
+  login: "Login",
+  logout: "Logout",
 };
 
 const ACTION_COLOR: Record<string, string> = {
   created: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
   updated: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
   deleted: "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
+  login: "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300",
+  logout: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
 };
 
 function formatDateTime(iso: string) {

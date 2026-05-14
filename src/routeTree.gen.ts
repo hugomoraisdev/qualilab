@@ -33,6 +33,7 @@ import { Route as AppDocumentsRouteImport } from './routes/_app/documents'
 import { Route as AppDataMigrationRouteImport } from './routes/_app/data-migration'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCustomerServiceRouteImport } from './routes/_app/customer-service'
+import { Route as AppComplianceRouteImport } from './routes/_app/compliance'
 import { Route as AppCompetenciesRouteImport } from './routes/_app/competencies'
 import { Route as AppCalibrationsRouteImport } from './routes/_app/calibrations'
 import { Route as AppAuditsRouteImport } from './routes/_app/audits'
@@ -175,6 +176,11 @@ const AppCustomerServiceRoute = AppCustomerServiceRouteImport.update({
   path: '/customer-service',
   getParentRoute: () => AppRoute,
 } as any)
+const AppComplianceRoute = AppComplianceRouteImport.update({
+  id: '/compliance',
+  path: '/compliance',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCompetenciesRoute = AppCompetenciesRouteImport.update({
   id: '/competencies',
   path: '/competencies',
@@ -296,6 +302,7 @@ export interface FileRoutesByFullPath {
   '/audits': typeof AppAuditsRouteWithChildren
   '/calibrations': typeof AppCalibrationsRoute
   '/competencies': typeof AppCompetenciesRoute
+  '/compliance': typeof AppComplianceRoute
   '/customer-service': typeof AppCustomerServiceRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/data-migration': typeof AppDataMigrationRoute
@@ -343,6 +350,7 @@ export interface FileRoutesByTo {
   '/audits': typeof AppAuditsRouteWithChildren
   '/calibrations': typeof AppCalibrationsRoute
   '/competencies': typeof AppCompetenciesRoute
+  '/compliance': typeof AppComplianceRoute
   '/customer-service': typeof AppCustomerServiceRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/data-migration': typeof AppDataMigrationRoute
@@ -392,6 +400,7 @@ export interface FileRoutesById {
   '/_app/audits': typeof AppAuditsRouteWithChildren
   '/_app/calibrations': typeof AppCalibrationsRoute
   '/_app/competencies': typeof AppCompetenciesRoute
+  '/_app/compliance': typeof AppComplianceRoute
   '/_app/customer-service': typeof AppCustomerServiceRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/data-migration': typeof AppDataMigrationRoute
@@ -441,6 +450,7 @@ export interface FileRouteTypes {
     | '/audits'
     | '/calibrations'
     | '/competencies'
+    | '/compliance'
     | '/customer-service'
     | '/dashboard'
     | '/data-migration'
@@ -488,6 +498,7 @@ export interface FileRouteTypes {
     | '/audits'
     | '/calibrations'
     | '/competencies'
+    | '/compliance'
     | '/customer-service'
     | '/dashboard'
     | '/data-migration'
@@ -536,6 +547,7 @@ export interface FileRouteTypes {
     | '/_app/audits'
     | '/_app/calibrations'
     | '/_app/competencies'
+    | '/_app/compliance'
     | '/_app/customer-service'
     | '/_app/dashboard'
     | '/_app/data-migration'
@@ -751,6 +763,13 @@ declare module '@tanstack/react-router' {
       path: '/customer-service'
       fullPath: '/customer-service'
       preLoaderRoute: typeof AppCustomerServiceRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/compliance': {
+      id: '/_app/compliance'
+      path: '/compliance'
+      fullPath: '/compliance'
+      preLoaderRoute: typeof AppComplianceRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/competencies': {
@@ -1052,6 +1071,7 @@ interface AppRouteChildren {
   AppAuditsRoute: typeof AppAuditsRouteWithChildren
   AppCalibrationsRoute: typeof AppCalibrationsRoute
   AppCompetenciesRoute: typeof AppCompetenciesRoute
+  AppComplianceRoute: typeof AppComplianceRoute
   AppCustomerServiceRoute: typeof AppCustomerServiceRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
   AppDataMigrationRoute: typeof AppDataMigrationRoute
@@ -1081,6 +1101,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAuditsRoute: AppAuditsRouteWithChildren,
   AppCalibrationsRoute: AppCalibrationsRoute,
   AppCompetenciesRoute: AppCompetenciesRoute,
+  AppComplianceRoute: AppComplianceRoute,
   AppCustomerServiceRoute: AppCustomerServiceRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
   AppDataMigrationRoute: AppDataMigrationRoute,

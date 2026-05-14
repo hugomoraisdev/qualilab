@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 
@@ -39,17 +39,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const userRef = useRef<User | null>(null);
 
   useEffect(() => {
     // 1. Listener PRIMEIRO (regra crítica do Supabase)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
       setSession(sess);
       if (sess?.user) {
         // Adia chamadas ao banco para fora do callback (evita deadlock)
         setTimeout(() => {
-          loadProfile(sess.user.id, sess.user.email ?? "").then(setUser);
+          loadProfile(sess.user.id, sess.user.email ?? "").then((u) => {
+            setUser(u);
+            userRef.current = u;
+            if (event === "SIGNED_IN") {
+              void (supabase as any).from("audit_logs").insert({
+                actor_id: u.id, actor_name: u.name, actor_email: u.email,
+                module: "auth", action: "login", record_label: u.email,
+              });
+            }
+          });
         }, 0);
       } else {
+        const prev = userRef.current;
+        if (event === "SIGNED_OUT" && prev) {
+          void (supabase as any).from("audit_logs").insert({
+            actor_id: prev.id, actor_name: prev.name, actor_email: prev.email,
+            module: "auth", action: "logout", record_label: prev.email,
+          });
+        }
+        userRef.current = null;
         setUser(null);
       }
     });
