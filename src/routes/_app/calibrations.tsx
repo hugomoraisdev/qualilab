@@ -291,14 +291,20 @@ function CalPage() {
         <div className="bg-card border border-border rounded-lg p-5 shadow-sm mb-6">
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><CalendarDays className="size-4" /> Próximas calibrações</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            {upcoming.map((c) => (
-              <div key={c.id} className="border border-border rounded-md p-3 bg-background">
-                <div className="text-xs font-mono text-muted-foreground">{c.certificate_number ?? c.id.slice(0, 8)}</div>
-                <div className="text-sm font-medium truncate">{equipLabel(c.equipment_id)}</div>
-                <div className="text-xs text-muted-foreground mt-1">Vence em {c.next_due_date}</div>
-                <div className="mt-1.5"><StatusBadge>{c.points?.length ? evaluateRecord(c) : c.result}</StatusBadge></div>
-              </div>
-            ))}
+            {upcoming.map((c) => {
+              const today = new Date().toISOString().slice(0, 10);
+              const overdue = !!c.next_due_date && c.next_due_date < today;
+              return (
+                <div key={c.id} className={`border rounded-md p-3 bg-background ${overdue ? "border-destructive" : "border-border"}`}>
+                  <div className="text-xs font-mono text-muted-foreground">{c.certificate_number ?? c.id.slice(0, 8)}</div>
+                  <div className="text-sm font-medium truncate">{equipLabel(c.equipment_id)}</div>
+                  <div className={`text-xs mt-1 ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                    {overdue ? `Vencida em ${c.next_due_date}` : `Vence em ${c.next_due_date}`}
+                  </div>
+                  <div className="mt-1.5"><StatusBadge>{c.points?.length ? evaluateRecord(c) : c.result}</StatusBadge></div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -306,14 +312,19 @@ function CalPage() {
       <DataTable
         key={refreshTick}
         data={calibrations}
-        searchKeys={["certificate_number", "provider", "result"]}
+        searchKeys={["certificate_number", "provider", "result", "equipment_id"]}
         newLabel="Nova calibração"
         exportName="calibracoes"
         columns={[
           { key: "certificate_number", header: "Certificado", render: (r) => <span className="font-mono text-xs">{r.certificate_number ?? "—"}</span> },
           { key: "equipment_id", header: "Equipamento", accessor: (r) => equipLabel(r.equipment_id), render: (r) => equipLabel(r.equipment_id) },
           { key: "performed_at", header: "Data" },
-          { key: "next_due_date", header: "Validade", render: (r) => r.next_due_date ?? "—" },
+          { key: "next_due_date", header: "Validade", render: (r) => {
+            if (!r.next_due_date) return "—";
+            const today = new Date().toISOString().slice(0, 10);
+            const overdue = r.next_due_date < today;
+            return <span className={overdue ? "text-destructive font-medium" : ""}>{r.next_due_date}</span>;
+          }},
           { key: "provider", header: "Provedor", render: (r) => r.provider ?? "—" },
           { key: "certificate_url", header: "Anexo", render: (r) => r.certificate_url ? <a href={r.certificate_url} target="_blank" rel="noreferrer" className="text-primary text-xs hover:underline">abrir</a> : <span className="text-muted-foreground text-xs">—</span> },
           { key: "result", header: "Resultado", render: (r) => <StatusBadge>{r.points?.length ? evaluateRecord(r) : r.result}</StatusBadge> },

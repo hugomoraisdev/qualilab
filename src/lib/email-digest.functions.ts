@@ -45,6 +45,11 @@ export const runEmailDigest = createServerFn({ method: "POST" }).handler(async (
     { data: risks },
     { data: riskMetaRows },
     { data: eqMetaRows },
+    { data: documents },
+    { data: docMetaRows },
+    { data: suppliers },
+    { data: supplierMetaRows },
+    { data: userRoles },
   ] = await Promise.all([
     supabaseAdmin.from("profiles").select("id,name,email"),
     supabaseAdmin.from("calibrations").select("id,equipment_id,next_due_date,responsible_id").lte("next_due_date", addDays(30)).is("deleted_at", null),
@@ -54,6 +59,11 @@ export const runEmailDigest = createServerFn({ method: "POST" }).handler(async (
     supabaseAdmin.from("risks").select("id,code,description,responsible_id,status").is("deleted_at", null),
     supabaseAdmin.from("app_data").select("key,value").like("key", "risk-meta:%"),
     supabaseAdmin.from("app_data").select("key,value").like("key", "equipment-meta:%"),
+    supabaseAdmin.from("documents").select("id,code,title").is("deleted_at", null),
+    supabaseAdmin.from("app_data").select("key,value").like("key", "doc-meta:%"),
+    supabaseAdmin.from("suppliers").select("id,name").is("deleted_at", null),
+    supabaseAdmin.from("app_data").select("key,value").like("key", "supplier-meta:%"),
+    supabaseAdmin.from("user_roles").select("user_id,role").in("role", ["admin", "gestor"]),
   ]);
 
   // Mapas auxiliares
@@ -80,6 +90,25 @@ export const runEmailDigest = createServerFn({ method: "POST" }).handler(async (
     const id = (r.key as string).replace("risk-meta:", "");
     const val = r.value as { treatment_deadline?: string | null };
     riskMetaMap.set(id, { treatment_deadline: val?.treatment_deadline ?? null });
+  }
+
+  // Mapa de documentos: id → { code, title }
+  const docMap = new Map<string, { code: string; title: string }>();
+  for (const doc of documents ?? []) docMap.set(doc.id, { code: doc.code, title: doc.title });
+
+  // Mapa de suppliers: id → { name }
+  const supplierMap = new Map<string, { name: string }>();
+  for (const s of suppliers ?? []) supplierMap.set(s.id, { name: s.name });
+
+  // Lista de emails de admins/gestores
+  const adminEmails: { email: string; name: string }[] = [];
+  for (const ur of userRoles ?? []) {
+    const email = profileById.get(ur.user_id);
+    if (!email) continue;
+    const name = profileByIdName.get(ur.user_id) ?? "";
+    if (!adminEmails.some((a) => a.email === email)) {
+      adminEmails.push({ email, name });
+    }
   }
 
   // Acumula alertas por e-mail
@@ -167,6 +196,97 @@ export const runEmailDigest = createServerFn({ method: "POST" }).handler(async (
       description: `${risk.code ?? ""} — ${(risk.description ?? "").slice(0, 60)}`,
       daysLeft: d,
     });
+  }
+
+  // Prazos de etapas de documentos (≤7 dias)
+  const docStageLabel: Record<string, string> = {
+    elaboration: "Elaboração",
+    review: "Revisão",
+    approval: "Aprovação",
+  };
+
+  interface WorkflowStage {
+    user_id: string | null;
+    user_name: string | null;
+    deadline: string | null;
+    signed_at: string | null;
+  }
+  interface WorkflowDoc {
+    workflow: {
+      stage: string;
+      elaboration: WorkflowStage;
+      review: WorkflowStage;
+      approval: WorkflowStage;
+    };
+  }
+
+  for (const row of docMetaRows ?? []) {
+    const docId = (row.key as string).replace("doc-meta:", "");
+    const meta = row.value as unknown as WorkflowDoc;
+    if (!meta?.workflow) continue;
+    const { stage, elaboration, review, approval } = meta.workflow;
+    if (stage === "aprovado" || stage === "obsoleto") continue;
+
+    const doc = docMap.get(docId);
+    if (!doc) continue;
+
+    for (const [stageKey, stageData] of Object.entries({ elaboration, review, approval }) as [string, WorkflowStage][]) {
+      if (stageData.signed_at) continue;
+      if (!stageData.deadline) continue;
+      const d = daysUntil(stageData.deadline);
+      if (d > 7) continue;
+
+      const email =
+        (stageData.user_id ? profileById.get(stageData.user_id) : undefined) ??
+        (stageData.user_name ? profileByName.get(stageData.user_name) : undefined);
+      if (!email) continue;
+
+      const recipientName =
+        (stageData.user_id ? profileByIdName.get(stageData.user_id) : undefined) ??
+        stageData.user_name ??
+        "";
+
+      const label = docStageLabel[stageKey] ?? stageKey;
+      addAlert(email, recipientName, {
+        category: "Documento",
+        level: d < 0 ? "danger" : "warning",
+        title: d < 0 ? `Etapa ${label} vencida` : `Etapa ${label} vence em ${d} dia(s)`,
+        description: `${doc.code} — ${doc.title.slice(0, 50)} · ${label}`,
+        daysLeft: d,
+      });
+    }
+  }
+
+  // Documentos de fornecedor vencendo (≤30 dias)
+  interface SupplierDocument {
+    validity?: string | null;
+    type: string;
+    status: string;
+  }
+  interface SupplierMeta {
+    documents: SupplierDocument[];
+  }
+
+  for (const row of supplierMetaRows ?? []) {
+    const supplierId = (row.key as string).replace("supplier-meta:", "");
+    const meta = row.value as unknown as SupplierMeta;
+    if (!meta?.documents) continue;
+
+    for (const doc of meta.documents) {
+      if (!doc.validity) continue;
+      const d = daysUntil(doc.validity);
+      if (d > 30) continue;
+
+      for (const { email, name } of adminEmails) {
+        addAlert(email, name, {
+          category: "Fornecedor",
+          level: d < 0 ? "danger" : "warning",
+          title: d < 0 ? "Documento de fornecedor vencido" : `Documento de fornecedor vence em ${d} dia(s)`,
+          description: `${supplierMap.get(supplierId)?.name ?? ""} — ${doc.type}`,
+          daysLeft: d,
+        });
+      }
+    }
   }
 
   // Envia um e-mail por destinatário

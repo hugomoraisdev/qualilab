@@ -17,10 +17,12 @@ import {
   type RiskCustomField,
 } from "@/lib/risk-meta-store";
 import { useTableStore } from "@/lib/table-store";
-import { profilesStore, profileName } from "@/lib/profiles-store";
+import { profilesStore, profileName, listProfiles } from "@/lib/profiles-store";
 import { documentsStore } from "@/lib/documents-store";
 import { occurrencesStore } from "@/lib/occurrences-store";
 import { actionPlansStore, saveActionPlan, ORIGIN_TYPE_LABEL } from "@/lib/action-plans-store";
+import { sendEmail } from "@/lib/send-email.functions";
+import { buildActionAssignedHtml } from "@/lib/email-templates";
 import {
   ArrowLeft, Plus, Trash2, Paperclip, History, Link2,
   ClipboardList, ShieldCheck, Save, Pencil,
@@ -401,6 +403,23 @@ function NewActionDialog({ riskId, riskCode, responsibleId, onSaved }: { riskId:
         progress: 0,
         notes: `Risco ${riskCode}`,
       });
+      if (responsible) {
+        const profile = listProfiles().find((p) => p.id === responsible);
+        if (profile?.email) {
+          sendEmail({
+            data: {
+              to: profile.email,
+              subject: "Qualilab — Nova ação atribuída a você",
+              html: buildActionAssignedHtml({
+                description,
+                responsible: profile.name,
+                originLabel: kind === "mitigacao" ? "Risco — Mitigação" : "Risco — Contingência",
+                deadline: deadline || null,
+              }),
+            },
+          }).catch(console.warn);
+        }
+      }
       await updateRiskMeta(riskId, (p) => p, {
         action: `Ação de ${kind === "mitigacao" ? "mitigação" : "contingência"} criada`,
         detail: description.slice(0, 80),

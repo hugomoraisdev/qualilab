@@ -63,7 +63,13 @@ export function DataTable<T extends Record<string, any>>({
     let rows = data;
     if (q.trim()) {
       const term = q.toLowerCase();
-      rows = rows.filter((r) => searchKeys.some((k) => String(r[k] ?? "").toLowerCase().includes(term)));
+      rows = rows.filter((r) =>
+        searchKeys.some((k) => {
+          const col = columns.find((c) => c.key === k);
+          const val = col?.accessor ? col.accessor(r) : r[k];
+          return String(val ?? "").toLowerCase().includes(term);
+        })
+      );
     }
     for (const [key, raw] of Object.entries(filters)) {
       const term = raw.trim().toLowerCase();
