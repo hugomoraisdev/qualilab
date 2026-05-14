@@ -311,10 +311,11 @@ function CalPage() {
         exportName="calibracoes"
         columns={[
           { key: "certificate_number", header: "Certificado", render: (r) => <span className="font-mono text-xs">{r.certificate_number ?? "—"}</span> },
-          { key: "equipment_id", header: "Equipamento", render: (r) => equipLabel(r.equipment_id) },
+          { key: "equipment_id", header: "Equipamento", accessor: (r) => equipLabel(r.equipment_id), render: (r) => equipLabel(r.equipment_id) },
           { key: "performed_at", header: "Data" },
           { key: "next_due_date", header: "Validade", render: (r) => r.next_due_date ?? "—" },
           { key: "provider", header: "Provedor", render: (r) => r.provider ?? "—" },
+          { key: "certificate_url", header: "Anexo", render: (r) => r.certificate_url ? <a href={r.certificate_url} target="_blank" rel="noreferrer" className="text-primary text-xs hover:underline">abrir</a> : <span className="text-muted-foreground text-xs">—</span> },
           { key: "result", header: "Resultado", render: (r) => <StatusBadge>{r.points?.length ? evaluateRecord(r) : r.result}</StatusBadge> },
         ]}
       />
