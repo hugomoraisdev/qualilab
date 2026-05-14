@@ -18,7 +18,7 @@ export const emptyExtra = (): IndicatorExtra => ({ kind: "desempenho", process: 
 
 export async function readIndicatorMeta(): Promise<IndicatorMetaMap> {
   const { data } = await supabase.from("app_data").select("value").eq("key", KEY).maybeSingle();
-  return ((data?.value as IndicatorMetaMap) ?? {});
+  return ((data?.value as unknown as IndicatorMetaMap) ?? {});
 }
 
 export async function writeIndicatorMeta(map: IndicatorMetaMap) {
