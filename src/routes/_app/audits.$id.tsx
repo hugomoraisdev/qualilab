@@ -139,13 +139,16 @@ function AuditDetail() {
     const f = actionDlg.finding;
     const ap: ActionPlanRow = {
       id: newId("AP"),
-      origin: `auditoria:${a.code ?? a.id}`,
+      code: null,
+      origin_type: "audit_finding",
+      origin_id: f.id,
       description: actDesc.trim(),
-      responsible: actResp.trim() || null,
+      responsible_id: actResp.trim() || null,
       deadline: actDeadline || null,
       priority: actPriority,
       status: "pendente",
       progress: 0,
+      notes: `Auditoria ${a.code ?? a.id}`,
     };
     await saveActionPlan(ap);
     await updateFindingMeta(f.id, (prev) => ({
