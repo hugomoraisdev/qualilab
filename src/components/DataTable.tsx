@@ -7,6 +7,7 @@ import {
   DropdownMenuSeparator, DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export interface Column<T> {
@@ -56,6 +57,7 @@ export function DataTable<T extends Record<string, any>>({
   const [q, setQ] = useState("");
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [detailRow, setDetailRow] = useState<T | null>(null);
 
   const visibleColumns = useMemo(() => columns.filter((c) => !hidden[c.key]), [columns, hidden]);
 
@@ -202,7 +204,7 @@ export function DataTable<T extends Record<string, any>>({
               <tr
                 key={i}
                 className="border-t border-border hover:bg-accent/30 transition-colors cursor-pointer"
-                onClick={() => onRowClick?.(row)}
+                onClick={() => (onRowClick ? onRowClick(row) : setDetailRow(row))}
               >
                 {visibleColumns.map((c) => (
                   <td key={c.key} className={`px-4 py-3 align-middle ${c.className ?? ""}`}>
@@ -211,9 +213,13 @@ export function DataTable<T extends Record<string, any>>({
                 ))}
                 <td className="px-4 py-3 text-right">
                   <button
-                    onClick={(e) => { e.stopPropagation(); if (onRowClick) { onRowClick(row); } else { toast.info(`Detalhes: ${row.id ?? ""}`); } }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onRowClick) onRowClick(row);
+                      else setDetailRow(row);
+                    }}
                     className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                    title="Visualizar"
+                    title="Visualizar detalhes"
                   >
                     <Eye className="size-4" />
                   </button>
@@ -227,6 +233,29 @@ export function DataTable<T extends Record<string, any>>({
       <div className="px-4 py-2.5 text-xs text-muted-foreground border-t border-border bg-muted/30">
         {filtered.length} de {data.length} registros
       </div>
+
+      <Dialog open={!!detailRow} onOpenChange={(o) => !o && setDetailRow(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes do registro</DialogTitle>
+            <DialogDescription>Visualização completa de todos os campos.</DialogDescription>
+          </DialogHeader>
+          {detailRow && (
+            <dl className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-x-4 gap-y-2 text-sm">
+              {columns.map((c) => {
+                const raw = c.accessor ? c.accessor(detailRow) : (detailRow as any)[c.key];
+                const display = c.render ? c.render(detailRow) : (raw == null || raw === "" ? "—" : String(raw));
+                return (
+                  <div key={c.key} className="contents">
+                    <dt className="text-muted-foreground font-medium pt-1.5 border-t border-border">{c.header}</dt>
+                    <dd className="pt-1.5 border-t border-border break-words">{display}</dd>
+                  </div>
+                );
+              })}
+            </dl>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
