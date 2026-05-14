@@ -26,6 +26,7 @@ import { Route as AppProcessMapRouteImport } from './routes/_app/process-map'
 import { Route as AppPocChecklistRouteImport } from './routes/_app/poc-checklist'
 import { Route as AppPocRouteImport } from './routes/_app/poc'
 import { Route as AppOccurrencesRouteImport } from './routes/_app/occurrences'
+import { Route as AppLabUnitsRouteImport } from './routes/_app/lab-units'
 import { Route as AppIndicatorsRouteImport } from './routes/_app/indicators'
 import { Route as AppFormsRouteImport } from './routes/_app/forms'
 import { Route as AppEquipmentsRouteImport } from './routes/_app/equipments'
@@ -139,6 +140,11 @@ const AppPocRoute = AppPocRouteImport.update({
 const AppOccurrencesRoute = AppOccurrencesRouteImport.update({
   id: '/occurrences',
   path: '/occurrences',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLabUnitsRoute = AppLabUnitsRouteImport.update({
+  id: '/lab-units',
+  path: '/lab-units',
   getParentRoute: () => AppRoute,
 } as any)
 const AppIndicatorsRoute = AppIndicatorsRouteImport.update({
@@ -310,6 +316,7 @@ export interface FileRoutesByFullPath {
   '/equipments': typeof AppEquipmentsRouteWithChildren
   '/forms': typeof AppFormsRouteWithChildren
   '/indicators': typeof AppIndicatorsRoute
+  '/lab-units': typeof AppLabUnitsRoute
   '/occurrences': typeof AppOccurrencesRouteWithChildren
   '/poc': typeof AppPocRouteWithChildren
   '/poc-checklist': typeof AppPocChecklistRoute
@@ -358,6 +365,7 @@ export interface FileRoutesByTo {
   '/equipments': typeof AppEquipmentsRouteWithChildren
   '/forms': typeof AppFormsRouteWithChildren
   '/indicators': typeof AppIndicatorsRoute
+  '/lab-units': typeof AppLabUnitsRoute
   '/occurrences': typeof AppOccurrencesRouteWithChildren
   '/poc': typeof AppPocRouteWithChildren
   '/poc-checklist': typeof AppPocChecklistRoute
@@ -408,6 +416,7 @@ export interface FileRoutesById {
   '/_app/equipments': typeof AppEquipmentsRouteWithChildren
   '/_app/forms': typeof AppFormsRouteWithChildren
   '/_app/indicators': typeof AppIndicatorsRoute
+  '/_app/lab-units': typeof AppLabUnitsRoute
   '/_app/occurrences': typeof AppOccurrencesRouteWithChildren
   '/_app/poc': typeof AppPocRouteWithChildren
   '/_app/poc-checklist': typeof AppPocChecklistRoute
@@ -458,6 +467,7 @@ export interface FileRouteTypes {
     | '/equipments'
     | '/forms'
     | '/indicators'
+    | '/lab-units'
     | '/occurrences'
     | '/poc'
     | '/poc-checklist'
@@ -506,6 +516,7 @@ export interface FileRouteTypes {
     | '/equipments'
     | '/forms'
     | '/indicators'
+    | '/lab-units'
     | '/occurrences'
     | '/poc'
     | '/poc-checklist'
@@ -555,6 +566,7 @@ export interface FileRouteTypes {
     | '/_app/equipments'
     | '/_app/forms'
     | '/_app/indicators'
+    | '/_app/lab-units'
     | '/_app/occurrences'
     | '/_app/poc'
     | '/_app/poc-checklist'
@@ -714,6 +726,13 @@ declare module '@tanstack/react-router' {
       path: '/occurrences'
       fullPath: '/occurrences'
       preLoaderRoute: typeof AppOccurrencesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/lab-units': {
+      id: '/_app/lab-units'
+      path: '/lab-units'
+      fullPath: '/lab-units'
+      preLoaderRoute: typeof AppLabUnitsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/indicators': {
@@ -1079,6 +1098,7 @@ interface AppRouteChildren {
   AppEquipmentsRoute: typeof AppEquipmentsRouteWithChildren
   AppFormsRoute: typeof AppFormsRouteWithChildren
   AppIndicatorsRoute: typeof AppIndicatorsRoute
+  AppLabUnitsRoute: typeof AppLabUnitsRoute
   AppOccurrencesRoute: typeof AppOccurrencesRouteWithChildren
   AppPocRoute: typeof AppPocRouteWithChildren
   AppPocChecklistRoute: typeof AppPocChecklistRoute
@@ -1109,6 +1129,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppEquipmentsRoute: AppEquipmentsRouteWithChildren,
   AppFormsRoute: AppFormsRouteWithChildren,
   AppIndicatorsRoute: AppIndicatorsRoute,
+  AppLabUnitsRoute: AppLabUnitsRoute,
   AppOccurrencesRoute: AppOccurrencesRouteWithChildren,
   AppPocRoute: AppPocRouteWithChildren,
   AppPocChecklistRoute: AppPocChecklistRoute,
