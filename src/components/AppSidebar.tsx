@@ -7,8 +7,19 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
+import { useLabUnits } from "@/lib/lab-units-store";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
+
+// Módulos sujeitos a restrição por unidade — devem bater com as chaves de
+// `lab-units.tsx`. Itens fora desta lista são sempre exibidos (dashboards,
+// POC, configurações, etc.).
+const RESTRICTABLE = new Set([
+  "documents", "occurrences", "audits", "risks", "indicators", "calibrations",
+  "equipments", "suppliers", "purchases", "competencies", "meetings", "forms",
+  "process-map", "reports",
+]);
+const moduleKeyOf = (to: string) => to.replace(/^\//, "").split("/")[0];
 
 type Item = { to: string; label: string; icon: React.ComponentType<{ className?: string }>; perm: string };
 
