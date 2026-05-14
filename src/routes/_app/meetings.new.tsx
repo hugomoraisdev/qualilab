@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft } from "lucide-react";
 import { createMeetingSeries, type RecurrenceFrequency } from "@/lib/meetings-store";
+import { updateMeetingMeta } from "@/lib/meeting-meta-store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/meetings/new")({ component: NewMeeting });
@@ -15,10 +16,12 @@ export const Route = createFileRoute("/_app/meetings/new")({ component: NewMeeti
 function NewMeeting() {
   const navigate = useNavigate();
   const [type, setType] = useState("Análise Crítica pela Direção");
+  const [sector, setSector] = useState("Qualidade");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [time, setTime] = useState("10:00");
   const [participants, setParticipants] = useState("Roberto Gestor, Mariana Técnica, Paulo Auditor");
   const [agendaText, setAgendaText] = useState("Revisão de indicadores\nStatus de auditorias\nAções corretivas em aberto");
+  const [autoSend, setAutoSend] = useState(false);
   const [recurring, setRecurring] = useState(false);
   const [frequency, setFrequency] = useState<RecurrenceFrequency>("monthly");
   const [until, setUntil] = useState(() => {
@@ -40,6 +43,10 @@ function NewMeeting() {
       agenda,
       recurrence: recurring ? { frequency, until } : undefined,
     });
+    // Aplica setor e config de envio automático em todas as reuniões da série
+    for (const m of created) {
+      await updateMeetingMeta(m.id, (prev) => ({ ...prev, sector: sector || null, auto_send_minutes: autoSend }));
+    }
     toast.success(
       recurring ? `${created.length} reuniões criadas (recorrência ${frequency})` : "Reunião criada",
       { description: `Primeira em ${date}` },
@@ -57,9 +64,13 @@ function NewMeeting() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <section className="lg:col-span-2 bg-card border border-border rounded-lg p-5 shadow-sm space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1.5 md:col-span-2">
+            <div className="space-y-1.5">
               <Label className="text-xs">Tipo de reunião</Label>
               <Input value={type} onChange={(e) => setType(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Setor</Label>
+              <Input value={sector} onChange={(e) => setSector(e.target.value)} placeholder="Ex.: Qualidade, Produção…" />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Data inicial</Label>
@@ -112,6 +123,15 @@ function NewMeeting() {
               </div>
             </div>
           )}
+          <div className="border-t pt-3">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={autoSend} onCheckedChange={(v) => setAutoSend(!!v)} />
+              Enviar ata automaticamente ao encerrar
+            </label>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Os participantes com e-mail cadastrado receberão a ata assim que a reunião for encerrada.
+            </p>
+          </div>
           <Button className="w-full" onClick={save}>Criar reunião{recurring ? "s" : ""}</Button>
         </aside>
       </div>
