@@ -18,7 +18,7 @@ type ModuleMap = Record<string, string[]>;
 const sb = supabase as any;
 
 export async function listUnits(): Promise<LabUnit[]> {
-  const { data, error } = await sb.from("lab_units").select("id,name,code,active").order("name");
+  const { data, error } = await sb.from("lab_units").select("id,name,code,active").eq("active", true).order("name");
   if (error) {
     console.warn("[lab-units] list:", error.message);
     return [];
