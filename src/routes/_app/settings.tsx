@@ -1,6 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { Building2, FlaskConical, Tag, AlertTriangle, ShieldAlert, Truck, Gauge, ListChecks, Users, Shield, ScrollText } from "lucide-react";
+import { Building2, FlaskConical, Tag, AlertTriangle, ShieldAlert, Truck, Gauge, ListChecks, Users, Shield, ScrollText, Mail, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { runEmailDigest } from "@/lib/email-digest.functions";
+import { toast } from "sonner";
 
 const SECTIONS: { icon: any; title: string; desc: string; to?: string }[] = [
   { icon: Building2, title: "Dados da organização", desc: "Razão social, CNPJ, endereço e logo" },
@@ -18,11 +22,63 @@ const SECTIONS: { icon: any; title: string; desc: string; to?: string }[] = [
 
 export const Route = createFileRoute("/_app/settings")({ component: SettingsPage });
 
+function EmailTestCard() {
+  const [sending, setSending] = useState(false);
+
+  const handleSendTest = async () => {
+    setSending(true);
+    try {
+      const result = await runEmailDigest({ data: undefined });
+      if ((result as any)?.skipped) {
+        toast.info("Digest já enviado hoje", { description: "O digest deste dia já foi processado." });
+      } else {
+        const { sent } = result as { sent: number };
+        toast.success("Email digest enviado", {
+          description: sent > 0 ? `${sent} destinatário(s) notificado(s).` : "Nenhum alerta pendente no momento.",
+        });
+      }
+    } catch (e: any) {
+      toast.error("Falha ao enviar email de teste", { description: e?.message ?? "Erro desconhecido" });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-lg p-4 shadow-sm col-span-full">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="size-9 rounded-lg bg-primary/10 grid place-items-center text-primary">
+            <Mail className="size-4" />
+          </div>
+          <div>
+            <div className="font-medium text-sm">Notificações por e-mail</div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              Dispara o digest diário agora — calibrações, ações, riscos, documentos e fornecedores.
+            </div>
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleSendTest}
+          disabled={sending}
+          data-testid="send-test-email"
+        >
+          {sending ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
+          {sending ? "Enviando..." : "Enviar digest de teste"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function SettingsPage() {
   return (
     <>
       <PageHeader title="Configurações" description="Parâmetros gerais do sistema QualiLab" />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <EmailTestCard />
         {SECTIONS.map((s) => {
           const inner = (
             <>
@@ -42,4 +98,3 @@ function SettingsPage() {
     </>
   );
 }
-

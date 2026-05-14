@@ -46,11 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
       setSession(sess);
       if (sess?.user) {
+        // Only set loading on SIGNED_IN to prevent _app.tsx from blanking on TOKEN_REFRESHED
+        if (event === "SIGNED_IN") setLoading(true);
         // Adia chamadas ao banco para fora do callback (evita deadlock)
         setTimeout(() => {
           loadProfile(sess.user.id, sess.user.email ?? "").then((u) => {
             setUser(u);
             userRef.current = u;
+            if (event === "SIGNED_IN") setLoading(false);
             if (event === "SIGNED_IN") {
               void (supabase as any).from("audit_logs").insert({
                 actor_id: u.id, actor_name: u.name, actor_email: u.email,
