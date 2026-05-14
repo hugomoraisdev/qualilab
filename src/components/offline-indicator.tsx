@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Wifi, WifiOff, RefreshCw, CloudUpload } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { countOutbox, flushOutbox, subscribe } from "@/lib/offline-outbox";
+import { occurrencesStore } from "@/lib/occurrences-store";
 import { toast } from "sonner";
+
+const offlineStores = [occurrencesStore];
 
 export function OfflineIndicator() {
   const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
@@ -11,17 +14,27 @@ export function OfflineIndicator() {
   const qc = useQueryClient();
 
   useEffect(() => {
-    const refresh = () => countOutbox().then(setPending).catch(() => {});
-    refresh();
-    const unsub = subscribe(refresh);
+    const refresh = async () => {
+      const fromOutbox = await countOutbox().catch(() => 0);
+      const fromStores = offlineStores.reduce((acc, s) => acc + s.pendingCount(), 0);
+      setPending(fromOutbox + fromStores);
+    };
+    void refresh();
+    const unsub = subscribe(() => { void refresh(); });
+    const storeHandlers = offlineStores.map((s) => {
+      const h = () => { void refresh(); };
+      window.addEventListener(`storage:${s.table}`, h);
+      return () => window.removeEventListener(`storage:${s.table}`, h);
+    });
     const goOnline = async () => {
       setOnline(true);
       setSyncing(true);
+      await Promise.all(offlineStores.map((s) => s.flushQueue()));
       const { sent } = await flushOutbox();
       setSyncing(false);
       await refresh();
-      if (sent > 0) {
-        toast.success(`Sincronizado: ${sent} ${sent === 1 ? "registro enviado" : "registros enviados"}.`);
+      if (sent > 0 || offlineStores.some((s) => s.pendingCount() === 0)) {
+        toast.success("Alterações sincronizadas com sucesso.");
         qc.invalidateQueries();
       }
     };
@@ -33,6 +46,7 @@ export function OfflineIndicator() {
     window.addEventListener("offline", goOffline);
     return () => {
       unsub();
+      storeHandlers.forEach((off) => off());
       window.removeEventListener("online", goOnline);
       window.removeEventListener("offline", goOffline);
     };
