@@ -16,6 +16,8 @@ import { auditsStore } from "@/lib/audits-store";
 import { profilesStore, profileName } from "@/lib/profiles-store";
 import { useJobRoles, LEVEL_LABEL, LEVEL_RANK } from "@/lib/job-roles-store";
 import { useAssignments } from "@/lib/role-assignments-store";
+import { indicatorsStore, indicatorResultsStore } from "@/lib/indicators-store";
+import { useIndicatorMeta } from "@/lib/indicator-meta-store";
 import { exportTablePdf } from "@/lib/pdf-export";
 
 export const Route = createFileRoute("/_app/reports")({ component: ReportsPage });
@@ -35,6 +37,9 @@ function ReportsPage() {
   const profiles = useTableStore(profilesStore);
   const { roles } = useJobRoles();
   const { map: assignments } = useAssignments();
+  const indicators = useTableStore(indicatorsStore);
+  const indResults = useTableStore(indicatorResultsStore);
+  const { getExtra: getIndExtra } = useIndicatorMeta();
 
   const today_iso = today();
   const isExpired = (iso: string | null | undefined) => !!iso && iso < today_iso;
@@ -153,6 +158,48 @@ function ReportsPage() {
       title: "Auditorias realizadas",
       cols: ["Código", "Tipo", "Escopo", "Auditor", "Realizada", "Achados", "Status"],
       build: () => audits.filter((a) => a.status === "concluida" || a.performed_at).map((a) => [a.code, a.type, a.scope, a.auditor_name, a.performed_at, a.findings_count, a.status]),
+    },
+    {
+      title: "Indicadores — resumo",
+      cols: ["Código", "Nome", "Tipo", "Setor", "Processo", "Periodicidade", "Meta", "Último valor", "Atinge meta", "Responsável"],
+      build: () => indicators.filter((i) => !i.deleted_at).map((i) => {
+        const ex = getIndExtra(i.id);
+        const rs = indResults.filter((r) => r.indicator_id === i.id).sort((a, b) => a.period.localeCompare(b.period));
+        const last = rs.at(-1);
+        const meets = last ? (i.direction === "maior" ? last.value >= i.target : last.value <= i.target) : null;
+        return [i.code ?? i.id, i.name, ex.kind, i.area ?? "—", ex.process ?? "—", i.frequency,
+          `${i.direction === "maior" ? "≥" : "≤"} ${i.target} ${i.unit}`,
+          last ? `${last.value} ${i.unit}` : "—",
+          last ? (meets ? "Sim" : "Não") : "—",
+          profileName(i.responsible_id)];
+      }),
+    },
+    {
+      title: "Indicadores — resultados (histórico)",
+      cols: ["Indicador", "Tipo", "Setor", "Período", "Valor", "Meta", "Status", "Notas"],
+      build: () => indResults.flatMap((r) => {
+        const i = indicators.find((x) => x.id === r.indicator_id);
+        if (!i) return [];
+        const ex = getIndExtra(i.id);
+        return [[i.name, ex.kind, i.area ?? "—", r.period, `${r.value} ${i.unit}`,
+          `${i.direction === "maior" ? "≥" : "≤"} ${i.target}`, r.status ?? "", r.notes ?? ""]];
+      }),
+    },
+    {
+      title: "Indicadores — análise de tendência",
+      cols: ["Indicador", "Setor", "Períodos", "Primeiro", "Último", "Variação", "Tendência", "% no alvo"],
+      build: () => indicators.filter((i) => !i.deleted_at).map((i) => {
+        const rs = indResults.filter((r) => r.indicator_id === i.id).sort((a, b) => a.period.localeCompare(b.period));
+        if (rs.length === 0) return [i.name, i.area ?? "—", 0, "—", "—", "—", "—", "—"];
+        const first = rs[0]; const last = rs.at(-1)!;
+        const delta = last.value - first.value;
+        const goodDelta = i.direction === "maior" ? delta > 0 : delta < 0;
+        const trend = delta === 0 ? "estável" : (goodDelta ? "melhorando" : "piorando");
+        const onTarget = rs.filter((r) => i.direction === "maior" ? r.value >= i.target : r.value <= i.target).length;
+        const pct = Math.round((onTarget / rs.length) * 100);
+        return [i.name, i.area ?? "—", rs.length, `${first.value} (${first.period})`,
+          `${last.value} (${last.period})`, `${delta >= 0 ? "+" : ""}${delta.toFixed(2)}`, trend, `${pct}%`];
+      }),
     },
   ];
 
