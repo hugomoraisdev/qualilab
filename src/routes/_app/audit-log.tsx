@@ -64,7 +64,7 @@ function AuditLogPage() {
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("audit_logs")
         .select("id, occurred_at, actor_name, actor_email, module, action, record_id, record_label")
         .order("occurred_at", { ascending: false })
