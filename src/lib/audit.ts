@@ -1,5 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useRef } from "react";
+import { logAuditFn } from "@/lib/log-audit.functions";
 
 interface AuditUser { id: string; name: string; email: string; }
 
@@ -14,20 +14,19 @@ export function logAudit(params: {
   action: string;
   record_id?: string | null;
   record_label?: string | null;
-  before?: unknown;
-  after?: unknown;
 }): void {
+  if (typeof window === "undefined") return;
   const user = _currentUser;
-  void (supabase as any).from("audit_logs").insert({
-    actor_id: user?.id ?? null,
-    actor_name: user?.name ?? null,
-    actor_email: user?.email ?? null,
-    module: params.module,
-    action: params.action,
-    record_id: params.record_id ?? null,
-    record_label: params.record_label ?? null,
-    before: params.before ?? null,
-    after: params.after ?? null,
+  void logAuditFn({
+    data: {
+      actor_id: user?.id ?? null,
+      actor_name: user?.name ?? null,
+      actor_email: user?.email ?? null,
+      module: params.module,
+      action: params.action,
+      record_id: params.record_id ?? null,
+      record_label: params.record_label ?? null,
+    },
   });
 }
 
