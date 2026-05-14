@@ -52,10 +52,13 @@ function emptyPoint(equipCode: string, idx: number): CalibrationPoint {
 function MultiPointForm({ onSaved }: { onSaved: () => void }) {
   const { user } = useAuth();
   const equipments = useTableStore(equipmentsStore);
+  const equipMetaMap = useAllEquipmentMeta(equipments.map((e) => e.id));
+  const sendEmailFn = useServerFn(sendEmail);
   const firstCode = equipments[0]?.code ?? "";
   const [equipCode, setEquipCode] = useState(firstCode);
   const [provider, setProvider] = useState("INMETRO");
   const [certificate, setCertificate] = useState("");
+  const [certificateUrl, setCertificateUrl] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [validity, setValidity] = useState("");
   const [points, setPoints] = useState<CalibrationPoint[]>(() => [
