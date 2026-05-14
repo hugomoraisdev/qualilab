@@ -18,6 +18,7 @@ export interface RiskRow {
   treatment: string | null;
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string | null;
 }
 
 export const risksStore = createTableStore<RiskRow>("risks", "id", true);
