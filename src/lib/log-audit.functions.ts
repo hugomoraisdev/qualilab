@@ -15,5 +15,6 @@ const AuditEventSchema = z.object({
 export const logAuditFn = createServerFn({ method: "POST" })
   .inputValidator((input) => AuditEventSchema.parse(input))
   .handler(async ({ data }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabaseAdmin as any).from("audit_logs").insert(data);
   });
