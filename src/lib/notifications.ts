@@ -198,7 +198,6 @@ export function useNotifications(): NotificationItem[] {
       });
     });
 
-    });
 
     // Prazos de elaboração / revisão / aprovação por documento
     documents.forEach((doc) => {
