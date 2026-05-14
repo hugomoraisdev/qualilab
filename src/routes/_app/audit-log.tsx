@@ -103,7 +103,7 @@ function AuditLogPage() {
         searchKeys={["actor_name", "actor_email", "module", "action", "record_label"]}
         newLabel="Exportar CSV"
         onNew={() => exportCsv(rows)}
-        emptyMessage={loading ? "Carregando…" : "Nenhum evento registrado ainda."}
+        
         columns={[
           {
             key: "occurred_at",
