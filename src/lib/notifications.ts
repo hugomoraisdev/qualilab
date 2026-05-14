@@ -84,7 +84,10 @@ export function useNotifications(): NotificationItem[] {
   const meetings = useTableStore(meetingsStore);
   const documents = useTableStore(documentsStore);
   const suppliers = useTableStore(suppliersStore);
+  const risks = useTableStore(risksStore);
   const docMeta = useDocumentMetaMap(documents.map((d) => d.id));
+  const riskIds = useMemo(() => risks.map((r) => r.id), [risks]);
+  const riskMeta = useAllRiskMeta(riskIds);
 
   return useMemo(() => {
     const out: NotificationItem[] = [];
