@@ -198,6 +198,34 @@ export function useNotifications(): NotificationItem[] {
       });
     });
 
+    });
+
+    // Prazos de elaboração / revisão / aprovação por documento
+    documents.forEach((doc) => {
+      const meta = docMeta[doc.id];
+      if (!meta) return;
+      const stages: { key: "elaboration" | "review" | "approval"; label: string }[] = [
+        { key: "elaboration", label: "Elaboração" },
+        { key: "review", label: "Revisão" },
+        { key: "approval", label: "Aprovação" },
+      ];
+      stages.forEach(({ key, label }) => {
+        const a = meta.workflow[key];
+        if (!a.deadline || a.signed_at) return;
+        const d = daysUntil(a.deadline);
+        if (d > 14) return;
+        out.push({
+          id: `doc-${doc.id}-${key}`,
+          category: "document",
+          level: levelFor(d),
+          title: d < 0 ? `${label} atrasada` : `${label} vence em ${d} dia(s)`,
+          description: `${doc.code} — ${doc.title} · etapa atual: ${stageLabel[meta.workflow.stage]}`,
+          date: a.deadline,
+          href: `/documents/${doc.id}`,
+        });
+      });
+    });
+
     return out.sort((a, b) => a.date.localeCompare(b.date));
-  }, [calibrations, equipments, actions, competencies, meetings, documents, suppliers]);
+  }, [calibrations, equipments, actions, competencies, meetings, documents, suppliers, docMeta]);
 }
