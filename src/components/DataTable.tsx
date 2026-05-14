@@ -211,7 +211,7 @@ export function DataTable<T extends Record<string, any>>({
                 ))}
                 <td className="px-4 py-3 text-right">
                   <button
-                    onClick={(e) => { e.stopPropagation(); onRowClick?.(row) ?? toast.info(`Detalhes: ${row.id ?? ""}`); }}
+                    onClick={(e) => { e.stopPropagation(); if (onRowClick) { onRowClick(row); } else { toast.info(`Detalhes: ${row.id ?? ""}`); } }}
                     className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                     title="Visualizar"
                   >

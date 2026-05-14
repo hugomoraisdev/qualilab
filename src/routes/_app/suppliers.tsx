@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -15,6 +16,7 @@ import { Inbox } from "lucide-react";
 export const Route = createFileRoute("/_app/suppliers")({ component: SupPage });
 
 function SupPage() {
+  useAuditAccess("suppliers");
   const suppliers = useTableStore(suppliersStore);
   useTableStore(supplierPortalStore);
   const pending = countPendingSubmissions();
