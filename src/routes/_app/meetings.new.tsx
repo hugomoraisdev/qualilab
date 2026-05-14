@@ -64,9 +64,13 @@ function NewMeeting() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <section className="lg:col-span-2 bg-card border border-border rounded-lg p-5 shadow-sm space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1.5 md:col-span-2">
+            <div className="space-y-1.5">
               <Label className="text-xs">Tipo de reunião</Label>
               <Input value={type} onChange={(e) => setType(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Setor</Label>
+              <Input value={sector} onChange={(e) => setSector(e.target.value)} placeholder="Ex.: Qualidade, Produção…" />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Data inicial</Label>
