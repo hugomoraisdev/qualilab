@@ -26,7 +26,6 @@ import { Route as AppProcessMapRouteImport } from './routes/_app/process-map'
 import { Route as AppPocChecklistRouteImport } from './routes/_app/poc-checklist'
 import { Route as AppPocRouteImport } from './routes/_app/poc'
 import { Route as AppOccurrencesRouteImport } from './routes/_app/occurrences'
-import { Route as AppMeetingsRouteImport } from './routes/_app/meetings'
 import { Route as AppIndicatorsRouteImport } from './routes/_app/indicators'
 import { Route as AppFormsRouteImport } from './routes/_app/forms'
 import { Route as AppEquipmentsRouteImport } from './routes/_app/equipments'
@@ -39,6 +38,7 @@ import { Route as AppCalibrationsRouteImport } from './routes/_app/calibrations'
 import { Route as AppAuditsRouteImport } from './routes/_app/audits'
 import { Route as AppAuditLogRouteImport } from './routes/_app/audit-log'
 import { Route as AppActionPlansRouteImport } from './routes/_app/action-plans'
+import { Route as AppMeetingsIndexRouteImport } from './routes/_app/meetings.index'
 import { Route as AppSuppliersIdRouteImport } from './routes/_app/suppliers.$id'
 import { Route as AppRisksIdRouteImport } from './routes/_app/risks.$id'
 import { Route as AppPocVarreduraRouteImport } from './routes/_app/poc.varredura'
@@ -138,11 +138,6 @@ const AppOccurrencesRoute = AppOccurrencesRouteImport.update({
   path: '/occurrences',
   getParentRoute: () => AppRoute,
 } as any)
-const AppMeetingsRoute = AppMeetingsRouteImport.update({
-  id: '/meetings',
-  path: '/meetings',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppIndicatorsRoute = AppIndicatorsRouteImport.update({
   id: '/indicators',
   path: '/indicators',
@@ -203,6 +198,11 @@ const AppActionPlansRoute = AppActionPlansRouteImport.update({
   path: '/action-plans',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMeetingsIndexRoute = AppMeetingsIndexRouteImport.update({
+  id: '/meetings/',
+  path: '/meetings/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSuppliersIdRoute = AppSuppliersIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -229,14 +229,14 @@ const AppOccurrencesIdRoute = AppOccurrencesIdRouteImport.update({
   getParentRoute: () => AppOccurrencesRoute,
 } as any)
 const AppMeetingsNewRoute = AppMeetingsNewRouteImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => AppMeetingsRoute,
+  id: '/meetings/new',
+  path: '/meetings/new',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppMeetingsIdRoute = AppMeetingsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppMeetingsRoute,
+  id: '/meetings/$id',
+  path: '/meetings/$id',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppFormsNewRoute = AppFormsNewRouteImport.update({
   id: '/new',
@@ -291,7 +291,6 @@ export interface FileRoutesByFullPath {
   '/equipments': typeof AppEquipmentsRouteWithChildren
   '/forms': typeof AppFormsRouteWithChildren
   '/indicators': typeof AppIndicatorsRoute
-  '/meetings': typeof AppMeetingsRouteWithChildren
   '/occurrences': typeof AppOccurrencesRouteWithChildren
   '/poc': typeof AppPocRouteWithChildren
   '/poc-checklist': typeof AppPocChecklistRoute
@@ -318,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/poc/varredura': typeof AppPocVarreduraRoute
   '/risks/$id': typeof AppRisksIdRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
+  '/meetings/': typeof AppMeetingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -336,7 +336,6 @@ export interface FileRoutesByTo {
   '/equipments': typeof AppEquipmentsRouteWithChildren
   '/forms': typeof AppFormsRouteWithChildren
   '/indicators': typeof AppIndicatorsRoute
-  '/meetings': typeof AppMeetingsRouteWithChildren
   '/occurrences': typeof AppOccurrencesRouteWithChildren
   '/poc': typeof AppPocRouteWithChildren
   '/poc-checklist': typeof AppPocChecklistRoute
@@ -363,6 +362,7 @@ export interface FileRoutesByTo {
   '/poc/varredura': typeof AppPocVarreduraRoute
   '/risks/$id': typeof AppRisksIdRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
+  '/meetings': typeof AppMeetingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -383,7 +383,6 @@ export interface FileRoutesById {
   '/_app/equipments': typeof AppEquipmentsRouteWithChildren
   '/_app/forms': typeof AppFormsRouteWithChildren
   '/_app/indicators': typeof AppIndicatorsRoute
-  '/_app/meetings': typeof AppMeetingsRouteWithChildren
   '/_app/occurrences': typeof AppOccurrencesRouteWithChildren
   '/_app/poc': typeof AppPocRouteWithChildren
   '/_app/poc-checklist': typeof AppPocChecklistRoute
@@ -410,6 +409,7 @@ export interface FileRoutesById {
   '/_app/poc/varredura': typeof AppPocVarreduraRoute
   '/_app/risks/$id': typeof AppRisksIdRoute
   '/_app/suppliers/$id': typeof AppSuppliersIdRoute
+  '/_app/meetings/': typeof AppMeetingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -430,7 +430,6 @@ export interface FileRouteTypes {
     | '/equipments'
     | '/forms'
     | '/indicators'
-    | '/meetings'
     | '/occurrences'
     | '/poc'
     | '/poc-checklist'
@@ -457,6 +456,7 @@ export interface FileRouteTypes {
     | '/poc/varredura'
     | '/risks/$id'
     | '/suppliers/$id'
+    | '/meetings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -475,7 +475,6 @@ export interface FileRouteTypes {
     | '/equipments'
     | '/forms'
     | '/indicators'
-    | '/meetings'
     | '/occurrences'
     | '/poc'
     | '/poc-checklist'
@@ -502,6 +501,7 @@ export interface FileRouteTypes {
     | '/poc/varredura'
     | '/risks/$id'
     | '/suppliers/$id'
+    | '/meetings'
   id:
     | '__root__'
     | '/'
@@ -521,7 +521,6 @@ export interface FileRouteTypes {
     | '/_app/equipments'
     | '/_app/forms'
     | '/_app/indicators'
-    | '/_app/meetings'
     | '/_app/occurrences'
     | '/_app/poc'
     | '/_app/poc-checklist'
@@ -548,6 +547,7 @@ export interface FileRouteTypes {
     | '/_app/poc/varredura'
     | '/_app/risks/$id'
     | '/_app/suppliers/$id'
+    | '/_app/meetings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -680,13 +680,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOccurrencesRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/meetings': {
-      id: '/_app/meetings'
-      path: '/meetings'
-      fullPath: '/meetings'
-      preLoaderRoute: typeof AppMeetingsRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/indicators': {
       id: '/_app/indicators'
       path: '/indicators'
@@ -771,6 +764,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppActionPlansRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/meetings/': {
+      id: '/_app/meetings/'
+      path: '/meetings'
+      fullPath: '/meetings/'
+      preLoaderRoute: typeof AppMeetingsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/suppliers/$id': {
       id: '/_app/suppliers/$id'
       path: '/$id'
@@ -808,17 +808,17 @@ declare module '@tanstack/react-router' {
     }
     '/_app/meetings/new': {
       id: '/_app/meetings/new'
-      path: '/new'
+      path: '/meetings/new'
       fullPath: '/meetings/new'
       preLoaderRoute: typeof AppMeetingsNewRouteImport
-      parentRoute: typeof AppMeetingsRoute
+      parentRoute: typeof AppRoute
     }
     '/_app/meetings/$id': {
       id: '/_app/meetings/$id'
-      path: '/$id'
+      path: '/meetings/$id'
       fullPath: '/meetings/$id'
       preLoaderRoute: typeof AppMeetingsIdRouteImport
-      parentRoute: typeof AppMeetingsRoute
+      parentRoute: typeof AppRoute
     }
     '/_app/forms/new': {
       id: '/_app/forms/new'
@@ -935,20 +935,6 @@ const AppFormsRouteWithChildren = AppFormsRoute._addFileChildren(
   AppFormsRouteChildren,
 )
 
-interface AppMeetingsRouteChildren {
-  AppMeetingsIdRoute: typeof AppMeetingsIdRoute
-  AppMeetingsNewRoute: typeof AppMeetingsNewRoute
-}
-
-const AppMeetingsRouteChildren: AppMeetingsRouteChildren = {
-  AppMeetingsIdRoute: AppMeetingsIdRoute,
-  AppMeetingsNewRoute: AppMeetingsNewRoute,
-}
-
-const AppMeetingsRouteWithChildren = AppMeetingsRoute._addFileChildren(
-  AppMeetingsRouteChildren,
-)
-
 interface AppOccurrencesRouteChildren {
   AppOccurrencesIdRoute: typeof AppOccurrencesIdRoute
 }
@@ -1011,7 +997,6 @@ interface AppRouteChildren {
   AppEquipmentsRoute: typeof AppEquipmentsRouteWithChildren
   AppFormsRoute: typeof AppFormsRouteWithChildren
   AppIndicatorsRoute: typeof AppIndicatorsRoute
-  AppMeetingsRoute: typeof AppMeetingsRouteWithChildren
   AppOccurrencesRoute: typeof AppOccurrencesRouteWithChildren
   AppPocRoute: typeof AppPocRouteWithChildren
   AppPocChecklistRoute: typeof AppPocChecklistRoute
@@ -1023,6 +1008,9 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppSuppliersRoute: typeof AppSuppliersRouteWithChildren
   AppUsersRoute: typeof AppUsersRoute
+  AppMeetingsIdRoute: typeof AppMeetingsIdRoute
+  AppMeetingsNewRoute: typeof AppMeetingsNewRoute
+  AppMeetingsIndexRoute: typeof AppMeetingsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1038,7 +1026,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppEquipmentsRoute: AppEquipmentsRouteWithChildren,
   AppFormsRoute: AppFormsRouteWithChildren,
   AppIndicatorsRoute: AppIndicatorsRoute,
-  AppMeetingsRoute: AppMeetingsRouteWithChildren,
   AppOccurrencesRoute: AppOccurrencesRouteWithChildren,
   AppPocRoute: AppPocRouteWithChildren,
   AppPocChecklistRoute: AppPocChecklistRoute,
@@ -1050,6 +1037,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppSuppliersRoute: AppSuppliersRouteWithChildren,
   AppUsersRoute: AppUsersRoute,
+  AppMeetingsIdRoute: AppMeetingsIdRoute,
+  AppMeetingsNewRoute: AppMeetingsNewRoute,
+  AppMeetingsIndexRoute: AppMeetingsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -1065,3 +1055,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

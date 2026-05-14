@@ -7,7 +7,7 @@ import { meetingsStore, agendaStore } from "@/lib/meetings-store";
 import { Button } from "@/components/ui/button";
 import { Plus, Repeat } from "lucide-react";
 
-export const Route = createFileRoute("/_app/meetings")({ component: MeetPage });
+export const Route = createFileRoute("/_app/meetings/")({ component: MeetPage });
 
 function MeetPage() {
   const navigate = useNavigate();
