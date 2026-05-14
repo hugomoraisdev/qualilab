@@ -10,8 +10,10 @@ import { competenciesStore } from "./competencies-store";
 import { meetingsStore } from "./meetings-store";
 import { documentsStore } from "./documents-store";
 import { suppliersStore } from "./suppliers-store";
+import { risksStore } from "./risks-store";
 import type { DocumentMeta } from "./document-meta-store";
 import { emptyMeta, stageLabel } from "./document-meta-store";
+import { useAllRiskMeta } from "./risk-meta-store";
 
 export type NotificationLevel = "info" | "warning" | "danger";
 export type NotificationCategory =
@@ -20,7 +22,8 @@ export type NotificationCategory =
   | "competency"
   | "meeting"
   | "document"
-  | "supplier";
+  | "supplier"
+  | "risk";
 
 export interface NotificationItem {
   id: string;
@@ -81,7 +84,10 @@ export function useNotifications(): NotificationItem[] {
   const meetings = useTableStore(meetingsStore);
   const documents = useTableStore(documentsStore);
   const suppliers = useTableStore(suppliersStore);
+  const risks = useTableStore(risksStore);
   const docMeta = useDocumentMetaMap(documents.map((d) => d.id));
+  const riskIds = useMemo(() => risks.map((r) => r.id), [risks]);
+  const riskMeta = useAllRiskMeta(riskIds);
 
   return useMemo(() => {
     const out: NotificationItem[] = [];
@@ -225,6 +231,24 @@ export function useNotifications(): NotificationItem[] {
       });
     });
 
+    // Riscos com prazo de tratamento próximo / vencido
+    risks.forEach((r) => {
+      const m = riskMeta[r.id];
+      if (!m?.treatment_deadline) return;
+      if (["mitigado", "encerrado", "aceito", "transferido"].includes(r.status)) return;
+      const d = daysUntil(m.treatment_deadline);
+      if (d > 14) return;
+      out.push({
+        id: `risk-${r.id}`,
+        category: "risk",
+        level: levelFor(d),
+        title: d < 0 ? "Tratamento de risco atrasado" : `Tratamento de risco vence em ${d} dia(s)`,
+        description: `${r.code ?? r.id.slice(0, 6)} — ${r.description.slice(0, 80)}`,
+        date: m.treatment_deadline,
+        href: `/risks/${r.id}`,
+      });
+    });
+
     return out.sort((a, b) => a.date.localeCompare(b.date));
-  }, [calibrations, equipments, actions, competencies, meetings, documents, suppliers, docMeta]);
+  }, [calibrations, equipments, actions, competencies, meetings, documents, suppliers, docMeta, risks, riskMeta]);
 }
