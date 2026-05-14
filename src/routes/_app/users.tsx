@@ -213,17 +213,18 @@ function UsersPage() {
               <TableHead>Nome</TableHead>
               <TableHead>E-mail</TableHead>
               <TableHead>Papel atual</TableHead>
+              <TableHead>Unidade</TableHead>
               <TableHead>Cadastro</TableHead>
-              <TableHead className="text-right">Alterar papel</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8">
+              <TableRow><TableCell colSpan={6} className="text-center py-8">
                 <Loader2 className="size-5 animate-spin mx-auto text-muted-foreground" />
               </TableCell></TableRow>
             ) : rows.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-sm text-muted-foreground">
+              <TableRow><TableCell colSpan={6} className="text-center py-8 text-sm text-muted-foreground">
                 Nenhum usuário cadastrado ainda.
               </TableCell></TableRow>
             ) : rows.map((r) => {
@@ -245,6 +246,31 @@ function UsersPage() {
                       </div>
                     )}
                   </TableCell>
+                  <TableCell>
+                    <Select
+                      value={r.lab_unit_id ?? "__none"}
+                      onValueChange={async (v) => {
+                        const next = v === "__none" ? null : v;
+                        try {
+                          await assignUserUnit(r.id, next);
+                          toast.success("Unidade atualizada");
+                          await load();
+                        } catch (err) {
+                          toast.error("Erro: " + (err as Error).message);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-44">
+                        <SelectValue placeholder="—" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">Sem unidade</SelectItem>
+                        {units.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {new Date(r.created_at).toLocaleDateString("pt-BR")}
                   </TableCell>
@@ -256,7 +282,7 @@ function UsersPage() {
                         disabled={savingId === r.id || r.id === user?.id}
                       >
                         <SelectTrigger className="h-8 w-44">
-                          <SelectValue placeholder="Selecionar..." />
+                          <SelectValue placeholder="Papel..." />
                         </SelectTrigger>
                         <SelectContent>
                           {ROLES.map((role) => (
