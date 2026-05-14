@@ -10,6 +10,8 @@ export interface DocumentRow {
   status: string;
   validity: string | null;
   responsible: string | null;
+  file_url?: string | null;
+  description?: string | null;
   created_at?: string;
   updated_at?: string;
 }
