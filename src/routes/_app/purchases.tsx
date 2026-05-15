@@ -15,7 +15,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
-export const Route = createFileRoute("/_app/purchases")({ component: PurchasesPage });
+export const Route = createFileRoute("/_app/purchases")({ component: PurchasesRoute });
+
+function PurchasesRoute() {
+  const location = useLocation();
+  if (location.pathname !== "/purchases") return <Outlet />;
+  return <PurchasesPage />;
+}
 
 function newId() {
   return `PRC-${Date.now().toString(36).toUpperCase()}`;
@@ -26,8 +32,6 @@ const emptyDraft = (): Draft => ({ description: "", supplier_id: "none", quantit
 
 function PurchasesPage() {
   useAuditAccess("purchases");
-  const location = useLocation();
-  if (location.pathname !== "/purchases") return <Outlet />;
   const purchases = useTableStore(purchasesStore);
   const suppliers = useTableStore(suppliersStore);
   const navigate = useNavigate();
