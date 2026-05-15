@@ -113,3 +113,38 @@ export function buildDigestHtml(recipientName: string, alerts: DigestAlert[]): s
     <table style="width:100%;border-collapse:collapse;font-size:14px;">${rows}</table>
     <p style="margin-top:16px;">Acesse o sistema para tratar cada item.</p>`);
 }
+
+export function buildAuditPlannedHtml(params: {
+  recipientName: string;
+  code: string;
+  type: string;
+  scope: string;
+  area: string | null;
+  auditor: string | null;
+  planned_at: string | null;
+  objective: string | null;
+  criterion: string | null;
+  checklist: string | null;
+  document_refs: string[];
+}): string {
+  const docs = params.document_refs.length
+    ? `<tr><td style="padding:6px 0;color:#6b7280;">Documentos</td><td style="padding:6px 0;">${params.document_refs.map(esc).join("<br/>")}</td></tr>`
+    : "";
+  return base(`Auditoria planejada — ${params.code}`, `
+    <p>Olá, <strong>${esc(params.recipientName)}</strong>.</p>
+    <p>Você foi incluído(a) no planejamento da auditoria abaixo:</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr><td style="padding:6px 0;color:#6b7280;width:140px;">Código</td><td style="padding:6px 0;">${esc(params.code)}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;">Tipo</td><td style="padding:6px 0;">${esc(params.type)}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;">Escopo</td><td style="padding:6px 0;">${esc(params.scope)}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;">Área</td><td style="padding:6px 0;">${esc(params.area) || "—"}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;">Auditor</td><td style="padding:6px 0;">${esc(params.auditor) || "—"}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;">Data planejada</td><td style="padding:6px 0;">${esc(params.planned_at) || "—"}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;">Objetivo</td><td style="padding:6px 0;">${esc(params.objective) || "—"}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;">Critério</td><td style="padding:6px 0;">${esc(params.criterion) || "—"}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;">Checklist</td><td style="padding:6px 0;">${esc(params.checklist) || "—"}</td></tr>
+      ${docs}
+    </table>
+    <p>Acesse o sistema para acompanhar o planejamento.</p>`);
+}
+
