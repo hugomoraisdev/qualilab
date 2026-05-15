@@ -32,7 +32,7 @@ const emptyDraft = (): Draft => ({ description: "", supplier_id: "none", quantit
 
 function PurchasesPage() {
   useAuditAccess("purchases");
-  const purchases = useTableStore(purchasesStore);
+  const purchasesRaw = useTableStore(purchasesStore);
   const suppliers = useTableStore(suppliersStore);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -40,6 +40,13 @@ function PurchasesPage() {
 
   const supplierName = (id: string | null) =>
     suppliers.find((s) => s.id === id)?.name ?? "—";
+
+  // Enriquece cada linha com o nome do fornecedor para que a busca textual
+  // (e os filtros por coluna) funcionem digitando o nome do fornecedor.
+  const purchases = purchasesRaw.map((p) => ({
+    ...p,
+    supplier_name: supplierName(p.supplier_id),
+  }));
 
   const create = async () => {
     if (!draft.description.trim()) { toast.error("Informe o item ou serviço"); return; }
@@ -71,13 +78,13 @@ function PurchasesPage() {
       <PageHeader title="Processos de Compra" description="Solicitações, aprovação e inspeção de recebimento" />
       <DataTable
         data={purchases}
-        searchKeys={["code", "description", "status", "supplier_id"]}
+        searchKeys={["code", "description", "status", "supplier_id", "supplier_name"]}
         newLabel="Nova solicitação"
         onNew={() => { setDraft(emptyDraft()); setOpen(true); }}
         onRowClick={(r) => navigate({ to: "/purchases/$id", params: { id: r.id } })}
         columns={[
           { key: "code", header: "Código", render: (r) => <span className="font-mono text-xs">{r.code ?? r.id.slice(0, 8)}</span> },
-          { key: "supplier_id", header: "Fornecedor", accessor: (r) => supplierName(r.supplier_id), render: (r) => supplierName(r.supplier_id) },
+          { key: "supplier_id", header: "Fornecedor", accessor: (r) => r.supplier_name, render: (r) => r.supplier_name },
           { key: "description", header: "Item / Serviço", render: (r) => <span className="font-medium">{r.description}</span> },
           { key: "total", header: "Valor", render: (r) => r.total != null ? `R$ ${Number(r.total).toFixed(2)}` : "—" },
           { key: "requested_at", header: "Solicitado" },
