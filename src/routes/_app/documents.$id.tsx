@@ -252,9 +252,41 @@ function NewRevisionDialog({ doc }: { doc: DocumentRow }) {
             <Label htmlFor="nr">Motivo da revisão</Label>
             <Textarea id="nr" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
           </div>
-          <div>
-            <Label htmlFor="nf">URL do novo arquivo (opcional)</Label>
-            <Input id="nf" value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} />
+          <div className="space-y-2">
+            <Label htmlFor="nf-upload">Arquivo do novo documento (opcional)</Label>
+            <Input
+              id="nf-upload"
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.size > 10 * 1024 * 1024) {
+                  toast.error("Arquivo muito grande", { description: "Limite de 10 MB." });
+                  e.target.value = "";
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => {
+                  setFileUrl(String(reader.result ?? ""));
+                  toast.success("Arquivo anexado", { description: file.name });
+                };
+                reader.onerror = () => toast.error("Falha ao ler arquivo");
+                reader.readAsDataURL(file);
+              }}
+            />
+            <div className="text-xs text-muted-foreground">ou informe uma URL pública abaixo (opcional)</div>
+            <Input
+              id="nf"
+              placeholder="https://…/doc.pdf"
+              value={fileUrl.startsWith("data:") ? "" : fileUrl}
+              onChange={(e) => setFileUrl(e.target.value)}
+            />
+            {fileUrl.startsWith("data:") && (
+              <div className="text-xs text-muted-foreground">
+                Arquivo carregado localmente ({Math.round(fileUrl.length / 1024)} KB).
+              </div>
+            )}
           </div>
         </div>
         <DialogFooter>
