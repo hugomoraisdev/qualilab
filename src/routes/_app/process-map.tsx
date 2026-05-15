@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
@@ -11,7 +11,13 @@ import { useTableStore } from "@/lib/table-store";
 import { profilesStore, profileName } from "@/lib/profiles-store";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_app/process-map")({ component: PMapPage });
+export const Route = createFileRoute("/_app/process-map")({ component: PMapRoute });
+
+function PMapRoute() {
+  const location = useLocation();
+  if (location.pathname !== "/process-map") return <Outlet />;
+  return <PMapPage />;
+}
 
 function PMapPage() {
   useAuditAccess("process_map");
