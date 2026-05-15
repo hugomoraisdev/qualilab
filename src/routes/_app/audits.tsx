@@ -19,14 +19,17 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_app/audits")({ component: AuditsPage });
 
 function AuditsPage() {
-  const location = useLocation();
-  if (location.pathname !== "/audits") return <Outlet />;
   useAuditAccess("audits");
   const rows = useTableStore(auditsStore).filter((a) => !a.deleted_at);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState({ scope: "", type: "Interna", area: "", auditor_name: "", planned_at: new Date().toISOString().slice(0, 10) });
+
+  if (location.pathname !== "/audits") {
+    return <Outlet />;
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   const counts = {
