@@ -110,24 +110,39 @@ function UsersPage() {
     }
   }
 
-  async function assignByEmail(e: React.FormEvent) {
+  async function createUser(e: React.FormEvent) {
     e.preventDefault();
-    setAssigning(true);
+    setCreating(true);
     try {
-      const email = assignEmail.trim().toLowerCase();
-      const { data: profile, error } = await supabase
-        .from("profiles").select("id,email").eq("email", email).maybeSingle();
-      if (error) throw error;
-      if (!profile) {
-        toast.error("Nenhum usuário com este e-mail. O usuário precisa criar conta primeiro em /signup.");
-        return;
-      }
-      await setUserRole(profile.id, assignRole);
-      setAssignEmail("");
+      await createUserFn({
+        data: {
+          email: newEmail.trim().toLowerCase(),
+          name: newName.trim(),
+          password: newPassword,
+          role: newRole,
+        },
+      });
+      toast.success("Usuário criado com sucesso");
+      setNewEmail(""); setNewName(""); setNewPassword(""); setNewRole("consulta");
+      await load();
+    } catch (err) {
+      toast.error("Erro ao criar usuário: " + (err as Error).message);
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function deleteUser(targetId: string, label: string) {
+    if (!confirm(`Remover permanentemente o usuário "${label}"? Esta ação não pode ser desfeita.`)) return;
+    setSavingId(targetId);
+    try {
+      await deleteUserFn({ data: { userId: targetId } });
+      toast.success("Usuário removido");
+      await load();
     } catch (err) {
       toast.error("Erro: " + (err as Error).message);
     } finally {
-      setAssigning(false);
+      setSavingId(null);
     }
   }
 
@@ -171,26 +186,35 @@ function UsersPage() {
         description="Atribua papéis aos usuários cadastrados na plataforma"
       />
 
-      {/* Atribuir papel por e-mail */}
+      {/* Criar novo usuário */}
       <div className="rounded-lg border border-border bg-card p-4 mb-6">
         <div className="flex items-center gap-2 mb-3">
           <UserPlus className="size-4 text-primary" />
-          <h3 className="font-semibold text-sm">Atribuir papel por e-mail</h3>
+          <h3 className="font-semibold text-sm">Criar novo usuário</h3>
         </div>
-        <form onSubmit={assignByEmail} className="grid gap-3 sm:grid-cols-[1fr_220px_auto]">
+        <form onSubmit={createUser} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_180px_180px_auto]">
           <div>
-            <Label htmlFor="email" className="text-xs">E-mail do usuário</Label>
-            <Input
-              id="email" type="email" required
-              placeholder="usuario@empresa.com"
-              value={assignEmail}
-              onChange={(e) => setAssignEmail(e.target.value)}
-            />
+            <Label htmlFor="new-name" className="text-xs">Nome</Label>
+            <Input id="new-name" required maxLength={120}
+              placeholder="Maria Silva"
+              value={newName} onChange={(e) => setNewName(e.target.value)} />
           </div>
           <div>
-            <Label htmlFor="role" className="text-xs">Papel</Label>
-            <Select value={assignRole} onValueChange={(v) => setAssignRole(v as Role)}>
-              <SelectTrigger id="role"><SelectValue /></SelectTrigger>
+            <Label htmlFor="new-email" className="text-xs">E-mail</Label>
+            <Input id="new-email" type="email" required maxLength={255}
+              placeholder="usuario@empresa.com"
+              value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="new-password" className="text-xs">Senha provisória</Label>
+            <Input id="new-password" type="text" required minLength={8} maxLength={72}
+              placeholder="mín. 8 caracteres"
+              value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="new-role" className="text-xs">Papel</Label>
+            <Select value={newRole} onValueChange={(v) => setNewRole(v as Role)}>
+              <SelectTrigger id="new-role"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {ROLES.map((r) => (
                   <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
@@ -199,14 +223,14 @@ function UsersPage() {
             </Select>
           </div>
           <div className="flex items-end">
-            <Button type="submit" disabled={assigning} className="w-full sm:w-auto">
-              {assigning ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
-              Atribuir
+            <Button type="submit" disabled={creating} className="w-full sm:w-auto">
+              {creating ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
+              Criar
             </Button>
           </div>
         </form>
         <p className="mt-2 text-xs text-muted-foreground">
-          O usuário precisa ter criado conta previamente em <code className="text-foreground">/signup</code>.
+          O usuário é criado com e-mail já confirmado. Compartilhe a senha provisória de forma segura.
         </p>
       </div>
 
