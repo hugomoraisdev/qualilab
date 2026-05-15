@@ -513,40 +513,40 @@ function OverviewSection({ occurrence, deadline, onSaved }: { occurrence: Occurr
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs">Auditoria</Label>
-            <Select value={draft.linked_audit_id ?? ""} onValueChange={(v) => setDraft({ ...draft, linked_audit_id: v || null })}>
+            <Select value={draft.linked_audit_id ?? "__none"} onValueChange={(v) => setDraft({ ...draft, linked_audit_id: v === "__none" ? null : v })}>
               <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhuma</SelectItem>
+                <SelectItem value="__none">Nenhuma</SelectItem>
                 {audits.map((a) => <SelectItem key={a.id} value={a.id}>{a.code ?? a.id} — {a.scope}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Documento</Label>
-            <Select value={draft.linked_document_id ?? ""} onValueChange={(v) => setDraft({ ...draft, linked_document_id: v || null })}>
+            <Select value={draft.linked_document_id ?? "__none"} onValueChange={(v) => setDraft({ ...draft, linked_document_id: v === "__none" ? null : v })}>
               <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none">Nenhum</SelectItem>
                 {documents.map((d) => <SelectItem key={d.id} value={d.id}>{d.code} — {d.title}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Risco</Label>
-            <Select value={linkedRisk} onValueChange={setLinkedRisk}>
+            <Select value={linkedRisk || "__none"} onValueChange={(v) => setLinkedRisk(v === "__none" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none">Nenhum</SelectItem>
                 {risks.map((r) => <SelectItem key={r.id} value={r.id}>{r.process} — {r.description.slice(0, 50)}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Fornecedor</Label>
-            <Select value={linkedSupplier} onValueChange={setLinkedSupplier}>
+            <Select value={linkedSupplier || "__none"} onValueChange={(v) => setLinkedSupplier(v === "__none" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none">Nenhum</SelectItem>
                 {suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
