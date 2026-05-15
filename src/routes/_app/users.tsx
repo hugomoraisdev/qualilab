@@ -122,7 +122,7 @@ function UsersPage() {
         data: {
           email: newEmail.trim().toLowerCase(),
           name: newName.trim(),
-          password: newPassword,
+          password: newPassword.trim(),
           role: newRole,
         },
       });
