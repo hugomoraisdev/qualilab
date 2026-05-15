@@ -14,6 +14,11 @@ import {
   Layers,
   Paperclip,
   Loader2,
+  Settings2,
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,10 +35,14 @@ import {
   saveCalibration,
   newCalibrationId,
 } from "@/lib/calibrations-store";
-import { equipmentsStore } from "@/lib/equipments-store";
+import { equipmentsStore, type EquipmentRow } from "@/lib/equipments-store";
 import { useTableStore } from "@/lib/table-store";
 import { useAuth } from "@/lib/auth";
-import { useAllEquipmentMeta } from "@/lib/equipment-meta-store";
+import {
+  useAllEquipmentMeta,
+  writeEquipmentMeta,
+  readEquipmentMeta,
+} from "@/lib/equipment-meta-store";
 import { useServerFn } from "@tanstack/react-start";
 import { sendEmail } from "@/lib/send-email.functions";
 
@@ -51,6 +60,123 @@ const LIMITS: Record<string, { maxError: number; unit: string }> = {
   "REF-001": { maxError: 1.0, unit: "°C" },
   "MUF-001": { maxError: 10, unit: "°C" },
 };
+
+function LimitsConfigPanel({ equipments }: { equipments: EquipmentRow[] }) {
+  const equipMetaMap = useAllEquipmentMeta(equipments.map((e) => e.id));
+  const [open, setOpen] = useState(false);
+  const [drafts, setDrafts] = useState<Record<string, { maxError: string; unit: string }>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    const d: Record<string, { maxError: string; unit: string }> = {};
+    for (const e of equipments) {
+      const limit = equipMetaMap[e.id]?.calibration_limit ??
+        LIMITS[e.code] ?? { maxError: 1, unit: "—" };
+      d[e.id] = { maxError: String(limit.maxError), unit: limit.unit };
+    }
+    setDrafts(d);
+  }, [equipments, equipMetaMap]);
+
+  async function saveLimitForEquip(equipId: string) {
+    const draft = drafts[equipId];
+    if (!draft) return;
+    const maxError = parseFloat(draft.maxError);
+    if (isNaN(maxError) || maxError <= 0) {
+      toast.error("Erro máximo deve ser um número positivo.");
+      return;
+    }
+    setSaving(equipId);
+    try {
+      const meta = await readEquipmentMeta(equipId);
+      await writeEquipmentMeta(equipId, {
+        ...meta,
+        calibration_limit: { maxError, unit: draft.unit },
+      });
+      toast.success("Limite salvo.");
+    } catch (e) {
+      toast.error("Falha ao salvar limite.", { description: (e as Error).message });
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-lg shadow-sm mb-6 overflow-hidden">
+      <button
+        className="w-full flex items-center justify-between px-5 py-3 text-sm font-semibold hover:bg-muted/40 transition-colors"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="flex items-center gap-2">
+          <Settings2 className="size-4 text-primary" />
+          Limites de aceitação por equipamento
+        </span>
+        {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+      </button>
+      {open && (
+        <div className="border-t border-border px-5 py-4">
+          <p className="text-xs text-muted-foreground mb-4">
+            Configure o erro máximo aceitável por equipamento. Estes valores sobrepõem os padrões do
+            sistema e são usados para avaliar conformidade nos pontos de calibração.
+          </p>
+          <div className="space-y-2">
+            <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_auto] gap-3 text-[11px] uppercase tracking-wider text-muted-foreground px-1">
+              <span>Equipamento</span>
+              <span>Erro máx. (±)</span>
+              <span>Unidade</span>
+              <span></span>
+            </div>
+            {equipments.map((e) => {
+              const draft = drafts[e.id] ?? { maxError: "1", unit: "—" };
+              return (
+                <div
+                  key={e.id}
+                  className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto] gap-3 items-center border border-border rounded-md px-3 py-2 bg-background"
+                >
+                  <div>
+                    <span className="font-mono text-xs text-muted-foreground">{e.code}</span>
+                    <span className="ml-2 text-sm">{e.name}</span>
+                  </div>
+                  <Input
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    className="h-8 text-sm"
+                    value={draft.maxError}
+                    onChange={(ev) =>
+                      setDrafts((d) => ({ ...d, [e.id]: { ...draft, maxError: ev.target.value } }))
+                    }
+                  />
+                  <Input
+                    className="h-8 text-sm"
+                    placeholder="g, mL, °C…"
+                    value={draft.unit}
+                    onChange={(ev) =>
+                      setDrafts((d) => ({ ...d, [e.id]: { ...draft, unit: ev.target.value } }))
+                    }
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    disabled={saving === e.id}
+                    onClick={() => void saveLimitForEquip(e.id)}
+                  >
+                    {saving === e.id ? <Loader2 className="size-3.5 animate-spin" /> : "Salvar"}
+                  </Button>
+                </div>
+              );
+            })}
+            {equipments.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhum equipamento cadastrado.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function emptyPoint(equipCode: string, idx: number): CalibrationPoint {
   const cfg = LIMITS[equipCode] ?? { maxError: 1, unit: "—" };
@@ -419,6 +545,57 @@ function CalPage() {
   const calibrations = useTableStore(calibrationsStore);
   const equipments = useTableStore(equipmentsStore);
 
+  const [filterEquip, setFilterEquip] = useState("");
+  const [filterResult, setFilterResult] = useState("");
+  const [filterValidity, setFilterValidity] = useState("");
+  const [filterProvider, setFilterProvider] = useState("");
+
+  const hasFilter = filterEquip || filterResult || filterValidity || filterProvider;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const plus30 = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+  const plus60 = new Date(Date.now() + 60 * 86_400_000).toISOString().slice(0, 10);
+
+  const filteredCalibrations = useMemo(() => {
+    let list = calibrations;
+    if (filterEquip) list = list.filter((c) => c.equipment_id === filterEquip);
+    if (filterResult) {
+      list = list.filter((c) => {
+        const res = c.points?.length ? evaluateRecord(c) : (c.result ?? "");
+        if (filterResult === "aprovado")
+          return res.toLowerCase() === "aprovada" || res.toLowerCase() === "aprovado";
+        if (filterResult === "reprovado")
+          return res.toLowerCase() === "reprovada" || res.toLowerCase() === "reprovado";
+        return true;
+      });
+    }
+    if (filterValidity) {
+      list = list.filter((c) => {
+        if (!c.next_due_date) return false;
+        if (filterValidity === "vencidas") return c.next_due_date < today;
+        if (filterValidity === "30dias")
+          return c.next_due_date >= today && c.next_due_date <= plus30;
+        if (filterValidity === "60dias")
+          return c.next_due_date >= today && c.next_due_date <= plus60;
+        return true;
+      });
+    }
+    if (filterProvider) {
+      const q = filterProvider.toLowerCase();
+      list = list.filter((c) => (c.provider ?? "").toLowerCase().includes(q));
+    }
+    return list;
+  }, [
+    calibrations,
+    filterEquip,
+    filterResult,
+    filterValidity,
+    filterProvider,
+    today,
+    plus30,
+    plus60,
+  ]);
+
   const equipLabel = (id: string) => {
     const e = equipments.find((x) => x.id === id);
     return e ? `${e.code} — ${e.name}` : id.slice(0, 8);
@@ -436,6 +613,8 @@ function CalPage() {
         description="Cronograma, certificados, rastreabilidade metrológica e múltiplos pontos por equipamento"
       />
 
+      <LimitsConfigPanel equipments={equipments} />
+
       <MultiPointForm onSaved={() => setRefreshTick((t) => t + 1)} />
 
       {upcoming.length > 0 && (
@@ -445,7 +624,6 @@ function CalPage() {
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {upcoming.map((c) => {
-              const today = new Date().toISOString().slice(0, 10);
               const overdue = !!c.next_due_date && c.next_due_date < today;
               return (
                 <div
@@ -471,10 +649,84 @@ function CalPage() {
         </div>
       )}
 
+      {/* Filtros personalizados */}
+      <div className="bg-card border border-border rounded-lg px-5 py-3 shadow-sm mb-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <Filter className="size-4 text-muted-foreground mt-5 shrink-0" />
+          <div className="space-y-1 min-w-[160px]">
+            <Label className="text-xs">Equipamento</Label>
+            <select
+              value={filterEquip}
+              onChange={(e) => setFilterEquip(e.target.value)}
+              className="h-8 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Todos</option>
+              {equipments.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.code} — {e.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1 min-w-[140px]">
+            <Label className="text-xs">Resultado</Label>
+            <select
+              value={filterResult}
+              onChange={(e) => setFilterResult(e.target.value)}
+              className="h-8 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Todos</option>
+              <option value="aprovado">Aprovada</option>
+              <option value="reprovado">Reprovada</option>
+            </select>
+          </div>
+          <div className="space-y-1 min-w-[170px]">
+            <Label className="text-xs">Validade</Label>
+            <select
+              value={filterValidity}
+              onChange={(e) => setFilterValidity(e.target.value)}
+              className="h-8 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Todas</option>
+              <option value="vencidas">Vencidas</option>
+              <option value="30dias">A vencer em 30 dias</option>
+              <option value="60dias">A vencer em 60 dias</option>
+            </select>
+          </div>
+          <div className="space-y-1 min-w-[150px]">
+            <Label className="text-xs">Provedor</Label>
+            <Input
+              className="h-8 text-sm"
+              placeholder="Filtrar provedor…"
+              value={filterProvider}
+              onChange={(e) => setFilterProvider(e.target.value)}
+            />
+          </div>
+          {hasFilter && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 text-muted-foreground"
+              onClick={() => {
+                setFilterEquip("");
+                setFilterResult("");
+                setFilterValidity("");
+                setFilterProvider("");
+              }}
+            >
+              <X className="size-3.5" /> Limpar filtros
+            </Button>
+          )}
+          <span className="text-xs text-muted-foreground ml-auto self-end pb-1">
+            {filteredCalibrations.length} registro(s)
+          </span>
+        </div>
+      </div>
+
       <DataTable
         key={refreshTick}
-        data={calibrations}
-        searchKeys={["certificate_number", "provider", "result", "equipment_id"]}
+        data={filteredCalibrations}
+        searchKeys={["certificate_number", "provider", "result"]}
         newLabel="Nova calibração"
         hideNew
         exportName="calibracoes"
@@ -496,7 +748,6 @@ function CalPage() {
             header: "Validade",
             render: (r) => {
               if (!r.next_due_date) return "—";
-              const today = new Date().toISOString().slice(0, 10);
               const overdue = r.next_due_date < today;
               return (
                 <span className={overdue ? "text-destructive font-medium" : ""}>
