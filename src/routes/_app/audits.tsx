@@ -240,11 +240,14 @@ function NewAuditDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
         : [...s.document_ref_ids, id],
     }));
 
+  const [saving, setSaving] = useState(false);
+
   const create = async () => {
     if (!draft.scope.trim()) {
       toast.error("Informe o escopo da auditoria");
       return;
     }
+    setSaving(true);
     const id = newId("AUD");
     const a: AuditRow = {
       id,
@@ -260,6 +263,7 @@ function NewAuditDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
       findings_count: 0,
       notes: plan.observations.trim() || null,
     };
+    try {
     await saveAudit(a);
     await writeAuditPlan(id, plan);
 
@@ -327,6 +331,12 @@ function NewAuditDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
     reset();
     onOpenChange(false);
     navigate({ to: "/audits/$id", params: { id } });
+    } catch (err) {
+      console.error("[audits] create:", err);
+      toast.error("Erro ao criar auditoria", { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const internalOptions = useMemo(
@@ -540,8 +550,8 @@ function NewAuditDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
         </div>
 
         <DialogFooter className="pt-2">
-          <Button variant="outline" onClick={() => { onOpenChange(false); reset(); }}>Cancelar</Button>
-          <Button onClick={create}>Criar auditoria</Button>
+          <Button variant="outline" onClick={() => { onOpenChange(false); reset(); }} disabled={saving}>Cancelar</Button>
+          <Button onClick={create} disabled={saving}>{saving ? "Criando…" : "Criar auditoria"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
