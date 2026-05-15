@@ -26,7 +26,6 @@ import {
   X,
   CheckSquare,
   DatabaseZap,
-  Mail,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
@@ -105,7 +104,6 @@ const groups: { label: string; items: Item[] }[] = [
       { to: "/settings", label: "Configurações", icon: Settings, perm: "all" },
       { to: "/users", label: "Usuários e Permissões", icon: Users, perm: "all" },
       { to: "/audit-log", label: "Log de Auditoria", icon: History, perm: "audit-log" },
-      { to: "/email-test", label: "Teste de E-mails", icon: Mail, perm: "all" },
     ],
   },
 ];
