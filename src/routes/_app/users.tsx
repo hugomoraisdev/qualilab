@@ -50,9 +50,13 @@ function UsersPage() {
   const [rows, setRows] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [assignEmail, setAssignEmail] = useState("");
-  const [assignRole, setAssignRole] = useState<Role>("consulta");
-  const [assigning, setAssigning] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newRole, setNewRole] = useState<Role>("consulta");
+  const [creating, setCreating] = useState(false);
+  const createUserFn = useServerFn(adminCreateUser);
+  const deleteUserFn = useServerFn(adminDeleteUser);
 
   async function load() {
     setLoading(true);
