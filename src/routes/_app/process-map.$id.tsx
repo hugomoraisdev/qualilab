@@ -25,6 +25,23 @@ import {
   Network,
 } from "lucide-react";
 import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   useProcesses,
   upsertProcess,
   softDeleteProcess,
@@ -120,6 +137,24 @@ function ProcessDetailPage() {
     if (i < 0 || j < 0 || j >= arr.length) return;
     [arr[i], arr[j]] = [arr[j], arr[i]];
     update({ steps: arr.map((s, k) => ({ ...s, order: k + 1 })) });
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = draft.steps.findIndex((s) => s.id === active.id);
+    const newIndex = draft.steps.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(draft.steps, oldIndex, newIndex).map((s, k) => ({
+      ...s,
+      order: k + 1,
+    }));
+    update({ steps: reordered });
   };
 
   const toggleLink = (
@@ -344,79 +379,35 @@ function ProcessDetailPage() {
                   )}
                 </div>
               )
-            ) : /* ── Lista editável ── */
+            ) : /* ── Lista editável com DnD ── */
             draft.steps.length === 0 ? (
               <div className="text-sm text-muted-foreground italic">Nenhuma etapa cadastrada.</div>
             ) : (
-              <ol className="space-y-2">
-                {draft.steps.map((s, idx) => (
-                  <li
-                    key={s.id}
-                    className="border border-border rounded-md p-3 grid grid-cols-1 lg:grid-cols-12 gap-2 items-start"
-                  >
-                    <div className="lg:col-span-1 flex flex-col items-center pt-2">
-                      {/* GripVertical indica que a etapa é reordenável.
-                          DnD completo requer instalação de @dnd-kit/sortable ou react-beautiful-dnd.
-                          Por ora, use os botões ↑/↓ abaixo para reordenar. */}
-                      <span aria-label="Reordenável — use ↑↓">
-                        <GripVertical className="size-4 text-muted-foreground cursor-grab mb-0.5" />
-                      </span>
-                      <span className="text-xs font-mono text-muted-foreground">#{s.order}</span>
-                      <button
-                        className="text-muted-foreground hover:text-foreground text-xs mt-1"
-                        onClick={() => moveStep(s.id, -1)}
-                        disabled={idx === 0}
-                      >
-                        ↑
-                      </button>
-                      <button
-                        className="text-muted-foreground hover:text-foreground text-xs"
-                        onClick={() => moveStep(s.id, 1)}
-                        disabled={idx === draft.steps.length - 1}
-                      >
-                        ↓
-                      </button>
-                    </div>
-                    <div className="lg:col-span-4 space-y-1.5">
-                      <Label className="text-xs">Título</Label>
-                      <Input
-                        value={s.title}
-                        onChange={(e) => updateStep(s.id, { title: e.target.value })}
-                        placeholder="Ex: Receber amostra"
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={draft.steps.map((s) => s.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <ol className="space-y-2">
+                    {draft.steps.map((s, idx) => (
+                      <SortableStepItem
+                        key={s.id}
+                        step={s}
+                        idx={idx}
+                        totalSteps={draft.steps.length}
+                        profiles={profiles}
+                        onUpdate={updateStep}
+                        onRemove={removeStep}
+                        onMove={moveStep}
                       />
-                    </div>
-                    <div className="lg:col-span-3 space-y-1.5">
-                      <Label className="text-xs">Responsável</Label>
-                      <select
-                        value={s.responsible_id ?? ""}
-                        onChange={(e) =>
-                          updateStep(s.id, { responsible_id: e.target.value || null })
-                        }
-                        className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                      >
-                        <option value="">— —</option>
-                        {profiles.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="lg:col-span-3 space-y-1.5">
-                      <Label className="text-xs">Descrição</Label>
-                      <Input
-                        value={s.description ?? ""}
-                        onChange={(e) => updateStep(s.id, { description: e.target.value || null })}
-                      />
-                    </div>
-                    <div className="lg:col-span-1 flex justify-end pt-5">
-                      <Button size="icon" variant="ghost" onClick={() => removeStep(s.id)}>
-                        <X className="size-3" />
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ol>
+                    ))}
+                  </ol>
+                </SortableContext>
+              </DndContext>
             )}
           </div>
         </TabsContent>
@@ -515,6 +506,106 @@ function ProcessDetailPage() {
         </TabsContent>
       </Tabs>
     </>
+  );
+}
+
+function SortableStepItem({
+  step: s,
+  idx,
+  totalSteps,
+  profiles,
+  onUpdate,
+  onRemove,
+  onMove,
+}: {
+  step: ProcessStep;
+  idx: number;
+  totalSteps: number;
+  profiles: { id: string; name: string }[];
+  onUpdate: (sid: string, patch: Partial<ProcessStep>) => void;
+  onRemove: (sid: string) => void;
+  onMove: (sid: string, dir: -1 | 1) => void;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id: s.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className="border border-border rounded-md p-3 grid grid-cols-1 lg:grid-cols-12 gap-2 items-start bg-card"
+    >
+      <div className="lg:col-span-1 flex flex-col items-center pt-2">
+        <button
+          ref={setActivatorNodeRef}
+          {...listeners}
+          {...attributes}
+          aria-label="Arrastar para reordenar"
+          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground mb-0.5 touch-none"
+        >
+          <GripVertical className="size-4" />
+        </button>
+        <span className="text-xs font-mono text-muted-foreground">#{s.order}</span>
+        <button
+          className="text-muted-foreground hover:text-foreground text-xs mt-1"
+          onClick={() => onMove(s.id, -1)}
+          disabled={idx === 0}
+          aria-label="Mover para cima"
+        >
+          ↑
+        </button>
+        <button
+          className="text-muted-foreground hover:text-foreground text-xs"
+          onClick={() => onMove(s.id, 1)}
+          disabled={idx === totalSteps - 1}
+          aria-label="Mover para baixo"
+        >
+          ↓
+        </button>
+      </div>
+      <div className="lg:col-span-4 space-y-1.5">
+        <Label className="text-xs">Título</Label>
+        <Input
+          value={s.title}
+          onChange={(e) => onUpdate(s.id, { title: e.target.value })}
+          placeholder="Ex: Receber amostra"
+        />
+      </div>
+      <div className="lg:col-span-3 space-y-1.5">
+        <Label className="text-xs">Responsável</Label>
+        <select
+          value={s.responsible_id ?? ""}
+          onChange={(e) => onUpdate(s.id, { responsible_id: e.target.value || null })}
+          className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+        >
+          <option value="">— —</option>
+          {profiles.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="lg:col-span-3 space-y-1.5">
+        <Label className="text-xs">Descrição</Label>
+        <Input
+          value={s.description ?? ""}
+          onChange={(e) => onUpdate(s.id, { description: e.target.value || null })}
+        />
+      </div>
+      <div className="lg:col-span-1 flex justify-end pt-5">
+        <Button size="icon" variant="ghost" onClick={() => onRemove(s.id)}>
+          <X className="size-3" />
+        </Button>
+      </div>
+    </li>
   );
 }
 

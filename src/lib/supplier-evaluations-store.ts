@@ -7,6 +7,7 @@ export interface SupplierEvaluationRow {
   evaluation_date: string;
   score: number;
   observations: string | null;
+  review_notes: string | null;
   evaluator_id: string | null;
   evaluator_name: string | null;
   created_at?: string;

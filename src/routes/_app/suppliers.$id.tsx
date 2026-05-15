@@ -93,6 +93,7 @@ function SupDetail() {
 
   const [score, setScore] = useState<number>(4);
   const [obs, setObs] = useState("");
+  const [reviewNotes, setReviewNotes] = useState("");
   const [evalDate, setEvalDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
   const [newActionDesc, setNewActionDesc] = useState("");
@@ -198,6 +199,7 @@ function SupDetail() {
         evaluation_date: evalDate,
         score,
         observations: obs || null,
+        review_notes: reviewNotes || null,
         evaluator_id: user?.id ?? null,
         evaluator_name: user?.name ?? null,
       });
@@ -213,6 +215,7 @@ function SupDetail() {
         rating: Number((avg * 2).toFixed(1)),
       });
       setObs("");
+      setReviewNotes("");
       setScore(4);
       toast.success("Avaliação registrada");
     } catch (e) {
@@ -677,6 +680,16 @@ function SupDetail() {
                     className="mt-1"
                   />
                 </div>
+                <div>
+                  <Label className="text-xs">Notas de revisão</Label>
+                  <Textarea
+                    value={reviewNotes}
+                    onChange={(e) => setReviewNotes(e.target.value)}
+                    rows={2}
+                    className="mt-1"
+                    placeholder="Observações da revisão desta avaliação…"
+                  />
+                </div>
                 <Button onClick={registerEvaluation} disabled={saving} size="sm" className="w-full">
                   {saving ? "Salvando…" : "Registrar avaliação"}
                 </Button>
@@ -695,6 +708,7 @@ function SupDetail() {
                       <TableHead>Pontuação</TableHead>
                       <TableHead>Avaliador</TableHead>
                       <TableHead>Observações</TableHead>
+                      <TableHead>Notas de revisão</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -710,6 +724,9 @@ function SupDetail() {
                         <TableCell className="text-xs">{e.evaluator_name ?? "—"}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {e.observations ?? "—"}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {e.review_notes ?? "—"}
                         </TableCell>
                       </TableRow>
                     ))}

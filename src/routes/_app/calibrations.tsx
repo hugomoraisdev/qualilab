@@ -724,8 +724,11 @@ function CalPage() {
 
       <DataTable
         key={refreshTick}
-        data={filteredCalibrations}
-        searchKeys={["certificate_number", "provider", "result"]}
+        data={filteredCalibrations.map((c) => {
+          const e = equipments.find((x) => x.id === c.equipment_id);
+          return { ...c, equipment_name: e?.name ?? "", equipment_code: e?.code ?? "" };
+        })}
+        searchKeys={["certificate_number", "provider", "result", "equipment_name", "equipment_code"]}
         newLabel="Nova calibração"
         hideNew
         exportName="calibracoes"
