@@ -268,7 +268,7 @@ export function useDocumentMeta(documentId: string | undefined): DocumentMeta {
     const handler = () => { void refresh(); };
     window.addEventListener(`storage:doc-meta:${documentId}`, handler);
     const channel = supabase
-      .channel(`doc-meta:${documentId}`)
+      .channel(`doc-meta:${documentId}:${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "app_data", filter: `key=eq.${keyFor(documentId)}` },
