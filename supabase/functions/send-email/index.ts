@@ -19,7 +19,7 @@ serve(async (req) => {
       Authorization: `Bearer ${RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: from ?? "Qualilab <noreply@montseguro.com.br>",
+      from: from ?? "Qualilab <noreply@notify.montseguro.com.br>",
       to: Array.isArray(to) ? to : [to],
       subject,
       html,
