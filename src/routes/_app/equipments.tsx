@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useLocation, Outlet } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
@@ -27,6 +27,10 @@ function EqPage() {
   useAuditAccess("equipments");
   const equipments = useTableStore(equipmentsStore);
   const navigate = useNavigate();
+  const location = useLocation();
+  if (location.pathname !== "/equipments") {
+    return <Outlet />;
+  }
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft());
 
