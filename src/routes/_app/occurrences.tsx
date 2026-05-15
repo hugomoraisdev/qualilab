@@ -104,6 +104,10 @@ function OccPage() {
     return { months, max };
   }, [occurrences]);
 
+  if (location.pathname !== "/occurrences") {
+    return <Outlet />;
+  }
+
   const handleCreate = async () => {
     if (!draft.description?.trim()) {
       toast.error("Informe a descrição");
