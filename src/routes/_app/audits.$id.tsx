@@ -24,6 +24,8 @@ import { actionPlansStore, saveActionPlan, type ActionPlanRow } from "@/lib/acti
 import { sendEmail } from "@/lib/send-email.functions";
 import { buildActionAssignedHtml } from "@/lib/email-templates";
 import { listProfiles } from "@/lib/profiles-store";
+import { listDocuments } from "@/lib/documents-store";
+import { useAuditPlan } from "@/lib/audit-plan-store";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { exportAuditReportPdf } from "@/lib/pdf-export";
 import { useAuth } from "@/lib/auth";
