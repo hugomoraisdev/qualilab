@@ -10,13 +10,17 @@ serve(async (req) => {
 
   const { from, to, subject, html } = await req.json();
   const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!RESEND_API_KEY) return new Response("RESEND_API_KEY not set", { status: 500 });
+  if (!LOVABLE_API_KEY) return new Response("LOVABLE_API_KEY not set", { status: 500 });
 
-  const res = await fetch("https://api.resend.com/emails", {
+  // Resend está conectado via connector da Lovable: precisa passar pelo gateway
+  const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${RESEND_API_KEY}`,
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "X-Connection-Api-Key": RESEND_API_KEY,
     },
     body: JSON.stringify({
       from: from ?? "Qualilab <noreply@notify.montseguro.com.br>",
@@ -27,6 +31,7 @@ serve(async (req) => {
   });
 
   const body = await res.json().catch(() => ({}));
+  if (!res.ok) console.error("[send-email] resend error", res.status, body);
   return new Response(JSON.stringify(body), {
     status: res.ok ? 200 : res.status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
