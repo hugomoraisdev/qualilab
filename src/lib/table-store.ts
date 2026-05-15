@@ -36,6 +36,7 @@ export class TableStore<T extends { id: string }> {
     public readonly table: string,
     public readonly orderBy: string = "created_at",
     public readonly ascending: boolean = false,
+    private readonly toPersistedRow: (row: T) => unknown = (row) => row,
   ) {
     // hidrata cache imediato do localStorage para uso offline
     if (typeof window !== "undefined") {
@@ -143,6 +144,7 @@ export class TableStore<T extends { id: string }> {
 
   async upsert(row: T): Promise<void> {
     const isCreate = !this.cache.some((r) => r.id === row.id);
+    const previousCache = this.cache;
     this.cache = [row, ...this.cache.filter((r) => r.id !== row.id)];
     this.persistCache();
     this.notify();
@@ -153,9 +155,13 @@ export class TableStore<T extends { id: string }> {
       this.enqueue({ kind: "upsert", row, ts: Date.now() });
       return;
     }
-    const { error } = await (supabase as any).from(this.table).upsert(row);
+    const { error } = await (supabase as any).from(this.table).upsert(this.toPersistedRow(row));
     if (error) {
+      this.cache = previousCache;
+      this.persistCache();
+      this.notify();
       console.warn(`[table-store] upsert ${this.table}:`, error.message);
+      throw error;
     }
   }
 
@@ -184,7 +190,7 @@ export class TableStore<T extends { id: string }> {
       for (const op of pending) {
         try {
           if (op.kind === "upsert") {
-            const { error } = await (supabase as any).from(this.table).upsert(op.row);
+            const { error } = await (supabase as any).from(this.table).upsert(this.toPersistedRow(op.row));
             if (error) throw new Error(error.message);
           } else {
             const { error } = await (supabase as any).from(this.table).delete().eq("id", op.id);
@@ -216,8 +222,9 @@ export function createTableStore<T extends { id: string }>(
   table: string,
   orderBy?: string,
   ascending?: boolean,
+  toPersistedRow?: (row: T) => unknown,
 ) {
-  return new TableStore<T>(table, orderBy, ascending);
+  return new TableStore<T>(table, orderBy, ascending, toPersistedRow);
 }
 
 /** Hook React: re-renderiza quando o store recebe atualizações (insert/update/delete/realtime). */
