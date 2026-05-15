@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useLocation, Outlet } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
@@ -22,9 +22,14 @@ function AuditsPage() {
   useAuditAccess("audits");
   const rows = useTableStore(auditsStore).filter((a) => !a.deleted_at);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState({ scope: "", type: "Interna", area: "", auditor_name: "", planned_at: new Date().toISOString().slice(0, 10) });
+
+  if (location.pathname !== "/audits") {
+    return <Outlet />;
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   const counts = {
