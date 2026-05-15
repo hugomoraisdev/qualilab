@@ -1,19 +1,27 @@
-import { ensureStorageBuckets } from "@/lib/ensure-storage.functions";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadFileToStorage } from "@/lib/storage-upload.functions";
 
-// Called at most once per session — creates the bucket if it doesn't exist yet
-let _ensurePromise: Promise<void> | null = null;
-function ensureOnce() {
-  if (!_ensurePromise) {
-    _ensurePromise = ensureStorageBuckets().then(() => {});
-  }
-  return _ensurePromise;
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1] ?? "";
+      resolve(base64);
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("read error"));
+    reader.readAsDataURL(file);
+  });
 }
 
 export async function uploadToStorage(bucket: string, path: string, file: File): Promise<string> {
-  await ensureOnce();
-  const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
-  if (error) throw error;
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
+  const contentBase64 = await fileToBase64(file);
+  const { publicUrl } = await uploadFileToStorage({
+    data: {
+      bucket,
+      path,
+      contentBase64,
+      contentType: file.type || "application/octet-stream",
+    },
+  });
+  return publicUrl;
 }
