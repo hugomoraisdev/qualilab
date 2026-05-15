@@ -7,12 +7,16 @@ import { formsStore, responsesStore } from "@/lib/forms-store";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/_app/forms")({ component: FormsPage });
+export const Route = createFileRoute("/_app/forms")({ component: FormsRoute });
+
+function FormsRoute() {
+  const location = useLocation();
+  if (location.pathname !== "/forms") return <Outlet />;
+  return <FormsPage />;
+}
 
 function FormsPage() {
   useAuditAccess("forms");
-  const location = useLocation();
-  if (location.pathname !== "/forms") return <Outlet />;
   const navigate = useNavigate();
   const forms = useTableStore(formsStore).filter((f) => !f.deleted_at);
   const responses = useTableStore(responsesStore);
