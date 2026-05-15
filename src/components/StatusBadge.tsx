@@ -28,7 +28,7 @@ export function StatusBadge({ children, tone }: { children?: string | null; tone
   };
   return (
     <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap", styles[t])}>
-      {children}
+      {label}
     </span>
   );
 }
