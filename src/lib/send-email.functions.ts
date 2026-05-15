@@ -14,7 +14,7 @@ export const sendEmail = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: result, error } = await supabaseAdmin.functions.invoke("send-email", {
       body: {
-        from: data.from ?? "Qualilab <noreply@montseguro.com.br>",
+        from: data.from ?? "Qualilab <noreply@notify.montseguro.com.br>",
         to: Array.isArray(data.to) ? data.to : [data.to],
         subject: data.subject,
         html: data.html,
