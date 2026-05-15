@@ -918,7 +918,7 @@ function CompetencyForm({
       setExtraState((prev) => ({ ...prev, certificate_url: publicUrl }));
       toast.success("Certificado anexado", { description: file.name });
     } catch (err) {
-      toast.error("Falha no upload", { description: (err as Error).message });
+      toast.error("Falha no upload do arquivo. Tente novamente.");
     } finally {
       setUploading(false);
     }
@@ -947,7 +947,7 @@ function CompetencyForm({
       toast.success("Competência salva");
       onClose();
     } catch (e) {
-      toast.error("Erro ao salvar: " + (e as Error).message);
+      toast.error("Erro ao salvar. Tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -961,7 +961,7 @@ function CompetencyForm({
       toast.success("Removida");
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error("Operação falhou. Tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -1206,7 +1206,7 @@ function RoleForm({ row, onClose }: { row: JobRole | null; onClose: () => void }
       toast.success("Função salva");
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error("Operação falhou. Tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -1219,7 +1219,7 @@ function RoleForm({ row, onClose }: { row: JobRole | null; onClose: () => void }
       toast.success("Removida");
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error("Operação falhou. Tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -1351,7 +1351,7 @@ function EmployeeForm({
       toast.success("Colaborador atualizado");
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error("Operação falhou. Tente novamente.");
     } finally {
       setSaving(false);
     }

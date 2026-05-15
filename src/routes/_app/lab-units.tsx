@@ -79,7 +79,7 @@ function LabUnitsPage() {
       // força refresh do hook
       window.dispatchEvent(new Event("storage:lab-units-modules"));
     } catch (err) {
-      toast.error("Erro: " + (err as Error).message);
+      toast.error("Operação falhou. Tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -90,7 +90,7 @@ function LabUnitsPage() {
       await updateUnit(id, { active });
       window.dispatchEvent(new Event("storage:lab-units-modules"));
     } catch (err) {
-      toast.error("Erro: " + (err as Error).message);
+      toast.error("Operação falhou. Tente novamente.");
     }
   }
 
@@ -103,7 +103,7 @@ function LabUnitsPage() {
       await writeModuleRestrictions(mods);
       toast.success("Unidade excluída");
     } catch (err) {
-      toast.error("Erro: " + (err as Error).message);
+      toast.error("Operação falhou. Tente novamente.");
     }
   }
 

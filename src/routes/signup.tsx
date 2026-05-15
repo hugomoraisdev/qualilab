@@ -35,7 +35,7 @@ function SignupPage() {
       toast.success("Conta criada com sucesso");
       navigate({ to: "/dashboard" });
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error("Não foi possível criar a conta. Verifique os dados e tente novamente.");
     } finally {
       setLoading(false);
     }

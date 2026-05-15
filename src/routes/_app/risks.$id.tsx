@@ -290,7 +290,7 @@ function EditRiskDialog({ risk }: { risk: RiskRow }) {
       toast.success("Risco atualizado");
       setOpen(false);
     } catch (e) {
-      toast.error("Falha ao salvar", { description: String((e as Error).message) });
+      toast.error("Falha ao salvar. Tente novamente.");
     }
   };
 
@@ -431,7 +431,7 @@ function NewActionDialog({ riskId, riskCode, responsibleId, onSaved }: { riskId:
       setDescription("");
       onSaved();
     } catch (e) {
-      toast.error("Falha ao criar ação", { description: String((e as Error).message) });
+      toast.error("Falha ao criar ação. Tente novamente.");
     }
   };
 

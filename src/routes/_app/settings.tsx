@@ -228,7 +228,7 @@ function EmailTestPanel() {
       setSent((s) => ({ ...s, [type]: true }));
       toast.success("E-mail enviado", { description: `Verifique a caixa de entrada de ${email}` });
     } catch (err) {
-      toast.error("Falha ao enviar", { description: (err as Error).message });
+      toast.error("Falha ao enviar. Tente novamente.");
     } finally {
       setLoading(null);
     }
@@ -417,7 +417,7 @@ function AlertRecipientsPanel() {
       await writeAlertRecipients(config);
       toast.success("Destinatários salvos");
     } catch (err) {
-      toast.error("Falha ao salvar", { description: (err as Error).message });
+      toast.error("Falha ao salvar. Tente novamente.");
     } finally {
       setSaving(false);
     }

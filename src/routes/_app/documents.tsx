@@ -197,7 +197,7 @@ function NewDocumentDialog({
       reset();
       navigate({ to: "/documents/$id", params: { id: row.id } });
     } catch (err) {
-      toast.error("Falha ao cadastrar", { description: String((err as Error)?.message ?? err) });
+      toast.error("Falha ao cadastrar. Verifique os dados e tente novamente.");
     } finally {
       setBusy(false);
     }

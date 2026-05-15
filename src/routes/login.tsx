@@ -33,7 +33,7 @@ function LoginPage() {
       toast.success("Acesso autorizado");
       navigate({ to: "/dashboard" });
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error("E-mail ou senha incorretos. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -50,7 +50,7 @@ function LoginPage() {
       if (error) throw error;
       setView("sent");
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error("Não foi possível entrar. Tente novamente.");
     } finally {
       setLoading(false);
     }

@@ -67,7 +67,7 @@ function UsersPage() {
       .select("id,email,name,created_at,lab_unit_id")
       .order("created_at", { ascending: false });
     if (pErr) {
-      toast.error("Erro ao carregar usuários: " + pErr.message);
+      toast.error("Erro ao carregar usuários. Tente novamente.");
       setLoading(false);
       return;
     }
@@ -110,7 +110,7 @@ function UsersPage() {
       toast.success(`Papel atualizado para ${roleLabel(newRole)}`);
       await load();
     } catch (err) {
-      toast.error("Erro ao atualizar papel: " + (err as Error).message);
+      toast.error("Erro ao atualizar permissão. Tente novamente.");
     } finally {
       setSavingId(null);
     }
@@ -132,7 +132,7 @@ function UsersPage() {
       setNewEmail(""); setNewName(""); setNewPassword(""); setNewRole("consulta");
       await load();
     } catch (err) {
-      toast.error("Erro ao criar usuário: " + (err as Error).message);
+      toast.error("Erro ao criar usuário. Tente novamente.");
     } finally {
       setCreating(false);
     }
@@ -146,7 +146,7 @@ function UsersPage() {
       toast.success("Usuário removido");
       await load();
     } catch (err) {
-      toast.error("Erro: " + (err as Error).message);
+      toast.error("Operação falhou. Tente novamente.");
     } finally {
       setSavingId(null);
     }
@@ -161,7 +161,7 @@ function UsersPage() {
       toast.success("Papéis revogados");
       await load();
     } catch (err) {
-      toast.error("Erro: " + (err as Error).message);
+      toast.error("Operação falhou. Tente novamente.");
     } finally {
       setSavingId(null);
     }
@@ -291,7 +291,7 @@ function UsersPage() {
                           toast.success("Unidade atualizada");
                           await load();
                         } catch (err) {
-                          toast.error("Erro: " + (err as Error).message);
+                          toast.error("Operação falhou. Tente novamente.");
                         }
                       }}
                     >

@@ -121,7 +121,7 @@ function RiskFormDialog({ trigger, initial, onSaved }: { trigger: React.ReactNod
       setOpen(false);
       onSaved?.();
     } catch (e) {
-      toast.error("Falha ao salvar", { description: String((e as Error).message) });
+      toast.error("Falha ao salvar. Tente novamente.");
     }
   };
 

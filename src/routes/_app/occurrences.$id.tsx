@@ -1200,7 +1200,7 @@ function AttachmentsSection({
       setDraft((d) => ({ ...d, name: d.name || file.name, url: publicUrl }));
       toast.success("Arquivo carregado", { description: file.name });
     } catch (err) {
-      toast.error("Falha no upload", { description: (err as Error).message });
+      toast.error("Falha no upload do arquivo. Tente novamente.");
     } finally {
       setUploading(false);
     }

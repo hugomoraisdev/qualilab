@@ -70,7 +70,7 @@ function SupplierPortal() {
       if (error) throw error;
       setProtocol(proto);
     } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao enviar documento");
+      toast.error("Erro ao enviar documento. Tente novamente.");
     } finally {
       setSaving(false);
     }

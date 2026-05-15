@@ -239,7 +239,7 @@ ${linkedActions.length ? `<h3>Plano de ação</h3><ul>${linkedActions.map((a) =>
       toast.success(`Ata enviada para ${recipients.length} destinatário(s).`);
       refresh();
     } catch (e) {
-      toast.error(`Falha ao enviar ata: ${e instanceof Error ? e.message : String(e)}`);
+      toast.error("Falha ao enviar a ata. Tente novamente.");
     }
   }
 
@@ -272,7 +272,7 @@ ${linkedActions.length ? `<h3>Plano de ação</h3><ul>${linkedActions.map((a) =>
       toast.success(`Lembrete enviado para ${recipients.length} pessoa(s).`);
       refresh();
     } catch (e) {
-      toast.error(`Falha: ${e instanceof Error ? e.message : String(e)}`);
+      toast.error("Operação falhou. Tente novamente.");
     }
   }
 

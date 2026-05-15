@@ -105,7 +105,7 @@ function AuditDetail() {
       }));
       toast.success("Evidência anexada", { description: file.name });
     } catch (err) {
-      toast.error("Falha no upload da evidência", { description: (err as Error).message });
+      toast.error("Falha no upload da evidência. Tente novamente.");
     } finally {
       setUploadingFindingId(null);
     }

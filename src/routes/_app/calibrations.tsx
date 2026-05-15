@@ -95,7 +95,7 @@ function LimitsConfigPanel({ equipments }: { equipments: EquipmentRow[] }) {
       });
       toast.success("Limite salvo.");
     } catch (e) {
-      toast.error("Falha ao salvar limite.", { description: (e as Error).message });
+      toast.error("Falha ao salvar o limite. Tente novamente.");
     } finally {
       setSaving(null);
     }
@@ -217,7 +217,7 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
       setCertificateUrl(publicUrl);
       toast.success("Certificado anexado", { description: file.name });
     } catch (err) {
-      toast.error("Falha no upload", { description: (err as Error).message });
+      toast.error("Falha no upload do certificado. Tente novamente.");
     } finally {
       setUploading(false);
     }

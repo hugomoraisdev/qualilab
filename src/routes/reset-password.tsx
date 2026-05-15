@@ -40,7 +40,7 @@ function ResetPasswordPage() {
       toast.success("Senha redefinida com sucesso");
       setTimeout(() => navigate({ to: "/login" }), 2500);
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error("Não foi possível redefinir a senha. Tente novamente.");
     } finally {
       setLoading(false);
     }
