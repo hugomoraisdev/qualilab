@@ -19,6 +19,8 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_app/audits")({ component: AuditsPage });
 
 function AuditsPage() {
+  const location = useLocation();
+  if (location.pathname !== "/audits") return <Outlet />;
   useAuditAccess("audits");
   const rows = useTableStore(auditsStore).filter((a) => !a.deleted_at);
   const navigate = useNavigate();
