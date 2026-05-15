@@ -42,7 +42,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadToStorage } from "@/lib/storage-upload";
 import {
   competenciesStore,
   type CompetencyRow,
@@ -914,12 +914,8 @@ function CompetencyForm({
     try {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `certificates/comp-${Date.now()}-${safeName}`;
-      const { error: uploadError } = await supabase.storage
-        .from("certificates")
-        .upload(path, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from("certificates").getPublicUrl(path);
-      setExtraState((prev) => ({ ...prev, certificate_url: urlData.publicUrl }));
+      const publicUrl = await uploadToStorage("certificates", path, file);
+      setExtraState((prev) => ({ ...prev, certificate_url: publicUrl }));
       toast.success("Certificado anexado", { description: file.name });
     } catch (err) {
       toast.error("Falha no upload", { description: (err as Error).message });

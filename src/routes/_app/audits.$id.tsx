@@ -27,7 +27,7 @@ import {
   Loader2,
   ClipboardList,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadToStorage } from "@/lib/storage-upload";
 import { useTableStore } from "@/lib/table-store";
 import {
   auditsStore,
@@ -98,14 +98,10 @@ function AuditDetail() {
     try {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `evidence/${Date.now()}-${safeName}`;
-      const { error: uploadError } = await supabase.storage
-        .from("certificates")
-        .upload(path, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from("certificates").getPublicUrl(path);
+      const publicUrl = await uploadToStorage("certificates", path, file);
       await updateFindingMeta(findingId, (p) => ({
         ...p,
-        evidence_urls: [urlData.publicUrl],
+        evidence_urls: [publicUrl],
       }));
       toast.success("Evidência anexada", { description: file.name });
     } catch (err) {

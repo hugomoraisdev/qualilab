@@ -67,7 +67,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadToStorage } from "@/lib/storage-upload";
 
 export const Route = createFileRoute("/_app/occurrences/$id")({ component: OccDetail });
 
@@ -1196,12 +1196,8 @@ function AttachmentsSection({
     try {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `evidence/occ-${Date.now()}-${safeName}`;
-      const { error: uploadError } = await supabase.storage
-        .from("certificates")
-        .upload(path, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from("certificates").getPublicUrl(path);
-      setDraft((d) => ({ ...d, name: d.name || file.name, url: urlData.publicUrl }));
+      const publicUrl = await uploadToStorage("certificates", path, file);
+      setDraft((d) => ({ ...d, name: d.name || file.name, url: publicUrl }));
       toast.success("Arquivo carregado", { description: file.name });
     } catch (err) {
       toast.error("Falha no upload", { description: (err as Error).message });

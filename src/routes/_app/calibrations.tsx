@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadToStorage } from "@/lib/storage-upload";
 import {
   type CalibrationPoint,
   type CalibrationRow,
@@ -213,12 +213,8 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
     try {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `calibrations/${Date.now()}-${safeName}`;
-      const { error: uploadError } = await supabase.storage
-        .from("certificates")
-        .upload(path, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from("certificates").getPublicUrl(path);
-      setCertificateUrl(urlData.publicUrl);
+      const publicUrl = await uploadToStorage("certificates", path, file);
+      setCertificateUrl(publicUrl);
       toast.success("Certificado anexado", { description: file.name });
     } catch (err) {
       toast.error("Falha no upload", { description: (err as Error).message });
