@@ -1,6 +1,7 @@
 // Confirmações de leitura — Fase 2B (tabela document_reads dedicada com Realtime).
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { profilesStore } from "@/lib/profiles-store";
 
 export interface DocumentRead {
   id?: string;
@@ -8,6 +9,13 @@ export interface DocumentRead {
   user_id: string;
   user_email: string;
   user_name: string;
+  confirmed_at: string;
+}
+
+interface DocumentReadRow {
+  id?: string;
+  document_id: string;
+  user_id: string;
   confirmed_at: string;
 }
 
@@ -20,6 +28,18 @@ function notify(documentId: string) {
   }
 }
 
+function enrich(rows: DocumentReadRow[]): DocumentRead[] {
+  const profiles = profilesStore.list();
+  return rows.map((r) => {
+    const p = profiles.find((pr) => pr.id === r.user_id);
+    return {
+      ...r,
+      user_email: p?.email ?? "",
+      user_name: p?.name ?? "—",
+    };
+  });
+}
+
 async function hydrate(documentId: string) {
   const { data, error } = await (supabase as any)
     .from("document_reads")
@@ -27,8 +47,10 @@ async function hydrate(documentId: string) {
     .eq("document_id", documentId)
     .order("confirmed_at", { ascending: false });
   if (!error) {
-    cache.set(documentId, (data ?? []) as DocumentRead[]);
+    cache.set(documentId, enrich((data ?? []) as DocumentReadRow[]));
     notify(documentId);
+  } else {
+    console.error("[document-reads] hydrate:", error.message);
   }
 }
 
@@ -41,7 +63,7 @@ function subscribeRealtime() {
       "postgres_changes",
       { event: "*", schema: "public", table: "document_reads" },
       (payload) => {
-        const row = (payload.new ?? payload.old) as DocumentRead;
+        const row = (payload.new ?? payload.old) as DocumentReadRow;
         if (row?.document_id) hydrate(row.document_id);
       },
     )
@@ -71,8 +93,6 @@ export async function confirmRead(entry: {
     {
       document_id: entry.documentId,
       user_id: entry.userId,
-      user_email: entry.userEmail,
-      user_name: entry.userName,
       confirmed_at: new Date().toISOString(),
     },
     { onConflict: "document_id,user_id" },
