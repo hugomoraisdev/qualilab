@@ -171,7 +171,7 @@ function APPage() {
           { key: "id", header: "Código", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
           { key: "origin_type", header: "Origem", render: (r) => <span>{ORIGIN_TYPE_LABEL[r.origin_type] ?? r.origin_type}</span> },
           { key: "description", header: "Ação", render: (r) => <span className="max-w-md truncate inline-block">{r.description}</span> },
-          { key: "responsible_id", header: "Responsável", render: (r) => <span>{profileName(r.responsible_id)}</span> },
+          { key: "responsible_id", header: "Responsável", accessor: (r) => profileName(r.responsible_id), render: (r) => <span>{profileName(r.responsible_id)}</span> },
           { key: "deadline", header: "Prazo" },
           { key: "priority", header: "Prioridade", render: (r) => <StatusBadge>{r.priority}</StatusBadge> },
           { key: "progress", header: "Progresso", render: (r) => (

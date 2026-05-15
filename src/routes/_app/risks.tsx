@@ -298,7 +298,7 @@ function RisksPage() {
             { key: "impact", header: "I" },
             { key: "level", header: "Nível", render: (r) => <span className="font-mono">{r.probability * r.impact}</span> },
             { key: "classification", header: "Classificação", render: (r) => <StatusBadge>{r.classification ?? classifyScore(r.probability * r.impact).label}</StatusBadge> },
-            { key: "responsible_id", header: "Responsável", render: (r) => <span>{profileName(r.responsible_id)}</span> },
+            { key: "responsible_id", header: "Responsável", accessor: (r) => profileName(r.responsible_id), render: (r) => <span>{profileName(r.responsible_id)}</span> },
             { key: "status", header: "Status", render: (r) => <StatusBadge>{statusLabel(r.status)}</StatusBadge> },
             { key: "deadline", header: "Prazo", render: (r) => {
               const d = metaMap[r.id]?.treatment_deadline;
