@@ -1,65 +1,64 @@
-## Análise (Status atual do módulo Ocorrências)
 
-| Requisito | Status | Onde |
-|---|---|---|
-| Registrar ocorrência / reclamação / NC | ✅ | `occurrences` + `tickets` |
-| Responsável | ✅ | `responsible_id` |
-| Prazo de tratamento | ❌ | sem coluna `deadline` |
-| 5 Porquês / Ishikawa / Brainstorm | ✅ | `RootCauseSection` |
-| 5W2H | ❌ | não existe |
-| Plano de ação | ✅ | `action_plans` (sem vínculo direto na UI da ocorrência) |
-| Notificações de prazo / vencidas | ✅ (ações) / ❌ (ocorrência) | `notifications.ts` |
-| Verificação de eficácia | ❌ | sem campo |
-| Vínculo a riscos | ❌ | só audit/documento |
-| Vínculo a fornecedores | ❌ | — |
-| Vínculo a auditorias | ✅ | `linked_audit_id` (não exposto) |
-| Anexos / evidências | ❌ | — |
-| Relatório / análise de tendência | ⚠️ parcial | apenas tabela |
-| Histórico completo | ⚠️ | `audit_logs` existe mas sem trigger em `occurrences` |
-| Etapas / acompanhamento | ⚠️ | só status |
-| Campos personalizados | ❌ | — |
+# Documentos — Organização + Campos Personalizados (PoC CISPAR)
 
-## Plano de implementação
+## 1. Taxonomia (pasta / setor / processo / categoria)
 
-### 1. Migração
-Adicionar à tabela `occurrences`:
-- `deadline date`
-- `linked_risk_id uuid`, `linked_supplier_id uuid`
-- `effectiveness_status text`, `effectiveness_verified_at date`, `effectiveness_notes text`, `effectiveness_verified_by uuid`
-- `attachments jsonb default '[]'`
-- `custom_fields jsonb default '{}'`
-- `five_w2h jsonb` (What/Why/Where/When/Who/How/HowMuch)
-- Trigger `log_table_audit('ocorrencias','description')` → `audit_logs`
+- `documents.category` já existe na tabela. `folder`, `sector`, `process` já existem em `document_meta-store` (em `app_data`).
+- **Estender o cadastro de novo documento** (`src/routes/_app/documents.tsx`, `NewDocumentDialog`) com 3 campos novos (Pasta, Setor, Processo) usando `Select` com presets do edital + opção “Outro…”. Após salvar o documento, gravar via `setDocumentTaxonomy` no meta-store.
+- **Tela de detalhe** (`documents.$id.tsx`): a aba “Organização” já permite editar pasta/setor/processo. Garantir presets nos selects. Sem mudança estrutural.
+- Criar `src/lib/document-taxonomy.ts` com as listas-presets (folders, sectors, processes, categories) reutilizáveis em todas as telas.
 
-### 2. Store
-Atualizar `occurrences-store.ts` com novos campos e tipos `FiveW2HData`, `Attachment`.
+## 2. Listagem com filtros e colunas
 
-### 3. Detalhe da ocorrência (`occurrences.$id.tsx`)
-Reorganizar em abas:
-- **Visão geral**: edição inline de tipo, severidade, status, responsável, prazo, ação imediata, vínculos (risco / fornecedor / auditoria / documento), campos personalizados.
-- **Causa raiz**: 5 Porquês, Ishikawa, Brainstorm (mantido) + nova aba **5W2H**.
-- **Plano de ação**: lista filtrada de `action_plans` com `origin_type='occurrence'` + `origin_id`, botão "Nova ação" pré-preenchido.
-- **Eficácia**: registrar verificação (status, data, responsável, notas).
-- **Anexos**: lista de URLs/descrições.
-- **Histórico**: timeline lida de `audit_logs` (módulo `ocorrencias`).
+Refatorar `src/routes/_app/documents.tsx`:
 
-### 4. Lista (`occurrences.tsx`)
-- Cards de KPIs: Abertas / Em análise / Atrasadas / Concluídas.
-- Mini-gráfico de tendência (últimos 6 meses, por tipo).
-- Filtros rápidos por status/tipo/severidade.
-- Botão "Nova ocorrência" abre dialog com campos completos.
+- Carregar `useAllDocumentMeta(documentIds)` para hidratar pasta/setor/processo/custom_fields.
+- Adicionar barra de filtros acima da `DataTable`: Categoria, Pasta, Setor, Processo, Status, Responsável (selects com “Todos”).
+- Adicionar tabs no topo: **“Documentos”** (visão atual enxuta) e **“Lista Mestra”** (todas as colunas: código, título, categoria, pasta, setor, processo, versão vigente, validade, responsável, status).
+- A busca textual da `DataTable` permanece para código/título/responsável.
 
-### 5. Notificações
-Em `notifications.ts`, nova categoria `occurrence`: alerta quando `deadline` ≤ 7 dias ou vencida e status ≠ concluida.
+## 3. Campos personalizados — engine
 
-### 6. PDF
-Estender `pdf-export.ts` com `exportOccurrencesPdf` (lista + responsável + prazo + status + vínculos).
+### Storage
+- Reutilizar `app_data` com chave `custom-fields:documents` → `value: CustomFieldDef[]`.
+- Novo módulo `src/lib/custom-fields-store.ts`:
+  ```ts
+  export interface CustomFieldDef {
+    id: string; name: string; key: string;
+    type: "text"|"textarea"|"number"|"date"|"select"|"multiselect"|"checkbox"|"attachment"|"user"|"sector"|"process"|"unit"|"status";
+    required: boolean; order: number; active: boolean;
+    options?: string[]; visibleRoles?: string[];
+  }
+  ```
+  Funções: `listFields`, `saveField`, `deleteField`, `reorder`, hook `useCustomFields("documents")` com realtime.
+- Valores por documento: já há `custom_fields: Record<string,string>` em `document-meta-store`. Estender para `Record<string, string | string[] | boolean | number>` mantendo compat.
 
-## Arquivos
-- migration SQL
-- `src/lib/occurrences-store.ts` (atualizar)
-- `src/routes/_app/occurrences.$id.tsx` (refatorar com abas)
-- `src/routes/_app/occurrences.tsx` (KPIs + dialog)
-- `src/lib/notifications.ts` (categoria occurrence)
-- `src/lib/pdf-export.ts` (export ocorrências)
-- `src/components/AuditLogTimeline.tsx` (componente reutilizável de histórico, se ainda não existir)
+### Configuração
+- Nova aba no Settings (`src/routes/_app/settings.tsx`): **“Campos Personalizados → Documentos”**. CRUD em modal com todos os parâmetros (nome, tipo, obrigatório, ordem, opções, visibilidade por perfil, ativo).
+
+### Renderização dinâmica
+- Componente `src/components/CustomFieldsRenderer.tsx` que recebe lista de definitions + values + onChange e renderiza os inputs apropriados (text, textarea, number, date, Select, multiselect, checkbox, file→data URL, user→Select de profiles, sector/process→Select com presets, unit→Select de `lab_units`, status→Select).
+- Integrar no **NewDocumentDialog** e na aba “Organização” do detalhe (substituindo/expandindo o quadro atual de “Campos personalizados”).
+- Validar obrigatoriedade no submit. Filtrar campos inativos no formulário, mas preservar valores antigos (não apagar do `custom_fields`).
+
+### Filtros / colunas
+- Listagem mestra: campos ativos com tipos `select`, `status`, `sector`, `process`, `unit`, `checkbox` viram filtros adicionais; demais aparecem como colunas opcionais (toggle simples).
+
+## 4. Auditoria
+- Cada save de documento (taxonomia ou custom field) chama `logAudit("documents", "updated", id, label, before, after)` com diff campo a campo. `logAudit` já existe em `src/lib/audit.ts`.
+
+## 5. Arquivos tocados
+- ➕ `src/lib/document-taxonomy.ts`
+- ➕ `src/lib/custom-fields-store.ts`
+- ➕ `src/components/CustomFieldsRenderer.tsx`
+- ✏️ `src/routes/_app/documents.tsx` (filtros + tabs + Lista Mestra + campos no diálogo)
+- ✏️ `src/routes/_app/documents.$id.tsx` (renderer dinâmico, presets nos selects)
+- ✏️ `src/routes/_app/settings.tsx` (aba Campos Personalizados)
+- ✏️ `src/lib/document-meta-store.ts` (tipo do `custom_fields` ampliado)
+
+## Fora de escopo (confirmar se quiser depois)
+- Migração das chaves de `custom_fields` antigas para os novos `key` definidos em `CustomFieldDef`.
+- Permissões granulares por perfil em runtime (apenas filtragem visual).
+- Versionamento dos próprios campos personalizados.
+
+Posso seguir com essa implementação?
