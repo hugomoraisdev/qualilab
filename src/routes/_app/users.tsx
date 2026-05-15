@@ -333,6 +333,15 @@ function UsersPage() {
                       >
                         <ShieldOff className="size-4" />
                       </Button>
+                      <Button
+                        size="sm" variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        disabled={savingId === r.id || r.id === user?.id}
+                        onClick={() => deleteUser(r.id, r.name || r.email)}
+                        title={r.id === user?.id ? "Não é possível remover a si mesmo" : "Remover usuário"}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
