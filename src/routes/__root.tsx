@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/lib/auth";
-import { OfflineIndicator } from "@/components/offline-indicator";
+
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -110,7 +110,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Outlet />
-        <OfflineIndicator />
+        
         <Toaster richColors position="top-right" />
       </AuthProvider>
     </QueryClientProvider>
