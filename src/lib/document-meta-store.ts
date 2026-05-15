@@ -62,7 +62,8 @@ export interface DocumentMeta {
   folder: string | null;
   sector: string | null;
   process: string | null;
-  custom_fields: Record<string, string>;
+  /** Valores dos campos personalizados (engine em custom-fields-store). */
+  custom_fields: Record<string, string | string[] | boolean | number | null>;
   obsolete: boolean;
   body: string | null;
 }
