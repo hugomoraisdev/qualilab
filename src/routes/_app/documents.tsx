@@ -46,6 +46,17 @@ export const Route = createFileRoute("/_app/documents")({
   component: DocumentsPage,
 });
 
+function stripHtml(html: string | null | undefined): string {
+  if (!html) return "";
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+type EnrichedDocumentRow = DocumentRow & {
+  _body_text: string;
+  _custom_values: string;
+  _external_text: string;
+};
+
 const FREE = "__livre__";
 
 /** Select com opções pré-definidas + alternativa "Outro / digitar manualmente". */
@@ -521,6 +532,25 @@ function DocumentsPage() {
 
   const columns = view === "master" ? masterColumns : baseColumns;
 
+  const enriched = useMemo<EnrichedDocumentRow[]>(() => {
+    return filtered.map((d) => {
+      const m = metaMap[d.id];
+      const bodyText = stripHtml(m?.body);
+      const customValues = m
+        ? Object.values(m.custom_fields)
+            .map((v) => {
+              if (v === null || v === undefined) return "";
+              if (Array.isArray(v)) return v.join(" ");
+              if (typeof v === "boolean") return v ? "sim" : "não";
+              return String(v);
+            })
+            .join(" ")
+        : "";
+      const externalText = [m?.external_issuer, m?.external_ref].filter(Boolean).join(" ");
+      return { ...d, _body_text: bodyText, _custom_values: customValues, _external_text: externalText };
+    });
+  }, [filtered, metaMap]);
+
   return (
     <>
       <PageHeader
@@ -558,8 +588,8 @@ function DocumentsPage() {
       />
 
       <DataTable
-        data={filtered}
-        searchKeys={["code", "title", "category", "status", "responsible"]}
+        data={enriched}
+        searchKeys={["code", "title", "category", "status", "responsible", "_body_text", "_custom_values", "_external_text"]}
         newLabel="Novo documento"
         onNew={() => setOpen(true)}
         onRowClick={(r) => navigate({ to: "/documents/$id", params: { id: r.id } })}

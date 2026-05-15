@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   Lock,
   Printer,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,7 @@ import {
   removeCustomField,
   logDocumentAccess,
   setDocumentBody,
+  setExternalMeta,
   stageLabel,
   type Stage,
 } from "@/lib/document-meta-store";
@@ -828,6 +830,82 @@ function AccessLogCard({ doc }: { doc: DocumentRow }) {
   );
 }
 
+/* ───────────── Informações de documento externo ───────────── */
+
+const EXTERNAL_CATEGORIES = new Set(["Documento Externo", "Norma externa"]);
+const EXTERNAL_FOLDER = "SGQ > Documentos Externos";
+
+function ExternalMetaSection({ doc }: { doc: DocumentRow }) {
+  const meta = useDocumentMeta(doc.id);
+  const isExternal =
+    EXTERNAL_CATEGORIES.has(doc.category) || meta.folder === EXTERNAL_FOLDER;
+
+  const [issuer, setIssuer] = useState(meta.external_issuer ?? "");
+  const [ref, setRef] = useState(meta.external_ref ?? "");
+  const [validity, setValidity] = useState(meta.external_validity ?? "");
+  const [url, setUrl] = useState(meta.external_url ?? "");
+
+  useEffect(() => {
+    setIssuer(meta.external_issuer ?? "");
+    setRef(meta.external_ref ?? "");
+    setValidity(meta.external_validity ?? "");
+    setUrl(meta.external_url ?? "");
+  }, [meta.external_issuer, meta.external_ref, meta.external_validity, meta.external_url]);
+
+  if (!isExternal) return null;
+
+  const persist = (patch: Parameters<typeof setExternalMeta>[1]) => {
+    void setExternalMeta(doc.id, patch);
+  };
+
+  return (
+    <div className="border-t border-border pt-3 mt-3">
+      <div className="text-xs font-semibold mb-2 flex items-center gap-1">
+        <ExternalLink className="size-3.5" /> Informações do documento externo
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <Label className="text-xs">Órgão emissor</Label>
+          <Input
+            value={issuer}
+            onChange={(e) => setIssuer(e.target.value)}
+            onBlur={() => persist({ external_issuer: issuer.trim() || null })}
+            placeholder="Ex: ABNT, ISO, ANVISA"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Número / referência</Label>
+          <Input
+            value={ref}
+            onChange={(e) => setRef(e.target.value)}
+            onBlur={() => persist({ external_ref: ref.trim() || null })}
+            placeholder="Ex: NBR ISO 9001:2015"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Data de vigência externa</Label>
+          <Input
+            type="date"
+            value={validity}
+            onChange={(e) => setValidity(e.target.value)}
+            onBlur={() => persist({ external_validity: validity || null })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">URL de acesso externo</Label>
+          <Input
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onBlur={() => persist({ external_url: url.trim() || null })}
+            placeholder="https://…"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ───────────── Pasta / setor / processo / campos personalizados ───────────── */
 
 function TaxonomyCard({ doc }: { doc: DocumentRow }) {
@@ -984,6 +1062,8 @@ function TaxonomyCard({ doc }: { doc: DocumentRow }) {
           </div>
         )}
       </div>
+
+      <ExternalMetaSection doc={doc} />
     </section>
   );
 }

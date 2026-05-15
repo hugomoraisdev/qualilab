@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -49,15 +49,23 @@ import {
   ShieldCheck,
   AlertTriangle,
   Save,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/occurrences/$id")({ component: OccDetail });
 
@@ -94,22 +102,54 @@ function isOverdue(deadline: string | null, status: string) {
 // ============================================================================
 // 5 Porquês
 // ============================================================================
-function FiveWhysForm({ value, onChange }: { value: FiveWhysData; onChange: (v: FiveWhysData) => void }) {
+function FiveWhysForm({
+  value,
+  onChange,
+}: {
+  value: FiveWhysData;
+  onChange: (v: FiveWhysData) => void;
+}) {
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">A resposta de cada pergunta alimenta a próxima. Pare quando chegar a uma causa acionável.</p>
+      <p className="text-xs text-muted-foreground">
+        A resposta de cada pergunta alimenta a próxima. Pare quando chegar a uma causa acionável.
+      </p>
       {value.whys.map((w, i) => (
         <div key={i} className="flex gap-2 items-start">
-          <div className="size-7 rounded-full bg-primary/10 text-primary text-xs font-bold grid place-items-center shrink-0 mt-1">{i + 1}</div>
+          <div className="size-7 rounded-full bg-primary/10 text-primary text-xs font-bold grid place-items-center shrink-0 mt-1">
+            {i + 1}
+          </div>
           <div className="flex-1 space-y-1">
-            <Label className="text-xs">Por quê {i + 1}{i > 0 && <span className="text-muted-foreground font-normal"> — sobre: "{value.whys[i - 1] || "…"}"</span>}</Label>
-            <Input value={w} onChange={(e) => onChange({ ...value, whys: value.whys.map((x, j) => (j === i ? e.target.value : x)) })} placeholder={`Resposta ${i + 1}`} />
+            <Label className="text-xs">
+              Por quê {i + 1}
+              {i > 0 && (
+                <span className="text-muted-foreground font-normal">
+                  {" "}
+                  — sobre: "{value.whys[i - 1] || "…"}"
+                </span>
+              )}
+            </Label>
+            <Input
+              value={w}
+              onChange={(e) =>
+                onChange({
+                  ...value,
+                  whys: value.whys.map((x, j) => (j === i ? e.target.value : x)),
+                })
+              }
+              placeholder={`Resposta ${i + 1}`}
+            />
           </div>
         </div>
       ))}
       <div className="space-y-1.5 pt-2">
         <Label className="text-xs">Causa raiz identificada</Label>
-        <Textarea value={value.rootCause} onChange={(e) => onChange({ ...value, rootCause: e.target.value })} placeholder="Síntese final da causa raiz" rows={2} />
+        <Textarea
+          value={value.rootCause}
+          onChange={(e) => onChange({ ...value, rootCause: e.target.value })}
+          placeholder="Síntese final da causa raiz"
+          rows={2}
+        />
       </div>
     </div>
   );
@@ -118,12 +158,16 @@ function FiveWhysView({ data }: { data: FiveWhysData }) {
   return (
     <div className="space-y-2">
       <ol className="space-y-1.5">
-        {data.whys.map((w, i) => w ? (
-          <li key={i} className="flex gap-2 text-sm">
-            <span className="size-6 rounded-full bg-primary/10 text-primary text-xs font-bold grid place-items-center shrink-0">{i + 1}</span>
-            <span>{w}</span>
-          </li>
-        ) : null)}
+        {data.whys.map((w, i) =>
+          w ? (
+            <li key={i} className="flex gap-2 text-sm">
+              <span className="size-6 rounded-full bg-primary/10 text-primary text-xs font-bold grid place-items-center shrink-0">
+                {i + 1}
+              </span>
+              <span>{w}</span>
+            </li>
+          ) : null,
+        )}
       </ol>
       {data.rootCause && (
         <div className="bg-primary/5 border border-primary/30 rounded-md p-3 mt-3">
@@ -138,31 +182,60 @@ function FiveWhysView({ data }: { data: FiveWhysData }) {
 // ============================================================================
 // Ishikawa
 // ============================================================================
-function IshikawaForm({ value, onChange }: { value: IshikawaData; onChange: (v: IshikawaData) => void }) {
+function IshikawaForm({
+  value,
+  onChange,
+}: {
+  value: IshikawaData;
+  onChange: (v: IshikawaData) => void;
+}) {
   const add = (k: keyof IshikawaData["causes"], v: string) => {
     const list = value.causes[k] ?? [];
     if (!v.trim() || list.length >= 3) return;
     onChange({ ...value, causes: { ...value.causes, [k]: [...list, v.trim()] } });
   };
   const remove = (k: keyof IshikawaData["causes"], idx: number) => {
-    onChange({ ...value, causes: { ...value.causes, [k]: value.causes[k].filter((_, i) => i !== idx) } });
+    onChange({
+      ...value,
+      causes: { ...value.causes, [k]: value.causes[k].filter((_, i) => i !== idx) },
+    });
   };
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label className="text-xs">Efeito / problema central</Label>
-        <Input value={value.effect ?? ""} onChange={(e) => onChange({ ...value, effect: e.target.value })} placeholder="Ex: Resultado fora da especificação" />
+        <Input
+          value={value.effect ?? ""}
+          onChange={(e) => onChange({ ...value, effect: e.target.value })}
+          placeholder="Ex: Resultado fora da especificação"
+        />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {ISHIKAWA_GROUPS.map((g) => (
-          <CauseGroup key={g.key} label={g.label} items={value.causes[g.key] ?? []} onAdd={(v) => add(g.key, v)} onRemove={(i) => remove(g.key, i)} />
+          <CauseGroup
+            key={g.key}
+            label={g.label}
+            items={value.causes[g.key] ?? []}
+            onAdd={(v) => add(g.key, v)}
+            onRemove={(i) => remove(g.key, i)}
+          />
         ))}
       </div>
       <p className="text-[11px] text-muted-foreground italic">Até 3 causas por categoria.</p>
     </div>
   );
 }
-function CauseGroup({ label, items, onAdd, onRemove }: { label: string; items: string[]; onAdd: (v: string) => void; onRemove: (i: number) => void }) {
+function CauseGroup({
+  label,
+  items,
+  onAdd,
+  onRemove,
+}: {
+  label: string;
+  items: string[];
+  onAdd: (v: string) => void;
+  onRemove: (i: number) => void;
+}) {
   const [val, setVal] = useState("");
   const full = items.length >= 3;
   return (
@@ -172,18 +245,46 @@ function CauseGroup({ label, items, onAdd, onRemove }: { label: string; items: s
         <span className="text-[10px] text-muted-foreground">{items.length}/3</span>
       </div>
       <div className="space-y-1 mb-2">
-        {items.length === 0 && <div className="text-[11px] text-muted-foreground italic">Sem causas listadas</div>}
+        {items.length === 0 && (
+          <div className="text-[11px] text-muted-foreground italic">Sem causas listadas</div>
+        )}
         {items.map((it, i) => (
           <div key={i} className="flex items-center gap-1 text-xs bg-muted rounded px-2 py-1">
             <span className="flex-1">{it}</span>
-            <button onClick={() => onRemove(i)} className="text-muted-foreground hover:text-destructive"><Trash2 className="size-3" /></button>
+            <button
+              onClick={() => onRemove(i)}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="size-3" />
+            </button>
           </div>
         ))}
       </div>
       <div className="flex gap-1">
-        <Input value={val} onChange={(e) => setVal(e.target.value)} placeholder={full ? "Limite atingido" : "Adicionar causa…"} disabled={full} className="h-8 text-xs"
-          onKeyDown={(e) => { if (e.key === "Enter") { onAdd(val); setVal(""); } }} />
-        <Button type="button" size="sm" variant="outline" className="h-8 px-2" disabled={full} onClick={() => { onAdd(val); setVal(""); }}>
+        <Input
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          placeholder={full ? "Limite atingido" : "Adicionar causa…"}
+          disabled={full}
+          className="h-8 text-xs"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onAdd(val);
+              setVal("");
+            }
+          }}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8 px-2"
+          disabled={full}
+          onClick={() => {
+            onAdd(val);
+            setVal("");
+          }}
+        >
           <Plus className="size-3" />
         </Button>
       </div>
@@ -193,7 +294,12 @@ function CauseGroup({ label, items, onAdd, onRemove }: { label: string; items: s
 function IshikawaView({ data }: { data: IshikawaData }) {
   return (
     <div className="space-y-3">
-      {data.effect && <div className="text-sm"><span className="text-muted-foreground">Efeito: </span><span className="font-medium">{data.effect}</span></div>}
+      {data.effect && (
+        <div className="text-sm">
+          <span className="text-muted-foreground">Efeito: </span>
+          <span className="font-medium">{data.effect}</span>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {ISHIKAWA_GROUPS.map((g) => {
           const items = data.causes[g.key] ?? [];
@@ -201,7 +307,11 @@ function IshikawaView({ data }: { data: IshikawaData }) {
           return (
             <div key={g.key} className="border border-border rounded-md p-3 bg-background">
               <div className="text-xs font-semibold mb-1.5">{g.label}</div>
-              <ul className="text-sm space-y-0.5 list-disc pl-4">{items.map((c, i) => <li key={i}>{c}</li>)}</ul>
+              <ul className="text-sm space-y-0.5 list-disc pl-4">
+                {items.map((c, i) => (
+                  <li key={i}>{c}</li>
+                ))}
+              </ul>
             </div>
           );
         })}
@@ -213,33 +323,66 @@ function IshikawaView({ data }: { data: IshikawaData }) {
 // ============================================================================
 // Brainstorm
 // ============================================================================
-function BrainstormForm({ value, onChange }: { value: BrainstormData; onChange: (v: BrainstormData) => void }) {
+function BrainstormForm({
+  value,
+  onChange,
+}: {
+  value: BrainstormData;
+  onChange: (v: BrainstormData) => void;
+}) {
   const [val, setVal] = useState("");
   const add = () => {
     if (!val.trim()) return;
     onChange({ ...value, ideas: [...value.ideas, val.trim()] });
     setVal("");
   };
-  const remove = (i: number) => onChange({ ...value, ideas: value.ideas.filter((_, j) => j !== i) });
+  const remove = (i: number) =>
+    onChange({ ...value, ideas: value.ideas.filter((_, j) => j !== i) });
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">Liste todas as ideias da equipe e selecione a mais provável.</p>
+      <p className="text-xs text-muted-foreground">
+        Liste todas as ideias da equipe e selecione a mais provável.
+      </p>
       <div className="flex gap-2">
-        <Input value={val} onChange={(e) => setVal(e.target.value)} placeholder="Nova ideia…" onKeyDown={(e) => e.key === "Enter" && add()} />
-        <Button type="button" onClick={add}><Plus className="size-4" /> Adicionar</Button>
+        <Input
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          placeholder="Nova ideia…"
+          onKeyDown={(e) => e.key === "Enter" && add()}
+        />
+        <Button type="button" onClick={add}>
+          <Plus className="size-4" /> Adicionar
+        </Button>
       </div>
       <div className="space-y-1.5">
-        {value.ideas.length === 0 && <div className="text-xs text-muted-foreground italic">Nenhuma ideia registrada ainda.</div>}
+        {value.ideas.length === 0 && (
+          <div className="text-xs text-muted-foreground italic">
+            Nenhuma ideia registrada ainda.
+          </div>
+        )}
         {value.ideas.map((idea, i) => (
-          <div key={i} className="flex items-center gap-2 border border-border rounded-md px-3 py-2 hover:bg-accent/30">
+          <div
+            key={i}
+            className="flex items-center gap-2 border border-border rounded-md px-3 py-2 hover:bg-accent/30"
+          >
             <span className="text-sm flex-1">{idea}</span>
-            <button onClick={() => remove(i)} className="text-muted-foreground hover:text-destructive"><Trash2 className="size-3.5" /></button>
+            <button
+              onClick={() => remove(i)}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
           </div>
         ))}
       </div>
       <div className="space-y-1.5 pt-2">
         <Label className="text-xs">Causa selecionada</Label>
-        <Textarea value={value.selected} onChange={(e) => onChange({ ...value, selected: e.target.value })} placeholder="Causa mais provável escolhida pela equipe" rows={2} />
+        <Textarea
+          value={value.selected}
+          onChange={(e) => onChange({ ...value, selected: e.target.value })}
+          placeholder="Causa mais provável escolhida pela equipe"
+          rows={2}
+        />
       </div>
     </div>
   );
@@ -248,7 +391,11 @@ function BrainstormView({ data }: { data: BrainstormData }) {
   return (
     <div className="space-y-2">
       {data.ideas.length > 0 && (
-        <ul className="text-sm space-y-0.5 list-disc pl-4">{data.ideas.map((i, idx) => <li key={idx}>{i}</li>)}</ul>
+        <ul className="text-sm space-y-0.5 list-disc pl-4">
+          {data.ideas.map((i, idx) => (
+            <li key={idx}>{i}</li>
+          ))}
+        </ul>
       )}
       {data.selected && (
         <div className="bg-primary/5 border border-primary/30 rounded-md p-3 mt-2">
@@ -301,7 +448,10 @@ function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
   const handleSave = async () => {
     const { tool: t, data } = currentData();
     await occurrencesStore.upsert({ ...occurrence, root_cause_tool: t, root_cause_data: data });
-    await updateOccurrenceMeta(occurrence.id, (p) => p, { action: "Análise de causa raiz salva", detail: TOOL_META[t].label });
+    await updateOccurrenceMeta(occurrence.id, (p) => p, {
+      action: "Análise de causa raiz salva",
+      detail: TOOL_META[t].label,
+    });
     toast.success("Análise de causa raiz salva");
     setEditing(false);
   };
@@ -314,11 +464,15 @@ function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
           <div className="inline-flex items-center gap-1.5 text-xs font-medium bg-primary/10 text-primary rounded-full px-3 py-1">
             <Icon className="size-3.5" /> {label}
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}><Pencil className="size-3.5 mr-1" /> Editar</Button>
+          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+            <Pencil className="size-3.5 mr-1" /> Editar
+          </Button>
         </div>
         {saved === "5_whys" && <FiveWhysView data={occurrence.root_cause_data as FiveWhysData} />}
         {saved === "ishikawa" && <IshikawaView data={occurrence.root_cause_data as IshikawaData} />}
-        {saved === "brainstorm" && <BrainstormView data={occurrence.root_cause_data as BrainstormData} />}
+        {saved === "brainstorm" && (
+          <BrainstormView data={occurrence.root_cause_data as BrainstormData} />
+        )}
       </div>
     );
   }
@@ -327,17 +481,35 @@ function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
     <div>
       <Tabs value={tool} onValueChange={(v) => setTool(v as RootCauseTool)}>
         <TabsList className="grid grid-cols-3 w-full">
-          <TabsTrigger value="5_whys"><ListOrdered className="size-3.5 mr-1" /> 5 Porquês</TabsTrigger>
-          <TabsTrigger value="ishikawa"><Fish className="size-3.5 mr-1" /> Ishikawa</TabsTrigger>
-          <TabsTrigger value="brainstorm"><Lightbulb className="size-3.5 mr-1" /> Brainstorm</TabsTrigger>
+          <TabsTrigger value="5_whys">
+            <ListOrdered className="size-3.5 mr-1" /> 5 Porquês
+          </TabsTrigger>
+          <TabsTrigger value="ishikawa">
+            <Fish className="size-3.5 mr-1" /> Ishikawa
+          </TabsTrigger>
+          <TabsTrigger value="brainstorm">
+            <Lightbulb className="size-3.5 mr-1" /> Brainstorm
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="5_whys" className="pt-4"><FiveWhysForm value={fiveWhys} onChange={setFiveWhys} /></TabsContent>
-        <TabsContent value="ishikawa" className="pt-4"><IshikawaForm value={ishikawa} onChange={setIshikawa} /></TabsContent>
-        <TabsContent value="brainstorm" className="pt-4"><BrainstormForm value={brainstorm} onChange={setBrainstorm} /></TabsContent>
+        <TabsContent value="5_whys" className="pt-4">
+          <FiveWhysForm value={fiveWhys} onChange={setFiveWhys} />
+        </TabsContent>
+        <TabsContent value="ishikawa" className="pt-4">
+          <IshikawaForm value={ishikawa} onChange={setIshikawa} />
+        </TabsContent>
+        <TabsContent value="brainstorm" className="pt-4">
+          <BrainstormForm value={brainstorm} onChange={setBrainstorm} />
+        </TabsContent>
       </Tabs>
       <div className={cn("mt-6 flex justify-end gap-2")}>
-        {saved && <Button variant="outline" onClick={() => setEditing(false)}>Cancelar</Button>}
-        <Button onClick={handleSave}><Save className="size-4 mr-1" /> Salvar análise</Button>
+        {saved && (
+          <Button variant="outline" onClick={() => setEditing(false)}>
+            Cancelar
+          </Button>
+        )}
+        <Button onClick={handleSave}>
+          <Save className="size-4 mr-1" /> Salvar análise
+        </Button>
       </div>
     </div>
   );
@@ -346,9 +518,17 @@ function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
 // ============================================================================
 // 5W2H
 // ============================================================================
-function FiveW2HSection({ occurrenceId, value }: { occurrenceId: string; value: FiveW2HData | null }) {
+function FiveW2HSection({
+  occurrenceId,
+  value,
+}: {
+  occurrenceId: string;
+  value: FiveW2HData | null;
+}) {
   const [data, setData] = useState<FiveW2HData>(value ?? emptyFiveW2H());
-  useEffect(() => { setData(value ?? emptyFiveW2H()); }, [value]);
+  useEffect(() => {
+    setData(value ?? emptyFiveW2H());
+  }, [value]);
 
   const fields: { key: keyof FiveW2HData; label: string; placeholder: string; type?: string }[] = [
     { key: "what", label: "What — O quê", placeholder: "O que será feito" },
@@ -361,11 +541,9 @@ function FiveW2HSection({ occurrenceId, value }: { occurrenceId: string; value: 
   ];
 
   const save = async () => {
-    await updateOccurrenceMeta(
-      occurrenceId,
-      (prev) => ({ ...prev, five_w2h: data }),
-      { action: "5W2H atualizado" },
-    );
+    await updateOccurrenceMeta(occurrenceId, (prev) => ({ ...prev, five_w2h: data }), {
+      action: "5W2H atualizado",
+    });
     toast.success("5W2H salvo");
   };
 
@@ -397,7 +575,9 @@ function FiveW2HSection({ occurrenceId, value }: { occurrenceId: string; value: 
         ))}
       </div>
       <div className="flex justify-end">
-        <Button onClick={save}><Save className="size-4 mr-1" /> Salvar 5W2H</Button>
+        <Button onClick={save}>
+          <Save className="size-4 mr-1" /> Salvar 5W2H
+        </Button>
       </div>
     </div>
   );
@@ -406,7 +586,15 @@ function FiveW2HSection({ occurrenceId, value }: { occurrenceId: string; value: 
 // ============================================================================
 // Visão geral / edição inline
 // ============================================================================
-function OverviewSection({ occurrence, deadline, onSaved }: { occurrence: OccurrenceRow; deadline: string | null; onSaved: () => void }) {
+function OverviewSection({
+  occurrence,
+  deadline,
+  onSaved,
+}: {
+  occurrence: OccurrenceRow;
+  deadline: string | null;
+  onSaved: () => void;
+}) {
   const profiles = useTableStore(profilesStore);
   const risks = useTableStore(risksStore);
   const suppliers = useTableStore(suppliersStore);
@@ -419,8 +607,12 @@ function OverviewSection({ occurrence, deadline, onSaved }: { occurrence: Occurr
   const [linkedRisk, setLinkedRisk] = useState<string>(meta.linked_risk_id ?? "");
   const [linkedSupplier, setLinkedSupplier] = useState<string>(meta.linked_supplier_id ?? "");
 
-  useEffect(() => { setDraft(occurrence); }, [occurrence]);
-  useEffect(() => { setDraftDeadline(deadline ?? ""); }, [deadline]);
+  useEffect(() => {
+    setDraft(occurrence);
+  }, [occurrence]);
+  useEffect(() => {
+    setDraftDeadline(deadline ?? "");
+  }, [deadline]);
   useEffect(() => {
     setLinkedRisk(meta.linked_risk_id ?? "");
     setLinkedSupplier(meta.linked_supplier_id ?? "");
@@ -453,101 +645,207 @@ function OverviewSection({ occurrence, deadline, onSaved }: { occurrence: Occurr
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-1.5 md:col-span-2">
           <Label className="text-xs">Descrição</Label>
-          <Textarea rows={2} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+          <Textarea
+            rows={2}
+            value={draft.description}
+            onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+          />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Tipo</Label>
           <Select value={draft.type} onValueChange={(v) => setDraft({ ...draft, type: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{TYPE_OPTIONS.map((o) => <SelectItem key={o} value={o}>{typeLabel(o)}</SelectItem>)}</SelectContent>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TYPE_OPTIONS.map((o) => (
+                <SelectItem key={o} value={o}>
+                  {typeLabel(o)}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Origem</Label>
           <Select value={draft.origin} onValueChange={(v) => setDraft({ ...draft, origin: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{ORIGIN_OPTIONS.map((o) => <SelectItem key={o} value={o}>{originLabel(o)}</SelectItem>)}</SelectContent>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ORIGIN_OPTIONS.map((o) => (
+                <SelectItem key={o} value={o}>
+                  {originLabel(o)}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Severidade</Label>
           <Select value={draft.severity} onValueChange={(v) => setDraft({ ...draft, severity: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{SEVERITY_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SEVERITY_OPTIONS.map((o) => (
+                <SelectItem key={o} value={o}>
+                  {o}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Status</Label>
           <Select value={draft.status} onValueChange={(v) => setDraft({ ...draft, status: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{STATUS_OPTIONS.map((o) => <SelectItem key={o} value={o}>{statusLabel(o)}</SelectItem>)}</SelectContent>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((o) => (
+                <SelectItem key={o} value={o}>
+                  {statusLabel(o)}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Identificada em</Label>
-          <Input type="date" value={draft.occurred_at ?? ""} onChange={(e) => setDraft({ ...draft, occurred_at: e.target.value })} />
+          <Input
+            type="date"
+            value={draft.occurred_at ?? ""}
+            onChange={(e) => setDraft({ ...draft, occurred_at: e.target.value })}
+          />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Prazo de tratamento</Label>
-          <Input type="date" value={draftDeadline} onChange={(e) => setDraftDeadline(e.target.value)} />
+          <Input
+            type="date"
+            value={draftDeadline}
+            onChange={(e) => setDraftDeadline(e.target.value)}
+          />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Responsável</Label>
-          <Select value={draft.responsible_id ?? ""} onValueChange={(v) => setDraft({ ...draft, responsible_id: v || null })}>
-            <SelectTrigger><SelectValue placeholder="Selecionar…" /></SelectTrigger>
-            <SelectContent>{profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+          <Select
+            value={draft.responsible_id ?? ""}
+            onValueChange={(v) => setDraft({ ...draft, responsible_id: v || null })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecionar…" />
+            </SelectTrigger>
+            <SelectContent>
+              {profiles.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5 md:col-span-2">
           <Label className="text-xs">Ação imediata / contenção</Label>
-          <Textarea rows={2} value={draft.immediate_action ?? ""} onChange={(e) => setDraft({ ...draft, immediate_action: e.target.value })} />
+          <Textarea
+            rows={2}
+            value={draft.immediate_action ?? ""}
+            onChange={(e) => setDraft({ ...draft, immediate_action: e.target.value })}
+          />
         </div>
         <div className="space-y-1.5 md:col-span-2">
           <Label className="text-xs">Causa raiz (resumo livre)</Label>
-          <Textarea rows={2} value={draft.root_cause ?? ""} onChange={(e) => setDraft({ ...draft, root_cause: e.target.value })} placeholder="Resumo da causa raiz (também pode usar as ferramentas na aba Causa Raiz)" />
+          <Textarea
+            rows={2}
+            value={draft.root_cause ?? ""}
+            onChange={(e) => setDraft({ ...draft, root_cause: e.target.value })}
+            placeholder="Resumo da causa raiz (também pode usar as ferramentas na aba Causa Raiz)"
+          />
         </div>
       </div>
 
       <div className="border-t border-border pt-4">
-        <h4 className="text-xs font-semibold mb-3 flex items-center gap-1.5"><Link2 className="size-3.5" /> Vínculos</h4>
+        <h4 className="text-xs font-semibold mb-3 flex items-center gap-1.5">
+          <Link2 className="size-3.5" /> Vínculos
+        </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs">Auditoria</Label>
-            <Select value={draft.linked_audit_id ?? "__none"} onValueChange={(v) => setDraft({ ...draft, linked_audit_id: v === "__none" ? null : v })}>
-              <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+            <Select
+              value={draft.linked_audit_id ?? "__none"}
+              onValueChange={(v) =>
+                setDraft({ ...draft, linked_audit_id: v === "__none" ? null : v })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Nenhuma" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">Nenhuma</SelectItem>
-                {audits.map((a) => <SelectItem key={a.id} value={a.id}>{a.code ?? a.id} — {a.scope}</SelectItem>)}
+                {audits.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.code ?? a.id} — {a.scope}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Documento</Label>
-            <Select value={draft.linked_document_id ?? "__none"} onValueChange={(v) => setDraft({ ...draft, linked_document_id: v === "__none" ? null : v })}>
-              <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+            <Select
+              value={draft.linked_document_id ?? "__none"}
+              onValueChange={(v) =>
+                setDraft({ ...draft, linked_document_id: v === "__none" ? null : v })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Nenhum" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">Nenhum</SelectItem>
-                {documents.map((d) => <SelectItem key={d.id} value={d.id}>{d.code} — {d.title}</SelectItem>)}
+                {documents.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.code} — {d.title}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Risco</Label>
-            <Select value={linkedRisk || "__none"} onValueChange={(v) => setLinkedRisk(v === "__none" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+            <Select
+              value={linkedRisk || "__none"}
+              onValueChange={(v) => setLinkedRisk(v === "__none" ? "" : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Nenhum" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">Nenhum</SelectItem>
-                {risks.map((r) => <SelectItem key={r.id} value={r.id}>{r.process} — {r.description.slice(0, 50)}</SelectItem>)}
+                {risks.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.process} — {r.description.slice(0, 50)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Fornecedor</Label>
-            <Select value={linkedSupplier || "__none"} onValueChange={(v) => setLinkedSupplier(v === "__none" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+            <Select
+              value={linkedSupplier || "__none"}
+              onValueChange={(v) => setLinkedSupplier(v === "__none" ? "" : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Nenhum" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">Nenhum</SelectItem>
-                {suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                {suppliers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -555,7 +853,9 @@ function OverviewSection({ occurrence, deadline, onSaved }: { occurrence: Occurr
       </div>
 
       <div className="flex justify-end">
-        <Button onClick={save}><Save className="size-4 mr-1" /> Salvar alterações</Button>
+        <Button onClick={save}>
+          <Save className="size-4 mr-1" /> Salvar alterações
+        </Button>
       </div>
     </div>
   );
@@ -596,7 +896,10 @@ function ActionPlansSection({ occurrenceId }: { occurrenceId: string }) {
       status: "pendente",
       progress: 0,
     } as any);
-    await updateOccurrenceMeta(occurrenceId, (p) => p, { action: "Ação criada", detail: draft.description.slice(0, 80) });
+    await updateOccurrenceMeta(occurrenceId, (p) => p, {
+      action: "Ação criada",
+      detail: draft.description.slice(0, 80),
+    });
     toast.success("Ação registrada");
     setOpen(false);
     setDraft({ description: "", responsible_id: "", deadline: "", priority: "media" });
@@ -617,30 +920,59 @@ function ActionPlansSection({ occurrenceId }: { occurrenceId: string }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">{linked.length} ação(ões) vinculada(s) a esta ocorrência.</p>
-        <Button size="sm" onClick={() => setOpen(true)}><Plus className="size-4 mr-1" /> Nova ação</Button>
+        <p className="text-xs text-muted-foreground">
+          {linked.length} ação(ões) vinculada(s) a esta ocorrência.
+        </p>
+        <Button size="sm" onClick={() => setOpen(true)}>
+          <Plus className="size-4 mr-1" /> Nova ação
+        </Button>
       </div>
 
-      {linked.length === 0 && <div className="text-sm text-muted-foreground italic py-6 text-center border border-dashed border-border rounded">Nenhuma ação registrada ainda.</div>}
+      {linked.length === 0 && (
+        <div className="text-sm text-muted-foreground italic py-6 text-center border border-dashed border-border rounded">
+          Nenhuma ação registrada ainda.
+        </div>
+      )}
 
       {linked.map((p: any) => {
         const overdue = isOverdue(p.deadline, p.status);
         return (
-          <div key={p.id} className={cn("border rounded-md p-3 space-y-2", overdue ? "border-destructive/50 bg-destructive/5" : "border-border")}>
+          <div
+            key={p.id}
+            className={cn(
+              "border rounded-md p-3 space-y-2",
+              overdue ? "border-destructive/50 bg-destructive/5" : "border-border",
+            )}
+          >
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <div className="text-sm font-medium">{p.description}</div>
                 <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
                   <span>Resp.: {profileName(p.responsible_id)}</span>
-                  {p.deadline && <span className={overdue ? "text-destructive font-medium" : ""}>Prazo: {p.deadline}{overdue && " ⚠ vencida"}</span>}
+                  {p.deadline && (
+                    <span className={overdue ? "text-destructive font-medium" : ""}>
+                      Prazo: {p.deadline}
+                      {overdue && " ⚠ vencida"}
+                    </span>
+                  )}
                   <span>Prioridade: {p.priority}</span>
                   <StatusBadge>{p.status}</StatusBadge>
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => remove(p.id)}><Trash2 className="size-3.5 text-destructive" /></Button>
+              <Button variant="ghost" size="sm" onClick={() => remove(p.id)}>
+                <Trash2 className="size-3.5 text-destructive" />
+              </Button>
             </div>
             <div className="flex items-center gap-2">
-              <input type="range" min={0} max={100} step={10} value={p.progress ?? 0} onChange={(e) => updateProgress(p.id, Number(e.target.value))} className="flex-1" />
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={10}
+                value={p.progress ?? 0}
+                onChange={(e) => updateProgress(p.id, Number(e.target.value))}
+                className="flex-1"
+              />
               <span className="text-xs font-mono w-10 text-right">{p.progress ?? 0}%</span>
             </div>
           </div>
@@ -649,15 +981,40 @@ function ActionPlansSection({ occurrenceId }: { occurrenceId: string }) {
 
       {open && (
         <div className="border border-border rounded-md p-3 space-y-2 bg-accent/30">
-          <Textarea rows={2} placeholder="Descrição da ação" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+          <Textarea
+            rows={2}
+            placeholder="Descrição da ação"
+            value={draft.description}
+            onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+          />
           <div className="grid grid-cols-3 gap-2">
-            <Select value={draft.responsible_id} onValueChange={(v) => setDraft({ ...draft, responsible_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Responsável" /></SelectTrigger>
-              <SelectContent>{profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+            <Select
+              value={draft.responsible_id}
+              onValueChange={(v) => setDraft({ ...draft, responsible_id: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
-            <Input type="date" value={draft.deadline} onChange={(e) => setDraft({ ...draft, deadline: e.target.value })} />
-            <Select value={draft.priority} onValueChange={(v) => setDraft({ ...draft, priority: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Input
+              type="date"
+              value={draft.deadline}
+              onChange={(e) => setDraft({ ...draft, deadline: e.target.value })}
+            />
+            <Select
+              value={draft.priority}
+              onValueChange={(v) => setDraft({ ...draft, priority: v })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="baixa">Baixa</SelectItem>
                 <SelectItem value="media">Média</SelectItem>
@@ -667,8 +1024,12 @@ function ActionPlansSection({ occurrenceId }: { occurrenceId: string }) {
             </Select>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button size="sm" onClick={create}>Adicionar</Button>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={create}>
+              Adicionar
+            </Button>
           </div>
         </div>
       )}
@@ -685,45 +1046,73 @@ function EffectivenessSection({ occurrenceId, value }: { occurrenceId: string; v
   useEffect(() => setDraft(value), [value]);
 
   const save = async () => {
-    await updateOccurrenceMeta(
-      occurrenceId,
-      (p) => ({ ...p, effectiveness: draft }),
-      { action: `Eficácia: ${effectivenessLabel[draft.status as keyof typeof effectivenessLabel]}` },
-    );
+    await updateOccurrenceMeta(occurrenceId, (p) => ({ ...p, effectiveness: draft }), {
+      action: `Eficácia: ${effectivenessLabel[draft.status as keyof typeof effectivenessLabel]}`,
+    });
     toast.success("Verificação registrada");
   };
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">Após implementadas as ações, registre a verificação de eficácia.</p>
+      <p className="text-xs text-muted-foreground">
+        Após implementadas as ações, registre a verificação de eficácia.
+      </p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs">Status</Label>
           <Select value={draft.status} onValueChange={(v) => setDraft({ ...draft, status: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {Object.entries(effectivenessLabel).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+              {Object.entries(effectivenessLabel).map(([k, v]) => (
+                <SelectItem key={k} value={k}>
+                  {v}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Verificado em</Label>
-          <Input type="date" value={draft.verified_at ?? ""} onChange={(e) => setDraft({ ...draft, verified_at: e.target.value })} />
+          <Input
+            type="date"
+            value={draft.verified_at ?? ""}
+            onChange={(e) => setDraft({ ...draft, verified_at: e.target.value })}
+          />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Verificado por</Label>
-          <Select value={draft.verified_by ?? ""} onValueChange={(v) => setDraft({ ...draft, verified_by: v })}>
-            <SelectTrigger><SelectValue placeholder="Selecionar…" /></SelectTrigger>
-            <SelectContent>{profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+          <Select
+            value={draft.verified_by ?? ""}
+            onValueChange={(v) => setDraft({ ...draft, verified_by: v })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecionar…" />
+            </SelectTrigger>
+            <SelectContent>
+              {profiles.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Observações</Label>
-        <Textarea rows={3} value={draft.notes ?? ""} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="Evidências da verificação, indicadores monitorados, etc." />
+        <Textarea
+          rows={3}
+          value={draft.notes ?? ""}
+          onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+          placeholder="Evidências da verificação, indicadores monitorados, etc."
+        />
       </div>
       <div className="flex justify-end">
-        <Button onClick={save}><ShieldCheck className="size-4 mr-1" /> Registrar verificação</Button>
+        <Button onClick={save}>
+          <ShieldCheck className="size-4 mr-1" /> Registrar verificação
+        </Button>
       </div>
     </div>
   );
@@ -732,8 +1121,35 @@ function EffectivenessSection({ occurrenceId, value }: { occurrenceId: string; v
 // ============================================================================
 // Anexos
 // ============================================================================
-function AttachmentsSection({ occurrenceId, items }: { occurrenceId: string; items: OccurrenceAttachment[] }) {
+function AttachmentsSection({
+  occurrenceId,
+  items,
+}: {
+  occurrenceId: string;
+  items: OccurrenceAttachment[];
+}) {
   const [draft, setDraft] = useState({ name: "", url: "", description: "" });
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFileUpload(file: File) {
+    setUploading(true);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `evidence/occ-${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from("certificates")
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("certificates").getPublicUrl(path);
+      setDraft((d) => ({ ...d, name: d.name || file.name, url: urlData.publicUrl }));
+      toast.success("Arquivo carregado", { description: file.name });
+    } catch (err) {
+      toast.error("Falha no upload", { description: (err as Error).message });
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const add = async () => {
     if (!draft.name.trim() || !draft.url.trim()) {
@@ -767,26 +1183,82 @@ function AttachmentsSection({ occurrenceId, items }: { occurrenceId: string; ite
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <Input placeholder="Nome do arquivo / evidência" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-        <Input placeholder="URL (link público / drive / storage)" value={draft.url} onChange={(e) => setDraft({ ...draft, url: e.target.value })} />
+        <Input
+          placeholder="Nome do arquivo / evidência"
+          value={draft.name}
+          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+        />
+        <div className="flex gap-1.5">
+          <Input
+            placeholder="URL ou faça upload →"
+            className="flex-1"
+            value={draft.url}
+            onChange={(e) => setDraft({ ...draft, url: e.target.value })}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleFileUpload(f);
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            title="Fazer upload de arquivo"
+            disabled={uploading}
+            className="h-9 px-2.5 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50 shrink-0"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Paperclip className="size-4" />
+            )}
+          </button>
+        </div>
         <div className="flex gap-2">
-          <Input placeholder="Descrição (opcional)" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
-          <Button onClick={add}><Plus className="size-4" /></Button>
+          <Input
+            placeholder="Descrição (opcional)"
+            value={draft.description}
+            onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+          />
+          <Button onClick={add}>
+            <Plus className="size-4" />
+          </Button>
         </div>
       </div>
       {items.length === 0 ? (
-        <div className="text-sm text-muted-foreground italic py-6 text-center border border-dashed border-border rounded">Nenhuma evidência anexada.</div>
+        <div className="text-sm text-muted-foreground italic py-6 text-center border border-dashed border-border rounded">
+          Nenhuma evidência anexada.
+        </div>
       ) : (
         <div className="space-y-1.5">
           {items.map((a) => (
             <div key={a.id} className="flex items-center gap-2 border border-border rounded-md p-2">
               <Paperclip className="size-3.5 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
-                <a href={a.url} target="_blank" rel="noreferrer" className="text-sm font-medium hover:underline truncate block">{a.name}</a>
-                {a.description && <div className="text-xs text-muted-foreground truncate">{a.description}</div>}
-                <div className="text-[10px] text-muted-foreground">{new Date(a.uploaded_at).toLocaleString("pt-BR")}</div>
+                <a
+                  href={a.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-medium hover:underline truncate block"
+                >
+                  {a.name}
+                </a>
+                {a.description && (
+                  <div className="text-xs text-muted-foreground truncate">{a.description}</div>
+                )}
+                <div className="text-[10px] text-muted-foreground">
+                  {new Date(a.uploaded_at).toLocaleString("pt-BR")}
+                </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => remove(a.id)}><Trash2 className="size-3.5 text-destructive" /></Button>
+              <Button variant="ghost" size="sm" onClick={() => remove(a.id)}>
+                <Trash2 className="size-3.5 text-destructive" />
+              </Button>
             </div>
           ))}
         </div>
@@ -798,7 +1270,13 @@ function AttachmentsSection({ occurrenceId, items }: { occurrenceId: string; ite
 // ============================================================================
 // Campos personalizados
 // ============================================================================
-function CustomFieldsSection({ occurrenceId, items }: { occurrenceId: string; items: OccurrenceCustomField[] }) {
+function CustomFieldsSection({
+  occurrenceId,
+  items,
+}: {
+  occurrenceId: string;
+  items: OccurrenceCustomField[];
+}) {
   const [list, setList] = useState<OccurrenceCustomField[]>(items);
   useEffect(() => setList(items), [items]);
 
@@ -809,23 +1287,43 @@ function CustomFieldsSection({ occurrenceId, items }: { occurrenceId: string; it
 
   const save = async () => {
     const cleaned = list.filter((f) => f.label.trim());
-    await updateOccurrenceMeta(occurrenceId, (p) => ({ ...p, custom_fields: cleaned }), { action: "Campos personalizados atualizados" });
+    await updateOccurrenceMeta(occurrenceId, (p) => ({ ...p, custom_fields: cleaned }), {
+      action: "Campos personalizados atualizados",
+    });
     toast.success("Campos personalizados salvos");
   };
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">Adicione campos específicos do seu processo (ex: número do lote, cliente, etc.).</p>
+      <p className="text-xs text-muted-foreground">
+        Adicione campos específicos do seu processo (ex: número do lote, cliente, etc.).
+      </p>
       {list.map((f) => (
         <div key={f.id} className="flex gap-2 items-center">
-          <Input className="w-1/3" placeholder="Rótulo" value={f.label} onChange={(e) => update(f.id, { label: e.target.value })} />
-          <Input className="flex-1" placeholder="Valor" value={f.value} onChange={(e) => update(f.id, { value: e.target.value })} />
-          <Button variant="ghost" size="sm" onClick={() => remove(f.id)}><Trash2 className="size-3.5 text-destructive" /></Button>
+          <Input
+            className="w-1/3"
+            placeholder="Rótulo"
+            value={f.label}
+            onChange={(e) => update(f.id, { label: e.target.value })}
+          />
+          <Input
+            className="flex-1"
+            placeholder="Valor"
+            value={f.value}
+            onChange={(e) => update(f.id, { value: e.target.value })}
+          />
+          <Button variant="ghost" size="sm" onClick={() => remove(f.id)}>
+            <Trash2 className="size-3.5 text-destructive" />
+          </Button>
         </div>
       ))}
       <div className="flex justify-between">
-        <Button variant="outline" size="sm" onClick={add}><Plus className="size-3.5 mr-1" /> Adicionar campo</Button>
-        <Button size="sm" onClick={save}><Save className="size-3.5 mr-1" /> Salvar campos</Button>
+        <Button variant="outline" size="sm" onClick={add}>
+          <Plus className="size-3.5 mr-1" /> Adicionar campo
+        </Button>
+        <Button size="sm" onClick={save}>
+          <Save className="size-3.5 mr-1" /> Salvar campos
+        </Button>
       </div>
     </div>
   );
@@ -836,7 +1334,11 @@ function CustomFieldsSection({ occurrenceId, items }: { occurrenceId: string; it
 // ============================================================================
 function HistorySection({ events }: { events: any[] }) {
   if (events.length === 0) {
-    return <div className="text-sm text-muted-foreground italic py-6 text-center">Sem eventos registrados ainda.</div>;
+    return (
+      <div className="text-sm text-muted-foreground italic py-6 text-center">
+        Sem eventos registrados ainda.
+      </div>
+    );
   }
   return (
     <ol className="relative border-l border-border ml-2 space-y-3">
@@ -868,7 +1370,10 @@ function OccDetail() {
   if (!o) {
     return (
       <>
-        <Link to="/occurrences" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+        <Link
+          to="/occurrences"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
+        >
           <ArrowLeft className="size-4 mr-1" /> Voltar
         </Link>
         <PageHeader title="Ocorrência não encontrada" description={id} />
@@ -880,7 +1385,10 @@ function OccDetail() {
 
   return (
     <>
-      <Link to="/occurrences" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+      <Link
+        to="/occurrences"
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
+      >
         <ArrowLeft className="size-4 mr-1" /> Voltar
       </Link>
       <PageHeader
@@ -905,10 +1413,16 @@ function OccDetail() {
               <TabsTrigger value="overview">Visão geral</TabsTrigger>
               <TabsTrigger value="root_cause">Causa raiz</TabsTrigger>
               <TabsTrigger value="five_w2h">5W2H</TabsTrigger>
-              <TabsTrigger value="actions"><ClipboardList className="size-3.5 mr-1" /> Ações</TabsTrigger>
+              <TabsTrigger value="actions">
+                <ClipboardList className="size-3.5 mr-1" /> Ações
+              </TabsTrigger>
               <TabsTrigger value="effectiveness">Eficácia</TabsTrigger>
-              <TabsTrigger value="attachments"><Paperclip className="size-3.5" /></TabsTrigger>
-              <TabsTrigger value="history"><History className="size-3.5" /></TabsTrigger>
+              <TabsTrigger value="attachments">
+                <Paperclip className="size-3.5" />
+              </TabsTrigger>
+              <TabsTrigger value="history">
+                <History className="size-3.5" />
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="pt-4">
@@ -943,10 +1457,29 @@ function OccDetail() {
               <Row k="Status" v={<StatusBadge>{statusLabel(o.status)}</StatusBadge>} />
               <Row k="Responsável" v={profileName(o.responsible_id)} />
               <Row k="Identificada" v={o.occurred_at ?? "—"} />
-              <Row k="Prazo" v={meta.deadline ? <span className={overdue ? "text-destructive font-medium" : ""}>{meta.deadline}</span> : "—"} />
+              <Row
+                k="Prazo"
+                v={
+                  meta.deadline ? (
+                    <span className={overdue ? "text-destructive font-medium" : ""}>
+                      {meta.deadline}
+                    </span>
+                  ) : (
+                    "—"
+                  )
+                }
+              />
               <Row k="Eficácia" v={effectivenessLabel[meta.effectiveness.status]} />
               <Row k="Anexos" v={meta.attachments.length} />
-              <Row k="Ações" v={actionPlansStore.list().filter((p: any) => p.origin_type === "occurrence" && p.origin_id === o.id).length} />
+              <Row
+                k="Ações"
+                v={
+                  actionPlansStore
+                    .list()
+                    .filter((p: any) => p.origin_type === "occurrence" && p.origin_id === o.id)
+                    .length
+                }
+              />
             </dl>
           </section>
 
