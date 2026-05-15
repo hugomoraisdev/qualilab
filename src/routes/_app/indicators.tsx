@@ -37,6 +37,23 @@ import {
 } from "@/lib/indicator-meta-store";
 import { profilesStore, profileName } from "@/lib/profiles-store";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
 
 export const Route = createFileRoute("/_app/indicators")({ component: IndicatorsPage });
 
@@ -88,6 +105,7 @@ function IndicatorsPage() {
   const [showForm, setShowForm] = useState(false);
   const [draft, setDraft] = useState<DraftIndicator>(emptyDraft());
   const [historyId, setHistoryId] = useState<string | null>(null);
+  const [chartId, setChartId] = useState<string | null>(null);
   const [resultDraft, setResultDraft] = useState<{
     id: string;
     period: string;
@@ -567,9 +585,19 @@ function IndicatorsPage() {
                 >
                   <History className="size-3" /> Histórico ({allFor.length})
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => openResult(i)}>
-                  <Plus className="size-3" /> Resultado
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setChartId(i.id)}
+                    disabled={allFor.length === 0}
+                  >
+                    <BarChart3 className="size-3" /> Gráfico
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openResult(i)}>
+                    <Plus className="size-3" /> Resultado
+                  </Button>
+                </div>
               </div>
               {isHistoryOpen && (
                 <div className="mt-3 border-t border-border pt-3">
@@ -677,7 +705,101 @@ function IndicatorsPage() {
           </div>
         </div>
       )}
+
+      {chartId && (() => {
+        const chartInd = list.find((i) => i.id === chartId);
+        if (!chartInd) return null;
+        return (
+          <IndicatorChartDialog
+            indicator={chartInd}
+            results={allResults.filter((r) => r.indicator_id === chartId)}
+            open={true}
+            onClose={() => setChartId(null)}
+          />
+        );
+      })()}
     </>
+  );
+}
+
+function IndicatorChartDialog({
+  indicator,
+  results,
+  open,
+  onClose,
+}: {
+  indicator: IndicatorRow;
+  results: IndicatorResultRow[];
+  open: boolean;
+  onClose: () => void;
+}) {
+  const sorted = [...results].sort((a, b) => a.period.localeCompare(b.period));
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <BarChart3 className="size-4" /> {indicator.name}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-xs text-muted-foreground -mt-2 mb-3">
+          Meta: {indicator.direction === "maior" ? "≥" : "≤"} {indicator.target} {indicator.unit}
+          {" · "}{indicator.area}{" · "}{indicator.frequency}
+        </p>
+        {sorted.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8 italic">
+            Sem resultados registrados.
+          </p>
+        ) : (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={sorted} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="period" stroke="var(--muted-foreground)" fontSize={11} />
+                <YAxis
+                  stroke="var(--muted-foreground)"
+                  fontSize={11}
+                  tickFormatter={(v: number) => `${v} ${indicator.unit}`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--popover)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                  }}
+                  formatter={(val: number) => [`${val} ${indicator.unit}`, "Resultado"]}
+                />
+                <ReferenceLine
+                  y={indicator.target}
+                  stroke="var(--primary)"
+                  strokeDasharray="4 4"
+                  label={{
+                    value: `Meta: ${indicator.target}`,
+                    position: "insideTopRight",
+                    fontSize: 11,
+                    fill: "var(--primary)",
+                  }}
+                />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  {sorted.map((r) => {
+                    const meets =
+                      indicator.direction === "maior"
+                        ? r.value >= indicator.target
+                        : r.value <= indicator.target;
+                    return (
+                      <Cell
+                        key={r.id}
+                        fill={meets ? "var(--success)" : "var(--warning)"}
+                      />
+                    );
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 

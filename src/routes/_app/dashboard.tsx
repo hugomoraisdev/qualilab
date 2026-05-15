@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
@@ -5,16 +6,22 @@ import { StatusBadge } from "@/components/StatusBadge";
 import {
   FileText, Wrench, Gauge, Truck, AlertTriangle, ShieldAlert,
   ListChecks, ClipboardCheck, GraduationCap, TrendingUp, ArrowRight,
+  Target, BarChart3, TrendingDown,
 } from "lucide-react";
 import {
   documents, equipments, calibrations, suppliers, occurrences, risks,
   actionPlans, audits, competencies, occurrencesByMonth,
 } from "@/lib/mock-data";
 import { suppliersStore, getEvaluationStatus } from "@/lib/suppliers-store";
+import {
+  indicatorsStore,
+  indicatorResultsStore,
+  computeIndicatorOverview,
+} from "@/lib/indicators-store";
 import { useTableStore } from "@/lib/table-store";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, ReferenceLine,
 } from "recharts";
 
 export const Route = createFileRoute("/_app/dashboard")({
@@ -66,6 +73,40 @@ function Dashboard() {
     const st = getEvaluationStatus(sp);
     return st === "vencida" || st === "a_vencer";
   }).length;
+
+  const indicators = useTableStore(indicatorsStore).filter((i) => !i.deleted_at);
+  const allIndicatorResults = useTableStore(indicatorResultsStore);
+
+  const indicatorOverview = useMemo(
+    () => computeIndicatorOverview(indicators, allIndicatorResults),
+    [indicators, allIndicatorResults],
+  );
+
+  const indicatorChartData = useMemo(() => {
+    return indicators
+      .map((ind) => {
+        const rs = allIndicatorResults
+          .filter((r) => r.indicator_id === ind.id)
+          .sort((a, b) => a.period.localeCompare(b.period));
+        const last = rs.at(-1);
+        if (!last) return null;
+        const achievement =
+          ind.direction === "maior"
+            ? Math.round(Math.min(150, (last.value / (ind.target || 1)) * 100))
+            : ind.target > 0 && last.value > 0
+            ? Math.round(Math.min(150, (ind.target / last.value) * 100))
+            : 0;
+        const meets =
+          ind.direction === "maior" ? last.value >= ind.target : last.value <= ind.target;
+        return {
+          name: ind.name.length > 14 ? ind.name.slice(0, 13) + "…" : ind.name,
+          achievement,
+          meets,
+        };
+      })
+      .filter((d): d is { name: string; achievement: number; meets: boolean } => d !== null)
+      .slice(0, 8);
+  }, [indicators, allIndicatorResults]);
   const occOpen = occurrences.filter(o => o.status !== "Concluída" && o.status !== "Cancelada").length;
   const ncCritical = occurrences.filter(o => o.severity === "Alta").length;
   const risksHigh = risks.filter(r => r.classification === "Alto" || r.classification === "Crítico").length;
@@ -189,6 +230,98 @@ function Dashboard() {
             </ResponsiveContainer>
           </div>
         </div>
+      </div>
+
+      {/* Indicadores de desempenho e qualidade */}
+      <div className="mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Target className="size-4" /> Indicadores de desempenho e qualidade
+          </h3>
+          <Link to="/indicators" className="text-xs text-primary hover:underline flex items-center gap-1">
+            Ver todos <ArrowRight className="size-3 ml-0.5" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <KpiCard
+            label="Total de indicadores"
+            value={indicatorOverview.total}
+            hint={`${indicatorOverview.noData} sem dados`}
+            icon={BarChart3}
+            to="/indicators"
+          />
+          <KpiCard
+            label="No alvo"
+            value={indicatorOverview.onTarget}
+            tone="success"
+            icon={Target}
+            to="/indicators"
+          />
+          <KpiCard
+            label="Abaixo da meta"
+            value={indicatorOverview.off}
+            tone="warning"
+            icon={TrendingDown}
+            to="/indicators"
+          />
+          <KpiCard
+            label="% no alvo"
+            value={`${indicatorOverview.pct}%`}
+            tone={
+              indicatorOverview.pct >= 80
+                ? "success"
+                : indicatorOverview.pct >= 50
+                ? "warning"
+                : "destructive"
+            }
+            icon={TrendingUp}
+            to="/indicators"
+          />
+        </div>
+        {indicatorChartData.length > 0 && (
+          <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold">Atingimento da meta por indicador</h4>
+              <span className="text-xs text-muted-foreground">% do alvo · último resultado</span>
+            </div>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={indicatorChartData}
+                  margin={{ top: 8, right: 24, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={10} />
+                  <YAxis stroke="var(--muted-foreground)" fontSize={11} unit="%" />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--popover)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                    }}
+                    formatter={(val: number) => [`${val}%`, "Atingimento"]}
+                  />
+                  <ReferenceLine
+                    y={100}
+                    stroke="var(--primary)"
+                    strokeDasharray="4 4"
+                    label={{
+                      value: "Meta (100%)",
+                      position: "insideTopLeft",
+                      fontSize: 11,
+                      fill: "var(--primary)",
+                    }}
+                  />
+                  <Bar dataKey="achievement" radius={[4, 4, 0, 0]}>
+                    {indicatorChartData.map((d, idx) => (
+                      <Cell key={idx} fill={d.meets ? "var(--success)" : "var(--warning)"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 bg-card border border-border rounded-lg p-4 shadow-sm">
