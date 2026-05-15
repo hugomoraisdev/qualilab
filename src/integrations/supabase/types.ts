@@ -425,18 +425,21 @@ export type Database = {
         Row: {
           confirmed_at: string
           document_id: string
+          document_version: string | null
           id: string
           user_id: string
         }
         Insert: {
           confirmed_at?: string
           document_id: string
+          document_version?: string | null
           id?: string
           user_id: string
         }
         Update: {
           confirmed_at?: string
           document_id?: string
+          document_version?: string | null
           id?: string
           user_id?: string
         }
