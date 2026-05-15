@@ -93,6 +93,7 @@ function NewDocumentDialog({
         status: "rascunho",
         validity: form.validity || null,
         responsible: form.responsible.trim() || null,
+        responsible_id: user?.id ?? null,
         file_url: form.file_url.trim() || null,
         description: form.description.trim() || null,
         created_at: now,
