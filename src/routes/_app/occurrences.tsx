@@ -56,6 +56,7 @@ function OccPage() {
   const occurrences = useTableStore(occurrencesStore);
   useTableStore(profilesStore);
   const navigate = useNavigate();
+  const location = useLocation();
   const ids = useMemo(() => occurrences.map((o) => o.id), [occurrences]);
   const metaMap = useAllOccurrenceMeta(ids);
   const [open, setOpen] = useState(false);
