@@ -276,6 +276,7 @@ function OccPage() {
           {
             key: "responsible_id",
             header: "Responsável",
+            accessor: (r) => profileName(r.responsible_id),
             render: (r) => profileName(r.responsible_id),
           },
           {
