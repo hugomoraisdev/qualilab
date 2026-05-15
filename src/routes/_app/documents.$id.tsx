@@ -44,7 +44,6 @@ import { confirmRead, hasConfirmed, useDocumentReads } from "@/lib/document-read
 import {
   archiveDocumentVersion,
   useDocumentVersions,
-  type DocumentVersion,
 } from "@/lib/document-versions-store";
 import {
   useDocumentMeta,
