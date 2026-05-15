@@ -49,6 +49,8 @@ function AuditDetail() {
   const findingIds = useMemo(() => findings.map((f) => f.id), [findings]);
   const metaMap = useAllFindingMeta(findingIds);
   const templates = useChecklistTemplates();
+  const plan = useAuditPlan(id);
+  const docs = listDocuments();
 
   const [reqText, setReqText] = useState("");
   const [tplId, setTplId] = useState<string>("");
