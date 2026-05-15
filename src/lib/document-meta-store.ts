@@ -14,8 +14,8 @@ export type Stage = "elaboracao" | "revisao" | "aprovacao" | "aprovado" | "obsol
 export interface StageAssignment {
   user_id: string | null;
   user_name: string | null;
-  deadline: string | null;       // ISO date
-  signed_at: string | null;      // ISO timestamp
+  deadline: string | null; // ISO date
+  signed_at: string | null; // ISO timestamp
   signed_by_name: string | null;
 }
 
@@ -67,7 +67,11 @@ export interface DocumentMeta {
 }
 
 const emptyAssignment = (): StageAssignment => ({
-  user_id: null, user_name: null, deadline: null, signed_at: null, signed_by_name: null,
+  user_id: null,
+  user_name: null,
+  deadline: null,
+  signed_at: null,
+  signed_by_name: null,
 });
 
 export const emptyMeta = (): DocumentMeta => ({
@@ -265,14 +269,18 @@ export function useDocumentMeta(documentId: string | undefined): DocumentMeta {
     };
     void refresh();
 
-    const handler = () => { void refresh(); };
+    const handler = () => {
+      void refresh();
+    };
     window.addEventListener(`storage:doc-meta:${documentId}`, handler);
     const channel = supabase
       .channel(`doc-meta:${documentId}:${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "app_data", filter: `key=eq.${keyFor(documentId)}` },
-        () => { void refresh(); },
+        () => {
+          void refresh();
+        },
       )
       .subscribe();
     return () => {
@@ -297,10 +305,7 @@ export function useAllDocumentMeta(documentIds: string[]): Record<string, Docume
     let cancelled = false;
     const keys = documentIds.map(keyFor);
     const load = async () => {
-      const { data, error } = await supabase
-        .from("app_data")
-        .select("key,value")
-        .in("key", keys);
+      const { data, error } = await supabase.from("app_data").select("key,value").in("key", keys);
       if (cancelled) return;
       if (error) {
         console.warn("[doc-meta] bulk:", error.message);
@@ -314,7 +319,9 @@ export function useAllDocumentMeta(documentIds: string[]): Record<string, Docume
       setMap(out);
     };
     void load();
-    const onChange = () => { void load(); };
+    const onChange = () => {
+      void load();
+    };
     documentIds.forEach((id) => window.addEventListener(`storage:doc-meta:${id}`, onChange));
     return () => {
       cancelled = true;
