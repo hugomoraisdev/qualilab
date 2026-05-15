@@ -215,8 +215,7 @@ export function DataTable<T extends Record<string, any>>({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (onRowClick) onRowClick(row);
-                      else setDetailRow(row);
+                      setDetailRow(row);
                     }}
                     className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                     title="Visualizar detalhes"
