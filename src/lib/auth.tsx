@@ -23,17 +23,53 @@ interface AuthCtx {
 
 const Ctx = createContext<AuthCtx | null>(null);
 
+const cachedUserKey = (userId: string) => `auth:user:${userId}`;
+
+function readCachedUser(userId: string): User | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(cachedUserKey(userId));
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedUser(user: User) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(cachedUserKey(user.id), JSON.stringify(user));
+  } catch {
+    // cache offline é opcional
+  }
+}
+
 async function loadProfile(userId: string, fallbackEmail: string): Promise<User> {
-  const [{ data: profile }, { data: roleRow }] = await Promise.all([
-    supabase.from("profiles").select("id,email,name").eq("id", userId).maybeSingle(),
-    supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
-  ]);
-  return {
-    id: userId,
-    email: profile?.email ?? fallbackEmail,
-    name: profile?.name || fallbackEmail.split("@")[0],
-    role: (roleRow?.role as Role) ?? "consulta",
-  };
+  const cached = readCachedUser(userId);
+  try {
+    const [{ data: profile, error: profileError }, { data: roleRow, error: roleError }] =
+      await Promise.all([
+        supabase.from("profiles").select("id,email,name").eq("id", userId).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
+      ]);
+    if ((profileError || roleError) && cached) return cached;
+    const loaded = {
+      id: userId,
+      email: profile?.email ?? cached?.email ?? fallbackEmail,
+      name: profile?.name || cached?.name || fallbackEmail.split("@")[0],
+      role: (roleRow?.role as Role) ?? cached?.role ?? "consulta",
+    };
+    writeCachedUser(loaded);
+    return loaded;
+  } catch {
+    if (cached) return cached;
+    return {
+      id: userId,
+      email: fallbackEmail,
+      name: fallbackEmail.split("@")[0],
+      role: "consulta",
+    };
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -44,7 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // 1. Listener PRIMEIRO (regra crítica do Supabase)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, sess) => {
       setSession(sess);
       if (sess?.user) {
         // Only set loading on SIGNED_IN to prevent _app.tsx from blanking on TOKEN_REFRESHED
@@ -78,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (sess?.user) {
         loadProfile(sess.user.id, sess.user.email ?? "").then((u) => {
           setUser(u);
+          userRef.current = u;
           setAuditUser(u);
           setLoading(false);
         });
@@ -91,7 +130,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message === "Invalid login credentials" ? "Credenciais inválidas" : error.message);
+    if (error)
+      throw new Error(
+        error.message === "Invalid login credentials" ? "Credenciais inválidas" : error.message,
+      );
   };
 
   const signup = async (email: string, password: string, name: string) => {
