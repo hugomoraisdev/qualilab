@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
@@ -175,7 +175,13 @@ function DocumentsPage() {
   useAuditAccess("documents");
   const documents = useTableStore(documentsStore);
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
+
+  if (location.pathname !== "/documents") {
+    return <Outlet />;
+  }
+
   return (
     <>
       <PageHeader title="Documentos" description="Controle documental com versão, validade e aprovação" />
