@@ -1242,14 +1242,14 @@ function DocumentDetail() {
               {doc.code}-v{doc.version}.pdf
               <br />
               {doc.file_url ? (
-                <a
-                  href={doc.file_url}
-                  className="text-xs underline"
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  className="text-xs underline disabled:opacity-50"
+                  disabled={isObsolete}
+                  onClick={() => handleDownload("print")}
                 >
                   Abrir
-                </a>
+                </button>
               ) : (
                 <span className="text-xs italic">sem arquivo</span>
               )}
