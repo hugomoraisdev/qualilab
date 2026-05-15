@@ -1,19 +1,36 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Calendar, Users, LayoutGrid, GanttChart } from "lucide-react";
+import { Plus, Calendar, Users, LayoutGrid, GanttChart, GripVertical, Pencil, Trash2, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Status = "backlog" | "doing" | "review" | "done";
+type Status = string;
 interface Project {
   id: string; title: string; description: string; status: Status;
   responsible: string; start: string | null; deadline: string | null; progress: number;
   subtasks: { id: string; title: string; done: boolean }[];
 }
+interface Column { key: string; label: string; color: string; bar: string }
+
+const DEFAULT_COLUMNS: Column[] = [
+  { key: "backlog", label: "Backlog",     color: "border-muted-foreground/30", bar: "bg-muted-foreground/40" },
+  { key: "doing",   label: "Em execução", color: "border-info/40",             bar: "bg-info" },
+  { key: "review",  label: "Em revisão",  color: "border-warning/40",          bar: "bg-warning" },
+  { key: "done",    label: "Concluído",   color: "border-success/40",          bar: "bg-success" },
+];
+
+const PALETTE: { color: string; bar: string }[] = [
+  { color: "border-muted-foreground/30", bar: "bg-muted-foreground/40" },
+  { color: "border-info/40",             bar: "bg-info" },
+  { color: "border-warning/40",          bar: "bg-warning" },
+  { color: "border-success/40",          bar: "bg-success" },
+  { color: "border-destructive/40",      bar: "bg-destructive" },
+  { color: "border-primary/40",          bar: "bg-primary" },
+];
 
 const SEED: Project[] = [
   { id: "PRJ-001", title: "Implantação do QualiLab", description: "Migração de planilhas para o sistema", status: "doing", responsible: "Carla Administradora", start: "2026-04-01", deadline: "2026-08-30", progress: 55, subtasks: [
@@ -42,25 +59,27 @@ const SEED: Project[] = [
   ]},
 ];
 
-const COLUMNS: { key: Status; label: string; color: string }[] = [
-  { key: "backlog", label: "Backlog", color: "border-muted-foreground/30" },
-  { key: "doing", label: "Em execução", color: "border-info/40" },
-  { key: "review", label: "Em revisão", color: "border-warning/40" },
-  { key: "done", label: "Concluído", color: "border-success/40" },
-];
-
-const STATUS_BAR: Record<Status, string> = {
-  backlog: "bg-muted-foreground/40",
-  doing: "bg-info",
-  review: "bg-warning",
-  done: "bg-success",
-};
+const LS_KEY = "qualilab.projects.kanban.v1";
+function loadState(): { projects: Project[]; columns: Column[] } {
+  if (typeof window === "undefined") return { projects: SEED, columns: DEFAULT_COLUMNS };
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return { projects: SEED, columns: DEFAULT_COLUMNS };
+    const p = JSON.parse(raw);
+    return {
+      projects: Array.isArray(p.projects) && p.projects.length ? p.projects : SEED,
+      columns: Array.isArray(p.columns) && p.columns.length ? p.columns : DEFAULT_COLUMNS,
+    };
+  } catch { return { projects: SEED, columns: DEFAULT_COLUMNS }; }
+}
 
 export const Route = createFileRoute("/_app/projects")({ component: ProjectsPage });
 
 function ProjectsPage() {
   useAuditAccess("projects");
-  const [projects, setProjects] = useState<Project[]>(SEED);
+  const initial = useMemo(loadState, []);
+  const [projects, setProjects] = useState<Project[]>(initial.projects);
+  const [columns, setColumns] = useState<Column[]>(initial.columns);
   const [showForm, setShowForm] = useState(false);
   const [view, setView] = useState<"kanban" | "gantt">("kanban");
   const [selected, setSelected] = useState<Project | null>(null);
@@ -68,15 +87,19 @@ function ProjectsPage() {
   const [responsible, setResponsible] = useState("");
   const [deadline, setDeadline] = useState("");
 
+  useEffect(() => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ projects, columns })); } catch { /* noop */ }
+  }, [projects, columns]);
+
   const moveProject = (id: string, status: Status) => {
-    setProjects(projects.map((p) => (p.id === id ? { ...p, status } : p)));
+    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
   };
 
   const create = () => {
     if (!title.trim()) return;
     setProjects([{
       id: "PRJ-" + String(projects.length + 1).padStart(3, "0"),
-      title, description: "", status: "backlog", responsible: responsible || "—",
+      title, description: "", status: columns[0]?.key ?? "backlog", responsible: responsible || "—",
       start: new Date().toISOString().slice(0, 10),
       deadline: deadline || null,
       progress: 0, subtasks: [],
@@ -84,11 +107,31 @@ function ProjectsPage() {
     setTitle(""); setResponsible(""); setDeadline(""); setShowForm(false);
   };
 
+  const addColumn = (label: string) => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    const key = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `col-${Date.now().toString(36)}`;
+    if (columns.some((c) => c.key === key)) return;
+    const palette = PALETTE[columns.length % PALETTE.length];
+    setColumns([...columns, { key, label: trimmed, ...palette }]);
+  };
+  const renameColumn = (key: string, label: string) => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    setColumns((prev) => prev.map((c) => (c.key === key ? { ...c, label: trimmed } : c)));
+  };
+  const removeColumn = (key: string) => {
+    if (columns.length <= 1) return;
+    const fallback = columns.find((c) => c.key !== key)!.key;
+    setColumns((prev) => prev.filter((c) => c.key !== key));
+    setProjects((prev) => prev.map((p) => (p.status === key ? { ...p, status: fallback } : p)));
+  };
+
   return (
     <>
       <PageHeader
         title="Projetos"
-        description="Gestão de projetos com Kanban e Gantt."
+        description="Gestão de projetos com Kanban (arraste e personalize colunas) e Gantt."
         actions={
           <div className="flex items-center gap-2">
             <div className="inline-flex rounded-md border border-border bg-card p-0.5">
@@ -126,36 +169,133 @@ function ProjectsPage() {
       )}
 
       {view === "kanban" ? (
-        <KanbanView projects={projects} onMove={moveProject} onOpen={setSelected} />
+        <KanbanView
+          projects={projects}
+          columns={columns}
+          onMove={moveProject}
+          onOpen={setSelected}
+          onAddColumn={addColumn}
+          onRenameColumn={renameColumn}
+          onRemoveColumn={removeColumn}
+        />
       ) : (
-        <GanttView projects={projects} onOpen={setSelected} />
+        <GanttView projects={projects} columns={columns} onOpen={setSelected} />
       )}
 
-      <ProjectDialog project={selected} onClose={() => setSelected(null)} />
+      <ProjectDialog project={selected} columns={columns} onClose={() => setSelected(null)} />
     </>
   );
 }
 
-function KanbanView({ projects, onMove, onOpen }: { projects: Project[]; onMove: (id: string, s: Status) => void; onOpen: (p: Project) => void }) {
+function KanbanView({
+  projects, columns, onMove, onOpen, onAddColumn, onRenameColumn, onRemoveColumn,
+}: {
+  projects: Project[];
+  columns: Column[];
+  onMove: (id: string, s: Status) => void;
+  onOpen: (p: Project) => void;
+  onAddColumn: (label: string) => void;
+  onRenameColumn: (key: string, label: string) => void;
+  onRemoveColumn: (key: string) => void;
+}) {
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overCol, setOverCol] = useState<string | null>(null);
+  const [newCol, setNewCol] = useState("");
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDragId(id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", id);
+  };
+  const handleDragEnd = () => { setDragId(null); setOverCol(null); };
+  const handleDragOver = (e: React.DragEvent, key: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (overCol !== key) setOverCol(key);
+  };
+  const handleDrop = (e: React.DragEvent, key: string) => {
+    e.preventDefault();
+    const id = dragId ?? e.dataTransfer.getData("text/plain");
+    if (id) onMove(id, key);
+    handleDragEnd();
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-      {COLUMNS.map((col) => {
+    <div className="flex gap-3 overflow-x-auto pb-2">
+      {columns.map((col) => {
         const items = projects.filter((p) => p.status === col.key);
+        const isOver = overCol === col.key;
+        const isEditing = editingKey === col.key;
         return (
-          <div key={col.key} className={cn("bg-muted/30 border-t-2 rounded-lg p-3 min-h-[200px]", col.color)}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold">{col.label}</h3>
-              <span className="text-xs text-muted-foreground">{items.length}</span>
+          <div
+            key={col.key}
+            onDragOver={(e) => handleDragOver(e, col.key)}
+            onDragLeave={() => setOverCol((c) => (c === col.key ? null : c))}
+            onDrop={(e) => handleDrop(e, col.key)}
+            className={cn(
+              "shrink-0 w-72 bg-muted/30 border-t-2 rounded-lg p-3 min-h-[260px] transition-colors",
+              col.color,
+              isOver && "bg-primary/5 ring-2 ring-primary/40",
+            )}
+          >
+            <div className="flex items-center justify-between mb-3 gap-2">
+              {isEditing ? (
+                <div className="flex items-center gap-1 flex-1">
+                  <Input
+                    autoFocus
+                    value={editLabel}
+                    onChange={(e) => setEditLabel(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { onRenameColumn(col.key, editLabel); setEditingKey(null); }
+                      if (e.key === "Escape") setEditingKey(null);
+                    }}
+                    className="h-7 text-sm"
+                  />
+                  <button onClick={() => { onRenameColumn(col.key, editLabel); setEditingKey(null); }} className="text-success p-1"><Check className="size-3.5" /></button>
+                  <button onClick={() => setEditingKey(null)} className="text-muted-foreground p-1"><X className="size-3.5" /></button>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-sm font-semibold flex items-center gap-1.5 flex-1 truncate">
+                    {col.label}
+                    <span className="text-xs font-normal text-muted-foreground">· {items.length}</span>
+                  </h3>
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                    <button
+                      onClick={() => { setEditingKey(col.key); setEditLabel(col.label); }}
+                      className="p-1 text-muted-foreground hover:text-foreground"
+                      title="Renomear"
+                    ><Pencil className="size-3.5" /></button>
+                    {columns.length > 1 && (
+                      <button
+                        onClick={() => removeColumnConfirm(col.label, () => onRemoveColumn(col.key))}
+                        className="p-1 text-muted-foreground hover:text-destructive"
+                        title="Excluir coluna"
+                      ><Trash2 className="size-3.5" /></button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
-            <div className="space-y-2">
+
+            <div className="space-y-2 min-h-[40px]">
               {items.map((p) => (
-                <button
+                <div
                   key={p.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, p.id)}
+                  onDragEnd={handleDragEnd}
                   onClick={() => onOpen(p)}
-                  className="w-full text-left bg-card border border-border rounded-md p-3 shadow-sm hover:border-primary/40 transition-colors"
+                  className={cn(
+                    "group/card relative bg-card border border-border rounded-md p-3 shadow-sm hover:border-primary/40 transition-all cursor-grab active:cursor-grabbing",
+                    dragId === p.id && "opacity-40",
+                  )}
                 >
+                  <GripVertical className="absolute top-2 right-2 size-3.5 text-muted-foreground/40 opacity-0 group-hover/card:opacity-100" />
                   <div className="text-[11px] font-mono text-muted-foreground">{p.id}</div>
-                  <div className="text-sm font-medium leading-tight mb-1">{p.title}</div>
+                  <div className="text-sm font-medium leading-tight mb-1 pr-4">{p.title}</div>
                   {p.description && <div className="text-[11px] text-muted-foreground mb-2">{p.description}</div>}
                   {p.subtasks.length > 0 && (
                     <div className="text-[11px] text-muted-foreground mb-2">
@@ -169,21 +309,43 @@ function KanbanView({ projects, onMove, onOpen }: { projects: Project[]; onMove:
                     <span className="flex items-center gap-1"><Users className="size-3" />{p.responsible.split(" ")[0]}</span>
                     <span className="flex items-center gap-1"><Calendar className="size-3" />{p.deadline ?? "—"}</span>
                   </div>
-                  <div className="flex gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
-                    {COLUMNS.filter((c) => c.key !== p.status).map((c) => (
-                      <button key={c.key} onClick={() => onMove(p.id, c.key)} className="text-[10px] px-1.5 py-0.5 rounded border border-border hover:bg-accent">
-                        → {c.label}
-                      </button>
-                    ))}
-                  </div>
-                </button>
+                </div>
               ))}
+              {items.length === 0 && (
+                <div className="text-[11px] text-muted-foreground italic text-center py-3 border border-dashed border-border rounded-md">
+                  Arraste cards para cá
+                </div>
+              )}
             </div>
           </div>
         );
       })}
+
+      {/* coluna para adicionar nova */}
+      <div className="shrink-0 w-72">
+        <div className="bg-muted/10 border border-dashed border-border rounded-lg p-3 flex flex-col gap-2">
+          <Input
+            value={newCol}
+            onChange={(e) => setNewCol(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { onAddColumn(newCol); setNewCol(""); }
+            }}
+            placeholder="Nome da nova coluna"
+            className="h-8 text-sm"
+          />
+          <Button size="sm" variant="outline" onClick={() => { onAddColumn(newCol); setNewCol(""); }}>
+            <Plus className="size-3.5 mr-1" /> Adicionar coluna
+          </Button>
+        </div>
+      </div>
     </div>
   );
+}
+
+function removeColumnConfirm(label: string, action: () => void) {
+  if (typeof window === "undefined" || window.confirm(`Excluir a coluna "${label}"? Os cards serão movidos para a primeira coluna disponível.`)) {
+    action();
+  }
 }
 
 // ---------- Gantt ----------
@@ -192,9 +354,10 @@ function startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 
 function addMonths(d: Date, n: number) { return new Date(d.getFullYear(), d.getMonth() + n, 1); }
 function daysBetween(a: Date, b: Date) { return Math.round((b.getTime() - a.getTime()) / 86400000); }
 
-function GanttView({ projects, onOpen }: { projects: Project[]; onOpen: (p: Project) => void }) {
+function GanttView({ projects, columns, onOpen }: { projects: Project[]; columns: Column[]; onOpen: (p: Project) => void }) {
   const dated = projects.filter((p) => p.start && p.deadline);
   const undated = projects.filter((p) => !p.start || !p.deadline);
+  const barFor = (status: string) => columns.find((c) => c.key === status)?.bar ?? "bg-muted-foreground/40";
 
   const { startMonth, totalDays, months } = useMemo(() => {
     if (dated.length === 0) {
@@ -217,7 +380,6 @@ function GanttView({ projects, onOpen }: { projects: Project[]; onOpen: (p: Proj
     <div className="space-y-6">
       <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
         <div className="flex">
-          {/* coluna fixa */}
           <div className="shrink-0 w-56 border-r border-border bg-muted/30">
             <div className="h-10 border-b border-border px-3 flex items-center text-xs font-semibold text-muted-foreground">
               Projeto
@@ -233,10 +395,8 @@ function GanttView({ projects, onOpen }: { projects: Project[]; onOpen: (p: Proj
             )}
           </div>
 
-          {/* timeline com scroll */}
           <div className="flex-1 overflow-x-auto">
             <div className="relative" style={{ minWidth: months.length * 80 }}>
-              {/* header de meses */}
               <div className="flex h-10 border-b border-border">
                 {months.map((m, i) => (
                   <div
@@ -249,7 +409,6 @@ function GanttView({ projects, onOpen }: { projects: Project[]; onOpen: (p: Proj
                 ))}
               </div>
 
-              {/* linha "hoje" */}
               {todayPct !== null && (
                 <div
                   className="absolute top-10 bottom-0 w-px bg-primary/60 z-10 pointer-events-none"
@@ -262,7 +421,6 @@ function GanttView({ projects, onOpen }: { projects: Project[]; onOpen: (p: Proj
                 </div>
               )}
 
-              {/* barras */}
               {dated.map((p) => {
                 const start = new Date(p.start!);
                 const end = new Date(p.deadline!);
@@ -272,7 +430,6 @@ function GanttView({ projects, onOpen }: { projects: Project[]; onOpen: (p: Proj
                 const width = (spanDays / totalDays) * 100;
                 return (
                   <div key={p.id} className="h-12 border-b border-border relative">
-                    {/* faixas mensais sutis */}
                     <div className="absolute inset-0 flex">
                       {months.map((m, i) => (
                         <div
@@ -287,7 +444,7 @@ function GanttView({ projects, onOpen }: { projects: Project[]; onOpen: (p: Proj
                       title={`${p.title}\n${p.start} → ${p.deadline}\nResponsável: ${p.responsible}\nProgresso: ${p.progress}%`}
                       className={cn(
                         "absolute top-2 h-8 rounded-md border border-border/60 shadow-sm overflow-hidden transition-transform hover:scale-y-105 hover:shadow-md",
-                        STATUS_BAR[p.status],
+                        barFor(p.status),
                       )}
                       style={{ left: `${left}%`, width: `max(${width}%, 24px)` }}
                     >
@@ -307,11 +464,10 @@ function GanttView({ projects, onOpen }: { projects: Project[]; onOpen: (p: Proj
           </div>
         </div>
 
-        {/* legenda */}
-        <div className="flex items-center gap-3 px-3 py-2 border-t border-border text-[11px] text-muted-foreground">
-          {COLUMNS.map((c) => (
+        <div className="flex flex-wrap items-center gap-3 px-3 py-2 border-t border-border text-[11px] text-muted-foreground">
+          {columns.map((c) => (
             <span key={c.key} className="inline-flex items-center gap-1.5">
-              <span className={cn("inline-block size-2.5 rounded-sm", STATUS_BAR[c.key])} />
+              <span className={cn("inline-block size-2.5 rounded-sm", c.bar)} />
               {c.label}
             </span>
           ))}
@@ -336,7 +492,7 @@ function GanttView({ projects, onOpen }: { projects: Project[]; onOpen: (p: Proj
                     <div className="text-sm font-medium">{p.title}</div>
                     <div className="text-[11px] text-muted-foreground">{p.id} · {p.responsible}</div>
                   </div>
-                  <span className={cn("inline-block size-2.5 rounded-sm", STATUS_BAR[p.status])} />
+                  <span className={cn("inline-block size-2.5 rounded-sm", barFor(p.status))} />
                 </button>
               </li>
             ))}
@@ -369,7 +525,7 @@ function todayInRange(today: Date, start: Date, totalDays: number) {
 
 // ---------- Modal ----------
 
-function ProjectDialog({ project, onClose }: { project: Project | null; onClose: () => void }) {
+function ProjectDialog({ project, columns, onClose }: { project: Project | null; columns: Column[]; onClose: () => void }) {
   return (
     <Dialog open={!!project} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg">
@@ -382,7 +538,7 @@ function ProjectDialog({ project, onClose }: { project: Project | null; onClose:
             <div className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Responsável" value={project.responsible} />
-                <Field label="Status" value={COLUMNS.find((c) => c.key === project.status)?.label ?? project.status} />
+                <Field label="Status" value={columns.find((c) => c.key === project.status)?.label ?? project.status} />
                 <Field label="Início" value={project.start ?? "—"} />
                 <Field label="Prazo" value={project.deadline ?? "—"} />
               </div>
