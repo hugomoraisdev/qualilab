@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -21,11 +21,22 @@ import {
   BookOpen,
   ChevronDown,
   ChevronUp,
+  Bell,
+  Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sendTestEmail } from "@/lib/test-email.functions";
+import {
+  type AlertCategory,
+  type AlertRecipientsConfig,
+  emptyAlertRecipientsConfig,
+  readAlertRecipients,
+  writeAlertRecipients,
+} from "@/lib/alert-recipients-store";
+import { profilesStore } from "@/lib/profiles-store";
+import { useTableStore } from "@/lib/table-store";
 import { toast } from "sonner";
 
 const SECTIONS: {
@@ -298,6 +309,211 @@ function EmailTestPanel() {
   );
 }
 
+const ALERT_CATEGORIES: {
+  key: AlertCategory;
+  label: string;
+  desc: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  {
+    key: "calibracao",
+    label: "Calibração",
+    desc: "Adicionados ao responsável do equipamento",
+    icon: GaugeIcon,
+  },
+  {
+    key: "competencia",
+    label: "Competência",
+    desc: "Adicionados ao próprio colaborador com treinamento",
+    icon: GraduationCap,
+  },
+  {
+    key: "risco",
+    label: "Risco",
+    desc: "Adicionados ao responsável pelo risco",
+    icon: ShieldAlert,
+  },
+  {
+    key: "fornecedor",
+    label: "Fornecedor",
+    desc: "Substitui 'todos os gestores' se preenchido",
+    icon: Truck,
+  },
+  {
+    key: "documento",
+    label: "Documento (etapas)",
+    desc: "Adicionados ao signatário da etapa",
+    icon: FileText,
+  },
+  {
+    key: "acao",
+    label: "Planos de ação",
+    desc: "Adicionados ao responsável pela ação",
+    icon: ListChecks,
+  },
+];
+
+function AlertRecipientsPanel() {
+  const [open, setOpen] = useState(false);
+  const [config, setConfig] = useState<AlertRecipientsConfig>(emptyAlertRecipientsConfig());
+  const [loadingCfg, setLoadingCfg] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const profiles = useTableStore(profilesStore);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoadingCfg(true);
+    readAlertRecipients().then((c) => {
+      setConfig(c);
+      setLoadingCfg(false);
+    });
+  }, [open]);
+
+  const toggle = (cat: AlertCategory, uid: string) => {
+    setConfig((prev) => ({
+      ...prev,
+      [cat]: prev[cat].includes(uid) ? prev[cat].filter((id) => id !== uid) : [...prev[cat], uid],
+    }));
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await writeAlertRecipients(config);
+      toast.success("Destinatários salvos");
+    } catch (err) {
+      toast.error("Falha ao salvar", { description: (err as Error).message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-lg shadow-sm col-span-full">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-4 p-4 text-left"
+      >
+        <div className="flex items-center gap-3">
+          <div className="size-9 rounded-lg bg-primary/10 grid place-items-center text-primary shrink-0">
+            <Bell className="size-4" />
+          </div>
+          <div>
+            <div className="font-medium text-sm">Destinatários de alertas por categoria</div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              Selecione quais usuários recebem cada tipo de notificação por e-mail.
+            </div>
+          </div>
+        </div>
+        {open ? (
+          <ChevronUp className="size-4 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronDown className="size-4 text-muted-foreground shrink-0" />
+        )}
+      </button>
+
+      {open && (
+        <div className="border-t border-border p-4 space-y-4">
+          {loadingCfg ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+              <Loader2 className="size-4 animate-spin" /> Carregando configuração…
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {ALERT_CATEGORIES.map(({ key, label, desc, icon: Icon }) => {
+                  const selected = config[key];
+                  return (
+                    <div
+                      key={key}
+                      className="border border-border rounded-lg p-3 space-y-2 bg-background"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="size-7 rounded-md bg-primary/10 grid place-items-center text-primary shrink-0">
+                          <Icon className="size-3.5" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-xs">{label}</div>
+                          <div className="text-[11px] text-muted-foreground">{desc}</div>
+                        </div>
+                      </div>
+
+                      {/* Tags dos selecionados */}
+                      {selected.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {selected.map((uid) => {
+                            const p = profiles.find((pr) => pr.id === uid);
+                            return (
+                              <span
+                                key={uid}
+                                className="inline-flex items-center gap-1 text-[11px] bg-primary/10 text-primary rounded-full px-2 py-0.5"
+                              >
+                                {p?.name ?? uid}
+                                <button
+                                  type="button"
+                                  onClick={() => toggle(key, uid)}
+                                  className="hover:text-destructive ml-0.5 leading-none"
+                                  aria-label="Remover"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Lista de usuários disponíveis */}
+                      <div className="max-h-36 overflow-y-auto border border-border rounded-md divide-y divide-border">
+                        {profiles.length === 0 && (
+                          <div className="px-3 py-2 text-xs text-muted-foreground">
+                            Nenhum usuário encontrado.
+                          </div>
+                        )}
+                        {profiles.map((p) => {
+                          const checked = selected.includes(p.id);
+                          return (
+                            <label
+                              key={p.id}
+                              className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted/50 text-xs"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggle(key, p.id)}
+                                className="accent-primary"
+                              />
+                              <span className="flex-1 truncate">{p.name}</span>
+                              <span className="text-muted-foreground truncate max-w-[120px]">
+                                {p.email}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button size="sm" onClick={save} disabled={saving}>
+                  {saving ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Save className="size-3.5" />
+                  )}
+                  Salvar configuração
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/_app/settings")({ component: SettingsPage });
 
 function SettingsPage() {
@@ -306,6 +522,7 @@ function SettingsPage() {
     <>
       <PageHeader title="Configurações" description="Parâmetros gerais do sistema QualiLab" />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <AlertRecipientsPanel />
         <EmailTestPanel />
         {SECTIONS.map((s) => {
           const inner = (
