@@ -19,31 +19,30 @@ function checkAuth(request: Request): Response | null {
   const expected = process.env.EXTERNAL_API_KEY;
   if (!expected) return json({ error: "API not configured" }, 500);
   const provided = request.headers.get("x-api-key");
-  if (!provided || provided !== expected) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+  if (!provided || provided !== expected) return json({ error: "Unauthorized" }, 401);
   return null;
 }
 
 const QuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
-  status: z.string().min(1).max(50).optional(),
-  type: z.string().min(1).max(50).optional(),
+  area: z.string().min(1).max(80).optional(),
+  frequency: z.string().min(1).max(40).optional(),
 });
 
 const CreateSchema = z.object({
-  type: z.string().min(1).max(80),
-  origin: z.string().min(1).max(80),
-  description: z.string().min(1).max(2000),
-  occurred_at: z.string().datetime().optional(),
-  severity: z.enum(["baixa", "media", "alta", "critica"]).default("media"),
-  status: z.string().min(1).max(40).default("aberta"),
+  name: z.string().min(1).max(200),
+  code: z.string().max(60).nullable().optional(),
+  area: z.string().max(80).nullable().optional(),
+  unit: z.string().min(1).max(40).default("—"),
+  frequency: z.enum(["mensal", "trimestral", "semestral", "anual", "semanal", "diario"]).default("mensal"),
+  target: z.number().default(0),
+  direction: z.enum(["maior", "menor"]).default("maior"),
   responsible_id: z.string().uuid().nullable().optional(),
-  immediate_action: z.string().max(2000).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
 });
 
-export const Route = createFileRoute("/api/public/v1/occurrences")({
+export const Route = createFileRoute("/api/public/v1/indicators")({
   server: {
     handlers: {
       OPTIONS: async () => new Response(null, { status: 204, headers: CORS }),
@@ -57,16 +56,16 @@ export const Route = createFileRoute("/api/public/v1/occurrences")({
         if (!parsed.success) {
           return json({ error: "Invalid query", details: parsed.error.flatten() }, 400);
         }
-        const { limit, offset, status, type } = parsed.data;
+        const { limit, offset, area, frequency } = parsed.data;
 
         let q = supabaseAdmin
-          .from("occurrences")
+          .from("indicators")
           .select("*", { count: "exact" })
           .is("deleted_at", null)
           .order("created_at", { ascending: false })
           .range(offset, offset + limit - 1);
-        if (status) q = q.eq("status", status);
-        if (type) q = q.eq("type", type);
+        if (area) q = q.eq("area", area);
+        if (frequency) q = q.eq("frequency", frequency);
 
         const { data, error, count } = await q;
         if (error) return json({ error: error.message }, 500);
@@ -88,14 +87,9 @@ export const Route = createFileRoute("/api/public/v1/occurrences")({
           return json({ error: "Validation failed", details: parsed.error.flatten() }, 400);
         }
 
-        const payload = {
-          ...parsed.data,
-          occurred_at: parsed.data.occurred_at ?? new Date().toISOString(),
-        };
-
         const { data, error } = await supabaseAdmin
-          .from("occurrences")
-          .insert(payload)
+          .from("indicators")
+          .insert(parsed.data)
           .select()
           .single();
         if (error) return json({ error: error.message }, 500);

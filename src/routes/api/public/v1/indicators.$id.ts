@@ -21,7 +21,7 @@ function checkAuth(request: Request): Response | null {
   return null;
 }
 
-export const Route = createFileRoute("/api/public/v1/occurrences/$id")({
+export const Route = createFileRoute("/api/public/v1/indicators/$id")({
   server: {
     handlers: {
       OPTIONS: async () => new Response(null, { status: 204, headers: CORS }),
@@ -29,15 +29,24 @@ export const Route = createFileRoute("/api/public/v1/occurrences/$id")({
         const unauth = checkAuth(request);
         if (unauth) return unauth;
 
-        const { data, error } = await supabaseAdmin
-          .from("occurrences")
+        const { data: indicator, error } = await supabaseAdmin
+          .from("indicators")
           .select("*")
           .eq("id", params.id)
           .is("deleted_at", null)
           .maybeSingle();
         if (error) return json({ error: error.message }, 500);
-        if (!data) return json({ error: "Not found" }, 404);
-        return json({ data });
+        if (!indicator) return json({ error: "Not found" }, 404);
+
+        const { data: results, error: rErr } = await supabaseAdmin
+          .from("indicator_results")
+          .select("*")
+          .eq("indicator_id", params.id)
+          .order("period", { ascending: false })
+          .limit(100);
+        if (rErr) return json({ error: rErr.message }, 500);
+
+        return json({ data: { ...indicator, results: results ?? [] } });
       },
     },
   },
