@@ -113,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (sess?.user) {
         loadProfile(sess.user.id, sess.user.email ?? "").then((u) => {
           setUser(u);
+          userRef.current = u;
           setAuditUser(u);
           setLoading(false);
         });
