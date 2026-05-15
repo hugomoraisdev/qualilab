@@ -64,6 +64,20 @@ import { toast } from "sonner";
 import { sendEmail } from "@/lib/send-email.functions";
 import { buildDocumentWorkflowHtml, buildDocumentReadReminderHtml } from "@/lib/email-templates";
 import { listProfiles } from "@/lib/profiles-store";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DOCUMENT_FOLDERS,
+  DOCUMENT_SECTORS,
+  DOCUMENT_PROCESSES,
+} from "@/lib/document-taxonomy";
+import { useCustomFields } from "@/lib/custom-fields-store";
+import { CustomFieldsRenderer } from "@/components/CustomFieldsRenderer";
 
 export const Route = createFileRoute("/_app/documents/$id")({
   component: DocumentDetail,
