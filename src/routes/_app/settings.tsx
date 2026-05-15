@@ -8,7 +8,6 @@ import { runEmailDigest } from "@/lib/email-digest.functions";
 import { toast } from "sonner";
 
 const SECTIONS: { icon: any; title: string; desc: string; to?: string }[] = [
-  { icon: Building2, title: "Dados da organização", desc: "Razão social, CNPJ, endereço e logo" },
   { icon: FlaskConical, title: "Unidades / Setores", desc: "Cadastro de unidades e restrição de módulos por unidade", to: "/lab-units" },
   { icon: Tag, title: "Categorias de documentos", desc: "Manual, POP, Instrução, Política, Registro, Formulário" },
   { icon: AlertTriangle, title: "Tipos de ocorrência", desc: "NC, reclamação, desvio, oportunidade de melhoria" },
@@ -18,7 +17,6 @@ const SECTIONS: { icon: any; title: string; desc: string; to?: string }[] = [
   { icon: ListChecks, title: "Modelos de checklist", desc: "Checklists reutilizáveis para auditorias" },
   { icon: Users, title: "Perfis e permissões", desc: "Administrador, Gestor, Técnico, Auditor, Consulta", to: "/users" },
   { icon: ScrollText, title: "Log de auditoria", desc: "Trilha completa de acessos e alterações", to: "/audit-log" },
-  { icon: Shield, title: "Conformidade & Segurança", desc: "LGPD, política de dados, backup, monitoramento e disponibilidade", to: "/compliance" },
 ];
 
 export const Route = createFileRoute("/_app/settings")({ component: SettingsPage });
