@@ -10,10 +10,10 @@ import * as XLSX from "xlsx";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { saveEquipment } from "@/lib/equipments-store";
-import { saveDocument } from "@/lib/documents-store";
-import { saveCalibration } from "@/lib/calibrations-store";
-import { saveSupplier } from "@/lib/suppliers-store";
+import { saveEquipment, equipmentsStore } from "@/lib/equipments-store";
+import { saveDocument, documentsStore } from "@/lib/documents-store";
+import { saveCalibration, calibrationsStore } from "@/lib/calibrations-store";
+import { saveSupplier, suppliersStore } from "@/lib/suppliers-store";
 import { supplierEvaluationsStore } from "@/lib/supplier-evaluations-store";
 
 export const Route = createFileRoute("/_app/data-migration")({ component: DataMigration });
@@ -66,7 +66,7 @@ const ENTITIES: EntityConfig[] = [
     name: "Documentos",
     qty: 800,
     cols: [
-      { key: "code",        label: "Código",       required: true,  aliases: ["codigo", "cod"] },
+      { key: "code",        label: "Código",       required: true,  aliases: ["codigo", "cod", "codigo_id"] },
       { key: "title",       label: "Título",        required: true,  aliases: ["titulo", "nome"] },
       { key: "category",    label: "Categoria",     required: true,  aliases: ["categoria"] },
       { key: "version",     label: "Versão",        required: true,  aliases: ["versao", "rev", "revisao"] },
@@ -75,18 +75,21 @@ const ENTITIES: EntityConfig[] = [
       { key: "responsible", label: "Responsável",   required: false, aliases: ["responsavel"] },
       { key: "description", label: "Descrição",     required: false, aliases: ["descricao", "obs"] },
     ],
-    buildRow: (m) => ({
-      id: crypto.randomUUID(),
-      code: m.code,
-      title: m.title,
-      category: m.category,
-      version: m.version,
-      status: m.status || "rascunho",
-      validity: parseDate(m.validity ?? "") ?? null,
-      responsible: m.responsible || null,
-      responsible_id: null,
-      description: m.description || null,
-    }),
+    buildRow: (m) => {
+      const existing = documentsStore.list().find((d) => d.code === m.code && !d.deleted_at);
+      return {
+        id: existing?.id ?? crypto.randomUUID(),
+        code: m.code,
+        title: m.title,
+        category: m.category,
+        version: m.version,
+        status: m.status || "rascunho",
+        validity: parseDate(m.validity ?? "") ?? null,
+        responsible: m.responsible || null,
+        responsible_id: null,
+        description: m.description || null,
+      };
+    },
     save: (r) => saveDocument(r as never),
   },
   {
@@ -94,32 +97,35 @@ const ENTITIES: EntityConfig[] = [
     name: "Equipamentos",
     qty: 1500,
     cols: [
-      { key: "code",                  label: "Código",              required: true,  aliases: ["codigo", "cod"] },
+      { key: "code",                  label: "Código",              required: true,  aliases: ["codigo", "cod", "codigo_id"] },
       { key: "name",                  label: "Nome",                required: true,  aliases: ["nome", "equipamento"] },
       { key: "status",                label: "Status",              required: false, aliases: ["situacao"] },
       { key: "manufacturer",          label: "Fabricante",          required: false, aliases: ["fabricante"] },
       { key: "model",                 label: "Modelo",              required: false, aliases: ["modelo"] },
       { key: "serial_number",         label: "Número de série",     required: false, aliases: ["serie", "serial", "num_serie"] },
-      { key: "location",              label: "Localização",         required: false, aliases: ["localizacao", "local"] },
-      { key: "category",              label: "Categoria",           required: false, aliases: ["categoria"] },
+      { key: "location",              label: "Localização",         required: false, aliases: ["localizacao", "local", "setor_localizacao", "setor"] },
+      { key: "category",              label: "Categoria",           required: false, aliases: ["categoria", "tipo"] },
       { key: "acquisition_date",      label: "Dt. aquisição",       required: false, aliases: ["aquisicao", "dt_aquisicao"], type: "date" },
-      { key: "next_calibration_date", label: "Próx. calibração",    required: false, aliases: ["proxima_calibracao", "prox_cal"], type: "date" },
+      { key: "next_calibration_date", label: "Próx. calibração",    required: false, aliases: ["proxima_calibracao", "prox_cal", "proxima_cal", "proxima_calibracao"], type: "date" },
       { key: "notes",                 label: "Observações",         required: false, aliases: ["observacoes", "obs"] },
     ],
-    buildRow: (m) => ({
-      id: crypto.randomUUID(),
-      code: m.code,
-      name: m.name,
-      status: m.status || "ativo",
-      manufacturer: m.manufacturer || null,
-      model: m.model || null,
-      serial_number: m.serial_number || null,
-      location: m.location || null,
-      category: m.category || null,
-      acquisition_date: parseDate(m.acquisition_date ?? "") ?? null,
-      next_calibration_date: parseDate(m.next_calibration_date ?? "") ?? null,
-      notes: m.notes || null,
-    }),
+    buildRow: (m) => {
+      const existing = equipmentsStore.list().find((e) => e.code === m.code && !e.deleted_at);
+      return {
+        id: existing?.id ?? crypto.randomUUID(),
+        code: m.code,
+        name: m.name,
+        status: m.status || "ativo",
+        manufacturer: m.manufacturer || null,
+        model: m.model || null,
+        serial_number: m.serial_number || null,
+        location: m.location || null,
+        category: m.category || null,
+        acquisition_date: parseDate(m.acquisition_date ?? "") ?? null,
+        next_calibration_date: parseDate(m.next_calibration_date ?? "") ?? null,
+        notes: m.notes || null,
+      };
+    },
     save: (r) => saveEquipment(r as never),
   },
   {
@@ -127,29 +133,35 @@ const ENTITIES: EntityConfig[] = [
     name: "Históricos de calibração",
     qty: 4000,
     cols: [
-      { key: "equipment_id",       label: "ID Equipamento",   required: true,  aliases: ["id_equipamento", "equipamento_id"] },
-      { key: "performed_at",       label: "Data realização",  required: true,  aliases: ["data", "data_realizacao", "dt_realizacao"], type: "date" },
+      { key: "equipment_id",       label: "ID Equipamento",   required: true,  aliases: ["id_equipamento", "equipamento_id", "equipamento"] },
+      { key: "performed_at",       label: "Data realização",  required: true,  aliases: ["data", "data_realizacao", "dt_realizacao", "data_calibracao"], type: "date" },
       { key: "result",             label: "Resultado",        required: true,  aliases: ["resultado"] },
-      { key: "certificate_number", label: "Nº Certificado",   required: false, aliases: ["certificado", "num_certificado"] },
-      { key: "provider",           label: "Laboratório",      required: false, aliases: ["fornecedor", "laboratorio"] },
-      { key: "next_due_date",      label: "Próx. vencimento", required: false, aliases: ["proximo_vencimento", "prox_vencimento"], type: "date" },
+      { key: "certificate_number", label: "Nº Certificado",   required: false, aliases: ["certificado", "num_certificado", "numero_certificado"] },
+      { key: "provider",           label: "Laboratório",      required: false, aliases: ["fornecedor", "laboratorio", "lab"] },
+      { key: "next_due_date",      label: "Próx. vencimento", required: false, aliases: ["proximo_vencimento", "prox_vencimento", "proxima_calibracao", "proxima_cal"], type: "date" },
       { key: "uncertainty",        label: "Incerteza",        required: false, aliases: ["incerteza"] },
       { key: "notes",              label: "Observações",      required: false, aliases: ["observacoes", "obs"] },
     ],
-    buildRow: (m) => ({
-      id: crypto.randomUUID(),
-      equipment_id: m.equipment_id,
-      performed_at: parseDate(m.performed_at ?? "") ?? m.performed_at ?? "",
-      result: m.result || "aprovado",
-      certificate_number: m.certificate_number || null,
-      provider: m.provider || null,
-      next_due_date: parseDate(m.next_due_date ?? "") ?? null,
-      uncertainty: m.uncertainty || null,
-      points: [],
-      certificate_url: null,
-      notes: m.notes || null,
-      responsible_id: null,
-    }),
+    buildRow: (m) => {
+      const performedAt = parseDate(m.performed_at ?? "") ?? m.performed_at ?? "";
+      const existing = calibrationsStore.list().find(
+        (c) => !c.deleted_at && c.equipment_id === m.equipment_id && c.performed_at === performedAt,
+      );
+      return {
+        id: existing?.id ?? crypto.randomUUID(),
+        equipment_id: m.equipment_id,
+        performed_at: performedAt,
+        result: m.result || "aprovado",
+        certificate_number: m.certificate_number || null,
+        provider: m.provider || null,
+        next_due_date: parseDate(m.next_due_date ?? "") ?? null,
+        uncertainty: m.uncertainty || null,
+        points: existing?.points ?? [],
+        certificate_url: existing?.certificate_url ?? null,
+        notes: m.notes || null,
+        responsible_id: null,
+      };
+    },
     save: (r) => saveCalibration(r as never),
   },
   {
@@ -169,24 +181,32 @@ const ENTITIES: EntityConfig[] = [
       { key: "rating",       label: "Nota (0–10)",         required: false, aliases: ["nota", "pontuacao"], type: "number" },
       { key: "notes",        label: "Observações",         required: false, aliases: ["observacoes", "obs"] },
     ],
-    buildRow: (m) => ({
-      id: crypto.randomUUID(),
-      name: m.name,
-      status: m.status || "ativo",
-      code: m.code || null,
-      cnpj: m.cnpj || null,
-      category: m.category || null,
-      contact_name: m.contact_name || null,
-      email: m.email || null,
-      phone: m.phone || null,
-      address: m.address || null,
-      rating: m.rating ? parseFloat(m.rating) : null,
-      qualified_until: null,
-      evaluation_frequency_days: null,
-      last_evaluation_date: null,
-      next_evaluation_date: null,
-      notes: m.notes || null,
-    }),
+    buildRow: (m) => {
+      const existing = suppliersStore.list().find(
+        (s) => !s.deleted_at && (
+          (m.code && s.code === m.code) ||
+          (m.cnpj && s.cnpj === m.cnpj)
+        ),
+      );
+      return {
+        id: existing?.id ?? crypto.randomUUID(),
+        name: m.name,
+        status: m.status || "ativo",
+        code: m.code || null,
+        cnpj: m.cnpj || null,
+        category: m.category || null,
+        contact_name: m.contact_name || null,
+        email: m.email || null,
+        phone: m.phone || null,
+        address: m.address || null,
+        rating: m.rating ? parseFloat(m.rating) : null,
+        qualified_until: null,
+        evaluation_frequency_days: null,
+        last_evaluation_date: null,
+        next_evaluation_date: null,
+        notes: m.notes || null,
+      };
+    },
     save: (r) => saveSupplier(r as never),
   },
   {
@@ -194,21 +214,27 @@ const ENTITIES: EntityConfig[] = [
     name: "Avaliações de fornecedores",
     qty: 800,
     cols: [
-      { key: "supplier_id",    label: "ID Fornecedor",    required: true,  aliases: ["id_fornecedor", "fornecedor_id"] },
-      { key: "evaluation_date",label: "Data avaliação",   required: true,  aliases: ["data", "data_avaliacao"], type: "date" },
+      { key: "supplier_id",    label: "ID Fornecedor",    required: true,  aliases: ["id_fornecedor", "fornecedor_id", "fornecedor"] },
+      { key: "evaluation_date",label: "Data avaliação",   required: true,  aliases: ["data", "data_avaliacao", "data_da_avaliacao"], type: "date" },
       { key: "score",          label: "Nota (0–10)",      required: true,  aliases: ["nota", "pontuacao"], type: "number" },
       { key: "observations",   label: "Observações",      required: false, aliases: ["observacoes", "obs"] },
-      { key: "evaluator_name", label: "Avaliador",        required: false, aliases: ["avaliador"] },
+      { key: "evaluator_name", label: "Avaliador",        required: false, aliases: ["avaliador", "nome_avaliador"] },
     ],
-    buildRow: (m) => ({
-      id: crypto.randomUUID(),
-      supplier_id: m.supplier_id,
-      evaluation_date: parseDate(m.evaluation_date ?? "") ?? m.evaluation_date ?? "",
-      score: parseFloat(m.score ?? "0"),
-      observations: m.observations || null,
-      evaluator_id: null,
-      evaluator_name: m.evaluator_name || null,
-    }),
+    buildRow: (m) => {
+      const evalDate = parseDate(m.evaluation_date ?? "") ?? m.evaluation_date ?? "";
+      const existing = supplierEvaluationsStore.list().find(
+        (e) => e.supplier_id === m.supplier_id && e.evaluation_date === evalDate,
+      );
+      return {
+        id: existing?.id ?? crypto.randomUUID(),
+        supplier_id: m.supplier_id,
+        evaluation_date: evalDate,
+        score: parseFloat(m.score ?? "0"),
+        observations: m.observations || null,
+        evaluator_id: existing?.evaluator_id ?? null,
+        evaluator_name: m.evaluator_name || null,
+      };
+    },
     save: (r) => supplierEvaluationsStore.upsert(r as never),
   },
   {
