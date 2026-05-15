@@ -47,10 +47,11 @@ function writeCachedUser(user: User) {
 async function loadProfile(userId: string, fallbackEmail: string): Promise<User> {
   const cached = readCachedUser(userId);
   try {
-    const [{ data: profile, error: profileError }, { data: roleRow, error: roleError }] = await Promise.all([
-      supabase.from("profiles").select("id,email,name").eq("id", userId).maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
-    ]);
+    const [{ data: profile, error: profileError }, { data: roleRow, error: roleError }] =
+      await Promise.all([
+        supabase.from("profiles").select("id,email,name").eq("id", userId).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
+      ]);
     if ((profileError || roleError) && cached) return cached;
     const loaded = {
       id: userId,
@@ -79,7 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // 1. Listener PRIMEIRO (regra crítica do Supabase)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, sess) => {
       setSession(sess);
       if (sess?.user) {
         // Only set loading on SIGNED_IN to prevent _app.tsx from blanking on TOKEN_REFRESHED
@@ -127,7 +130,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message === "Invalid login credentials" ? "Credenciais inválidas" : error.message);
+    if (error)
+      throw new Error(
+        error.message === "Invalid login credentials" ? "Credenciais inválidas" : error.message,
+      );
   };
 
   const signup = async (email: string, password: string, name: string) => {
