@@ -6,28 +6,60 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { documentsStore, saveDocument, type DocumentRow } from "@/lib/documents-store";
 import { useTableStore } from "@/lib/table-store";
 import {
-  ArrowLeft, FileText, Download, History, MessageSquare, CheckCircle2,
-  BookOpenCheck, GitBranch, Loader2, Send, ShieldCheck, ListChecks, Eye,
-  Folder, Plus, Trash2, AlertTriangle, Lock, Printer,
+  ArrowLeft,
+  FileText,
+  Download,
+  History,
+  MessageSquare,
+  CheckCircle2,
+  BookOpenCheck,
+  GitBranch,
+  Loader2,
+  Send,
+  ShieldCheck,
+  ListChecks,
+  Eye,
+  Folder,
+  Plus,
+  Trash2,
+  AlertTriangle,
+  Lock,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader,
-  DialogTitle, DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
 import { confirmRead, hasConfirmed, useDocumentReads } from "@/lib/document-reads-store";
 import {
-  archiveDocumentVersion, useDocumentVersions, type DocumentVersion,
+  archiveDocumentVersion,
+  useDocumentVersions,
+  type DocumentVersion,
 } from "@/lib/document-versions-store";
 import {
-  useDocumentMeta, addDocumentComment, setStageAssignment, signStage,
-  addDistributionCopy, setDocumentObsolete, setDocumentTaxonomy,
-  setCustomField, removeCustomField, logDocumentAccess, setDocumentBody,
-  stageLabel, type Stage,
+  useDocumentMeta,
+  addDocumentComment,
+  setStageAssignment,
+  signStage,
+  addDistributionCopy,
+  setDocumentObsolete,
+  setDocumentTaxonomy,
+  setCustomField,
+  removeCustomField,
+  logDocumentAccess,
+  setDocumentBody,
+  stageLabel,
+  type Stage,
 } from "@/lib/document-meta-store";
 import { toast } from "sonner";
 import { sendEmail } from "@/lib/send-email.functions";
@@ -56,13 +88,19 @@ function downloadVersion(v: DocumentVersion) {
   const a = document.createElement("a");
   a.href = url;
   a.download = (v.file_name ?? `${v.snapshot.code}-v${v.version}`) + ".json";
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
 function fmtDate(iso: string | null | undefined) {
   if (!iso) return "—";
-  try { return new Date(iso).toLocaleString("pt-BR"); } catch { return iso; }
+  try {
+    return new Date(iso).toLocaleString("pt-BR");
+  } catch {
+    return iso;
+  }
 }
 
 /* ───────────── Read confirmation ───────────── */
@@ -91,22 +129,49 @@ function ReadConfirmationCard({ doc }: { doc: DocumentRow }) {
         variant={already ? "outline" : "default"}
         onClick={async () => {
           if (!user) return;
-          await confirmRead({ documentId: doc.id, userId: user.id, userEmail: user.email, userName: user.name });
-          await logDocumentAccess({ documentId: doc.id, userId: user.id, userName: user.name, action: "read", version: doc.version });
+          await confirmRead({
+            documentId: doc.id,
+            userId: user.id,
+            userEmail: user.email,
+            userName: user.name,
+          });
+          await logDocumentAccess({
+            documentId: doc.id,
+            userId: user.id,
+            userName: user.name,
+            action: "read",
+            version: doc.version,
+          });
           toast.success("Leitura confirmada", { description: `${user.name} · v${doc.version}` });
         }}
       >
-        {already ? <><CheckCircle2 className="size-4" /> Leitura confirmada</> : <>Confirmar leitura</>}
+        {already ? (
+          <>
+            <CheckCircle2 className="size-4" /> Leitura confirmada
+          </>
+        ) : (
+          <>Confirmar leitura</>
+        )}
       </Button>
 
       <div className="mt-4">
         <div className="text-xs font-semibold mb-2">Confirmações registradas</div>
-        {reads.length === 0 && <div className="text-xs text-muted-foreground italic">Nenhuma confirmação ainda.</div>}
+        {reads.length === 0 && (
+          <div className="text-xs text-muted-foreground italic">Nenhuma confirmação ainda.</div>
+        )}
         <ul className="space-y-1.5">
           {reads.map((r) => (
-            <li key={`${r.user_email}-${r.confirmed_at}`} className="text-sm flex items-center justify-between border-t border-border pt-1.5">
-              <span className="flex items-center gap-2"><CheckCircle2 className="size-3.5 text-success" />{r.user_name}</span>
-              <span className="text-xs text-muted-foreground">v{doc.version} · {new Date(r.confirmed_at).toLocaleString("pt-BR")}</span>
+            <li
+              key={`${r.user_email}-${r.confirmed_at}`}
+              className="text-sm flex items-center justify-between border-t border-border pt-1.5"
+            >
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="size-3.5 text-success" />
+                {r.user_name}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                v{doc.version} · {new Date(r.confirmed_at).toLocaleString("pt-BR")}
+              </span>
             </li>
           ))}
         </ul>
@@ -127,14 +192,18 @@ function NewRevisionDialog({ doc }: { doc: DocumentRow }) {
 
   const submit = async () => {
     if (!version.trim() || version.trim() === doc.version) {
-      toast.error("Informe uma nova versão diferente da atual"); return;
+      toast.error("Informe uma nova versão diferente da atual");
+      return;
     }
     setBusy(true);
     try {
       await archiveDocumentVersion({
-        current: doc, reason: reason.trim() || null,
-        archivedBy: user?.id ?? null, archivedByName: user?.name ?? null,
-        fileUrl: doc.file_url ?? null, fileName: `${doc.code}-v${doc.version}.pdf`,
+        current: doc,
+        reason: reason.trim() || null,
+        archivedBy: user?.id ?? null,
+        archivedByName: user?.name ?? null,
+        fileUrl: doc.file_url ?? null,
+        fileName: `${doc.code}-v${doc.version}.pdf`,
       });
       await saveDocument({
         ...doc,
@@ -143,11 +212,18 @@ function NewRevisionDialog({ doc }: { doc: DocumentRow }) {
         file_url: fileUrl.trim() || null,
         updated_at: new Date().toISOString(),
       });
-      toast.success("Nova revisão criada", { description: `v${doc.version} arquivada · v${version.trim()} agora é a vigente` });
-      setOpen(false); setReason("");
+      toast.success("Nova revisão criada", {
+        description: `v${doc.version} arquivada · v${version.trim()} agora é a vigente`,
+      });
+      setOpen(false);
+      setReason("");
     } catch (err) {
-      toast.error("Falha ao criar revisão", { description: String((err as Error)?.message ?? err) });
-    } finally { setBusy(false); }
+      toast.error("Falha ao criar revisão", {
+        description: String((err as Error)?.message ?? err),
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const locked = doc.status === "aprovado";
@@ -163,18 +239,31 @@ function NewRevisionDialog({ doc }: { doc: DocumentRow }) {
         <DialogHeader>
           <DialogTitle>Nova revisão de documento</DialogTitle>
           <DialogDescription>
-            A versão <span className="font-mono">v{doc.version}</span> será preservada
-            no histórico. O documento volta para rascunho da nova versão até nova aprovação.
+            A versão <span className="font-mono">v{doc.version}</span> será preservada no histórico.
+            O documento volta para rascunho da nova versão até nova aprovação.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div><Label htmlFor="nv">Nova versão</Label><Input id="nv" value={version} onChange={(e) => setVersion(e.target.value)} /></div>
-          <div><Label htmlFor="nr">Motivo da revisão</Label><Textarea id="nr" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} /></div>
-          <div><Label htmlFor="nf">URL do novo arquivo (opcional)</Label><Input id="nf" value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} /></div>
+          <div>
+            <Label htmlFor="nv">Nova versão</Label>
+            <Input id="nv" value={version} onChange={(e) => setVersion(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="nr">Motivo da revisão</Label>
+            <Textarea id="nr" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="nf">URL do novo arquivo (opcional)</Label>
+            <Input id="nf" value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} />
+          </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Cancelar</Button>
-          <Button onClick={submit} disabled={busy}>{busy && <Loader2 className="size-4 animate-spin" />} Arquivar e revisar</Button>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>
+            Cancelar
+          </Button>
+          <Button onClick={submit} disabled={busy}>
+            {busy && <Loader2 className="size-4 animate-spin" />} Arquivar e revisar
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -184,12 +273,22 @@ function NewRevisionDialog({ doc }: { doc: DocumentRow }) {
 /* ───────────── Workflow ───────────── */
 
 function StageRow({
-  doc, stageKey, label, assignment, currentStage, onAfterSign,
+  doc,
+  stageKey,
+  label,
+  assignment,
+  currentStage,
+  onAfterSign,
 }: {
   doc: DocumentRow;
   stageKey: "elaboration" | "review" | "approval";
   label: string;
-  assignment: { user_name: string | null; deadline: string | null; signed_at: string | null; signed_by_name: string | null };
+  assignment: {
+    user_name: string | null;
+    deadline: string | null;
+    signed_at: string | null;
+    signed_by_name: string | null;
+  };
   currentStage: Stage;
   onAfterSign?: (stage: "elaboration" | "review" | "approval") => void;
 }) {
@@ -199,20 +298,30 @@ function StageRow({
   const [deadline, setDeadline] = useState(assignment.deadline ?? "");
 
   useEffect(() => {
-    setName(assignment.user_name ?? ""); setDeadline(assignment.deadline ?? "");
+    setName(assignment.user_name ?? "");
+    setDeadline(assignment.deadline ?? "");
   }, [assignment.user_name, assignment.deadline]);
 
   const stageOrder: Stage[] = ["elaboracao", "revisao", "aprovacao", "aprovado"];
-  const stageMap: Record<typeof stageKey, Stage> = { elaboration: "elaboracao", review: "revisao", approval: "aprovacao" };
+  const stageMap: Record<typeof stageKey, Stage> = {
+    elaboration: "elaboracao",
+    review: "revisao",
+    approval: "aprovacao",
+  };
   const myStage = stageMap[stageKey];
   const isCurrent = currentStage === myStage;
-  const overdue = !assignment.signed_at && assignment.deadline && new Date(assignment.deadline) < new Date();
+  const overdue =
+    !assignment.signed_at && assignment.deadline && new Date(assignment.deadline) < new Date();
   const order = stageOrder.indexOf(myStage);
   const cur = stageOrder.indexOf(currentStage);
 
   const dot = assignment.signed_at
     ? "bg-success"
-    : isCurrent ? (overdue ? "bg-destructive animate-pulse" : "bg-primary") : "bg-muted";
+    : isCurrent
+      ? overdue
+        ? "bg-destructive animate-pulse"
+        : "bg-primary"
+      : "bg-muted";
 
   return (
     <div className="border border-border rounded-md p-3 space-y-2">
@@ -224,7 +333,9 @@ function StageRow({
           {overdue && <AlertTriangle className="size-3.5 text-destructive" />}
         </div>
         {!editing && (
-          <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Editar</Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+            Editar
+          </Button>
         )}
       </div>
 
@@ -233,41 +344,52 @@ function StageRow({
           <Input placeholder="Responsável" value={name} onChange={(e) => setName(e.target.value)} />
           <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
           <div className="col-span-2 flex justify-end gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancelar</Button>
-            <Button size="sm" onClick={async () => {
-              await setStageAssignment(doc.id, stageKey, {
-                user_name: name.trim() || null,
-                user_id: user?.id ?? null,
-                deadline: deadline || null,
-              });
-              setEditing(false);
-              toast.success("Etapa atualizada");
-              if (name.trim()) {
-                const profile = listProfiles().find((p) => p.name === name.trim());
-                if (profile?.email) {
-                  sendEmail({
-                    data: {
-                      to: profile.email,
-                      subject: `Qualilab — Documento aguarda sua ação: ${label}`,
-                      html: buildDocumentWorkflowHtml({
-                        docCode: doc.code,
-                        docTitle: doc.title,
-                        stage: label,
-                        recipientName: profile.name,
-                        deadline: deadline || null,
-                      }),
-                    },
-                  }).catch(console.warn);
+            <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              onClick={async () => {
+                await setStageAssignment(doc.id, stageKey, {
+                  user_name: name.trim() || null,
+                  user_id: user?.id ?? null,
+                  deadline: deadline || null,
+                });
+                setEditing(false);
+                toast.success("Etapa atualizada");
+                if (name.trim()) {
+                  const profile = listProfiles().find((p) => p.name === name.trim());
+                  if (profile?.email) {
+                    sendEmail({
+                      data: {
+                        to: profile.email,
+                        subject: `Qualilab — Documento aguarda sua ação: ${label}`,
+                        html: buildDocumentWorkflowHtml({
+                          docCode: doc.code,
+                          docTitle: doc.title,
+                          stage: label,
+                          recipientName: profile.name,
+                          deadline: deadline || null,
+                        }),
+                      },
+                    }).catch(console.warn);
+                  }
                 }
-              }
-            }}>Salvar</Button>
+              }}
+            >
+              Salvar
+            </Button>
           </div>
         </div>
       ) : (
         <div className="text-xs text-muted-foreground space-y-1">
-          <div><span className="font-medium text-foreground">Responsável:</span> {assignment.user_name ?? "—"}</div>
           <div>
-            <span className="font-medium text-foreground">Prazo:</span> {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString("pt-BR") : "—"}
+            <span className="font-medium text-foreground">Responsável:</span>{" "}
+            {assignment.user_name ?? "—"}
+          </div>
+          <div>
+            <span className="font-medium text-foreground">Prazo:</span>{" "}
+            {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString("pt-BR") : "—"}
             {overdue && <span className="ml-2 text-destructive">(atrasada)</span>}
           </div>
           {assignment.signed_at && (
@@ -278,21 +400,36 @@ function StageRow({
         </div>
       )}
 
-      {!assignment.signed_at && order <= cur && currentStage !== "aprovado" && currentStage !== "obsoleto" && (
-        <Button size="sm" disabled={!user || !isCurrent} onClick={async () => {
-          if (!user) return;
-          await signStage(doc.id, stageKey, user.name);
-          if (stageKey === "approval") {
-            await saveDocument({ ...doc, status: "aprovado", updated_at: new Date().toISOString() });
-          } else if (stageKey === "review") {
-            await saveDocument({ ...doc, status: "em_revisao", updated_at: new Date().toISOString() });
-          }
-          onAfterSign?.(stageKey);
-          toast.success(`Etapa ${label.toLowerCase()} assinada`);
-        }}>
-          <ShieldCheck className="size-4" /> {isCurrent ? "Assinar" : "Aguardando etapa anterior"}
-        </Button>
-      )}
+      {!assignment.signed_at &&
+        order <= cur &&
+        currentStage !== "aprovado" &&
+        currentStage !== "obsoleto" && (
+          <Button
+            size="sm"
+            disabled={!user || !isCurrent}
+            onClick={async () => {
+              if (!user) return;
+              await signStage(doc.id, stageKey, user.name);
+              if (stageKey === "approval") {
+                await saveDocument({
+                  ...doc,
+                  status: "aprovado",
+                  updated_at: new Date().toISOString(),
+                });
+              } else if (stageKey === "review") {
+                await saveDocument({
+                  ...doc,
+                  status: "em_revisao",
+                  updated_at: new Date().toISOString(),
+                });
+              }
+              onAfterSign?.(stageKey);
+              toast.success(`Etapa ${label.toLowerCase()} assinada`);
+            }}
+          >
+            <ShieldCheck className="size-4" /> {isCurrent ? "Assinar" : "Aguardando etapa anterior"}
+          </Button>
+        )}
     </div>
   );
 }
@@ -356,19 +493,52 @@ function WorkflowCard({ doc }: { doc: DocumentRow }) {
         <StatusBadge>{stageLabel[wf.stage]}</StatusBadge>
       </div>
       <div className="space-y-2">
-        <StageRow doc={doc} stageKey="elaboration" label="Elaboração" assignment={wf.elaboration} currentStage={wf.stage} onAfterSign={notifyNextStage} />
-        <StageRow doc={doc} stageKey="review" label="Revisão" assignment={wf.review} currentStage={wf.stage} onAfterSign={notifyNextStage} />
-        <StageRow doc={doc} stageKey="approval" label="Aprovação" assignment={wf.approval} currentStage={wf.stage} onAfterSign={notifyNextStage} />
+        <StageRow
+          doc={doc}
+          stageKey="elaboration"
+          label="Elaboração"
+          assignment={wf.elaboration}
+          currentStage={wf.stage}
+          onAfterSign={notifyNextStage}
+        />
+        <StageRow
+          doc={doc}
+          stageKey="review"
+          label="Revisão"
+          assignment={wf.review}
+          currentStage={wf.stage}
+          onAfterSign={notifyNextStage}
+        />
+        <StageRow
+          doc={doc}
+          stageKey="approval"
+          label="Aprovação"
+          assignment={wf.approval}
+          currentStage={wf.stage}
+          onAfterSign={notifyNextStage}
+        />
       </div>
       <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
         <span className="text-xs text-muted-foreground">
-          {meta.obsolete ? "Documento marcado como obsoleto." : "Apenas a versão vigente é distribuída."}
+          {meta.obsolete
+            ? "Documento marcado como obsoleto."
+            : "Apenas a versão vigente é distribuída."}
         </span>
-        <Button size="sm" variant={meta.obsolete ? "outline" : "ghost"} onClick={async () => {
-          await setDocumentObsolete(doc.id, !meta.obsolete);
-          await saveDocument({ ...doc, status: meta.obsolete ? "rascunho" : "obsoleto", updated_at: new Date().toISOString() });
-          toast.success(meta.obsolete ? "Documento reativado" : "Documento marcado como obsoleto");
-        }}>
+        <Button
+          size="sm"
+          variant={meta.obsolete ? "outline" : "ghost"}
+          onClick={async () => {
+            await setDocumentObsolete(doc.id, !meta.obsolete);
+            await saveDocument({
+              ...doc,
+              status: meta.obsolete ? "rascunho" : "obsoleto",
+              updated_at: new Date().toISOString(),
+            });
+            toast.success(
+              meta.obsolete ? "Documento reativado" : "Documento marcado como obsoleto",
+            );
+          }}
+        >
           <Lock className="size-4" /> {meta.obsolete ? "Reativar" : "Marcar obsoleto"}
         </Button>
       </div>
@@ -403,19 +573,34 @@ function CommentsCard({ doc }: { doc: DocumentRow }) {
         ))}
       </div>
       <div className="flex gap-2">
-        <Textarea rows={2} placeholder="Comentar a revisão…" value={text} onChange={(e) => setText(e.target.value)} />
-        <Button disabled={!user || !text.trim() || busy} onClick={async () => {
-          if (!user || !text.trim()) return;
-          setBusy(true);
-          try {
-            await addDocumentComment({
-              documentId: doc.id, authorId: user.id, authorName: user.name,
-              text: text.trim(), stage: meta.workflow.stage,
-            });
-            setText("");
-            toast.success("Comentário publicado");
-          } finally { setBusy(false); }
-        }}><Send className="size-4" /></Button>
+        <Textarea
+          rows={2}
+          placeholder="Comentar a revisão…"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <Button
+          disabled={!user || !text.trim() || busy}
+          onClick={async () => {
+            if (!user || !text.trim()) return;
+            setBusy(true);
+            try {
+              await addDocumentComment({
+                documentId: doc.id,
+                authorId: user.id,
+                authorName: user.name,
+                text: text.trim(),
+                stage: meta.workflow.stage,
+              });
+              setText("");
+              toast.success("Comentário publicado");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <Send className="size-4" />
+        </Button>
       </div>
     </section>
   );
@@ -437,26 +622,60 @@ function DistributionCard({ doc }: { doc: DocumentRow }) {
           <Printer className="size-4" /> Cópias controladas / distribuição
         </h3>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button size="sm" variant="outline"><Plus className="size-4" /> Registrar cópia</Button></DialogTrigger>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="outline">
+              <Plus className="size-4" /> Registrar cópia
+            </Button>
+          </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Nova cópia controlada</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Nova cópia controlada</DialogTitle>
+            </DialogHeader>
             <div className="space-y-3">
-              <div><Label>Destinatário / setor</Label><Input value={recipient} onChange={(e) => setRecipient(e.target.value)} /></div>
-              <div><Label>Nº da cópia</Label><Input value={copyNumber} onChange={(e) => setCopyNumber(e.target.value)} placeholder="ex.: 001" /></div>
-              <div><Label>Observações</Label><Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+              <div>
+                <Label>Destinatário / setor</Label>
+                <Input value={recipient} onChange={(e) => setRecipient(e.target.value)} />
+              </div>
+              <div>
+                <Label>Nº da cópia</Label>
+                <Input
+                  value={copyNumber}
+                  onChange={(e) => setCopyNumber(e.target.value)}
+                  placeholder="ex.: 001"
+                />
+              </div>
+              <div>
+                <Label>Observações</Label>
+                <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button onClick={async () => {
-                if (!recipient.trim()) { toast.error("Informe o destinatário"); return; }
-                await addDistributionCopy(doc.id, {
-                  recipient: recipient.trim(), copy_number: copyNumber.trim() || "—",
-                  sent_at: new Date().toISOString(), returned_at: null, status: "ativa",
-                  notes: notes.trim() || null,
-                });
-                setRecipient(""); setCopyNumber(""); setNotes(""); setOpen(false);
-                toast.success("Cópia registrada");
-              }}>Registrar</Button>
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!recipient.trim()) {
+                    toast.error("Informe o destinatário");
+                    return;
+                  }
+                  await addDistributionCopy(doc.id, {
+                    recipient: recipient.trim(),
+                    copy_number: copyNumber.trim() || "—",
+                    sent_at: new Date().toISOString(),
+                    returned_at: null,
+                    status: "ativa",
+                    notes: notes.trim() || null,
+                  });
+                  setRecipient("");
+                  setCopyNumber("");
+                  setNotes("");
+                  setOpen(false);
+                  toast.success("Cópia registrada");
+                }}
+              >
+                Registrar
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -465,14 +684,23 @@ function DistributionCard({ doc }: { doc: DocumentRow }) {
         <p className="text-xs text-muted-foreground italic">Nenhuma cópia controlada registrada.</p>
       ) : (
         <table className="w-full text-sm">
-          <thead className="text-xs text-muted-foreground"><tr className="text-left"><th>Cópia</th><th>Destinatário</th><th>Enviada</th><th>Status</th></tr></thead>
+          <thead className="text-xs text-muted-foreground">
+            <tr className="text-left">
+              <th>Cópia</th>
+              <th>Destinatário</th>
+              <th>Enviada</th>
+              <th>Status</th>
+            </tr>
+          </thead>
           <tbody>
             {meta.distribution.map((d) => (
               <tr key={d.id} className="border-t border-border">
                 <td className="py-1.5 font-mono text-xs">#{d.copy_number}</td>
                 <td>{d.recipient}</td>
                 <td className="text-xs">{new Date(d.sent_at).toLocaleDateString("pt-BR")}</td>
-                <td><StatusBadge>{d.status}</StatusBadge></td>
+                <td>
+                  <StatusBadge>{d.status}</StatusBadge>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -490,16 +718,25 @@ function AccessLogCard({ doc }: { doc: DocumentRow }) {
     <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
       <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
         <Eye className="size-4" /> Histórico de acessos e alterações
-        <span className="text-xs font-normal text-muted-foreground">({meta.access_log.length})</span>
+        <span className="text-xs font-normal text-muted-foreground">
+          ({meta.access_log.length})
+        </span>
       </h3>
       {meta.access_log.length === 0 ? (
         <p className="text-xs text-muted-foreground italic">Sem registros ainda.</p>
       ) : (
         <ul className="space-y-1 text-sm max-h-64 overflow-y-auto">
           {meta.access_log.slice(0, 50).map((e) => (
-            <li key={e.id} className="flex items-center justify-between border-t border-border py-1">
-              <span>{e.user_name} · <span className="text-xs text-muted-foreground">{e.action}</span></span>
-              <span className="text-xs text-muted-foreground">v{e.version} · {fmtDate(e.at)}</span>
+            <li
+              key={e.id}
+              className="flex items-center justify-between border-t border-border py-1"
+            >
+              <span>
+                {e.user_name} · <span className="text-xs text-muted-foreground">{e.action}</span>
+              </span>
+              <span className="text-xs text-muted-foreground">
+                v{e.version} · {fmtDate(e.at)}
+              </span>
             </li>
           ))}
         </ul>
@@ -519,16 +756,41 @@ function TaxonomyCard({ doc }: { doc: DocumentRow }) {
   const [newVal, setNewVal] = useState("");
 
   useEffect(() => {
-    setFolder(meta.folder ?? ""); setSector(meta.sector ?? ""); setProcess(meta.process ?? "");
+    setFolder(meta.folder ?? "");
+    setSector(meta.sector ?? "");
+    setProcess(meta.process ?? "");
   }, [meta.folder, meta.sector, meta.process]);
 
   return (
     <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
-      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Folder className="size-4" /> Organização & campos personalizados</h3>
+      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+        <Folder className="size-4" /> Organização & campos personalizados
+      </h3>
       <div className="grid grid-cols-3 gap-2 mb-3">
-        <div><Label className="text-xs">Pasta</Label><Input value={folder} onChange={(e) => setFolder(e.target.value)} onBlur={() => setDocumentTaxonomy(doc.id, { folder: folder.trim() || null })} /></div>
-        <div><Label className="text-xs">Setor</Label><Input value={sector} onChange={(e) => setSector(e.target.value)} onBlur={() => setDocumentTaxonomy(doc.id, { sector: sector.trim() || null })} /></div>
-        <div><Label className="text-xs">Processo</Label><Input value={process} onChange={(e) => setProcess(e.target.value)} onBlur={() => setDocumentTaxonomy(doc.id, { process: process.trim() || null })} /></div>
+        <div>
+          <Label className="text-xs">Pasta</Label>
+          <Input
+            value={folder}
+            onChange={(e) => setFolder(e.target.value)}
+            onBlur={() => setDocumentTaxonomy(doc.id, { folder: folder.trim() || null })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Setor</Label>
+          <Input
+            value={sector}
+            onChange={(e) => setSector(e.target.value)}
+            onBlur={() => setDocumentTaxonomy(doc.id, { sector: sector.trim() || null })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Processo</Label>
+          <Input
+            value={process}
+            onChange={(e) => setProcess(e.target.value)}
+            onBlur={() => setDocumentTaxonomy(doc.id, { process: process.trim() || null })}
+          />
+        </div>
       </div>
       <div className="border-t border-border pt-3">
         <div className="text-xs font-semibold mb-2">Campos personalizados</div>
@@ -540,18 +802,31 @@ function TaxonomyCard({ doc }: { doc: DocumentRow }) {
             <li key={k} className="flex items-center gap-2 text-sm">
               <span className="font-medium min-w-[120px]">{k}:</span>
               <span className="flex-1 text-muted-foreground">{v}</span>
-              <Button size="sm" variant="ghost" onClick={() => removeCustomField(doc.id, k)}><Trash2 className="size-3.5" /></Button>
+              <Button size="sm" variant="ghost" onClick={() => removeCustomField(doc.id, k)}>
+                <Trash2 className="size-3.5" />
+              </Button>
             </li>
           ))}
         </ul>
         <div className="flex gap-2">
-          <Input placeholder="Campo (ex.: Cliente)" value={newKey} onChange={(e) => setNewKey(e.target.value)} className="max-w-[180px]" />
+          <Input
+            placeholder="Campo (ex.: Cliente)"
+            value={newKey}
+            onChange={(e) => setNewKey(e.target.value)}
+            className="max-w-[180px]"
+          />
           <Input placeholder="Valor" value={newVal} onChange={(e) => setNewVal(e.target.value)} />
-          <Button size="sm" onClick={async () => {
-            if (!newKey.trim()) return;
-            await setCustomField(doc.id, newKey.trim(), newVal.trim());
-            setNewKey(""); setNewVal("");
-          }}>Adicionar</Button>
+          <Button
+            size="sm"
+            onClick={async () => {
+              if (!newKey.trim()) return;
+              await setCustomField(doc.id, newKey.trim(), newVal.trim());
+              setNewKey("");
+              setNewVal("");
+            }}
+          >
+            Adicionar
+          </Button>
         </div>
       </div>
     </section>
@@ -584,12 +859,19 @@ function DocumentBodyCard({ doc }: { doc: DocumentRow }) {
     try {
       const newBody = draft.trim() || null;
       await setDocumentBody(doc.id, newBody);
-      logAudit({ module: "documents", action: "content_edited", record_id: doc.id, record_label: doc.title });
+      logAudit({
+        module: "documents",
+        action: "content_edited",
+        record_id: doc.id,
+        record_label: doc.title,
+      });
       setEditing(false);
       setDraft("");
       toast.success("Conteúdo salvo com sucesso");
     } catch (err) {
-      toast.error("Falha ao salvar conteúdo", { description: String((err as Error)?.message ?? err) });
+      toast.error("Falha ao salvar conteúdo", {
+        description: String((err as Error)?.message ?? err),
+      });
     } finally {
       setBusy(false);
     }
@@ -611,7 +893,9 @@ function DocumentBodyCard({ doc }: { doc: DocumentRow }) {
       {editing ? (
         <div className="space-y-3">
           <div>
-            <Label htmlFor="doc-body" className="sr-only">Conteúdo do documento</Label>
+            <Label htmlFor="doc-body" className="sr-only">
+              Conteúdo do documento
+            </Label>
             <Textarea
               id="doc-body"
               rows={10}
@@ -652,7 +936,7 @@ function DocumentDetail() {
   const { user } = useAuth();
   const { id } = Route.useParams();
   const documents = useTableStore(documentsStore);
-  const doc = documents.find(d => d.id === id);
+  const doc = documents.find((d) => d.id === id);
   const versions = useDocumentVersions(doc?.id);
   const meta = useDocumentMeta(doc?.id);
 
@@ -662,7 +946,13 @@ function DocumentDetail() {
     const k = `viewed:${doc.id}:${doc.version}`;
     if (sessionStorage.getItem(k)) return;
     sessionStorage.setItem(k, "1");
-    void logDocumentAccess({ documentId: doc.id, userId: user.id, userName: user.name, action: "view", version: doc.version });
+    void logDocumentAccess({
+      documentId: doc.id,
+      userId: user.id,
+      userName: user.name,
+      action: "view",
+      version: doc.version,
+    });
   }, [doc, user]);
 
   const isObsolete = useMemo(() => {
@@ -675,7 +965,10 @@ function DocumentDetail() {
   if (!doc) {
     return (
       <>
-        <Link to="/documents" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+        <Link
+          to="/documents"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
+        >
           <ArrowLeft className="size-4 mr-1" /> Voltar para documentos
         </Link>
         <PageHeader title="Documento não encontrado" description={id} />
@@ -694,19 +987,29 @@ function DocumentDetail() {
       toast.info("Nenhum arquivo anexado");
     }
     if (user) {
-      await logDocumentAccess({ documentId: doc.id, userId: user.id, userName: user.name, action, version: doc.version });
+      await logDocumentAccess({
+        documentId: doc.id,
+        userId: user.id,
+        userName: user.name,
+        action,
+        version: doc.version,
+      });
     }
   };
 
   return (
     <>
-      <Link to="/documents" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+      <Link
+        to="/documents"
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
+      >
         <ArrowLeft className="size-4 mr-1" /> Voltar para documentos
       </Link>
 
       {isObsolete && (
         <div className="mb-3 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          <AlertTriangle className="size-4" /> Documento obsoleto — apenas a versão vigente aprovada deve ser distribuída.
+          <AlertTriangle className="size-4" /> Documento obsoleto — apenas a versão vigente aprovada
+          deve ser distribuída.
         </div>
       )}
 
@@ -716,10 +1019,20 @@ function DocumentDetail() {
         actions={
           <>
             <StatusBadge>{isObsolete ? "obsoleto" : doc.status}</StatusBadge>
-            <Button variant="outline" size="sm" onClick={() => handleDownload("download")} disabled={isObsolete}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDownload("download")}
+              disabled={isObsolete}
+            >
               <Download className="size-4" /> Baixar vigente
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => handleDownload("print")} disabled={isObsolete}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDownload("print")}
+              disabled={isObsolete}
+            >
               <Printer className="size-4" /> Imprimir
             </Button>
             <NewRevisionDialog doc={doc} />
@@ -732,12 +1045,32 @@ function DocumentDetail() {
           <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
             <h3 className="text-sm font-semibold mb-3">Identificação padronizada</h3>
             <dl className="grid grid-cols-2 gap-3 text-sm">
-              <div><dt className="text-xs text-muted-foreground">Código</dt><dd className="font-mono">{doc.code}</dd></div>
-              <div><dt className="text-xs text-muted-foreground">Categoria</dt><dd>{doc.category}</dd></div>
-              <div><dt className="text-xs text-muted-foreground">Versão</dt><dd className="font-mono">v{doc.version}</dd></div>
-              <div><dt className="text-xs text-muted-foreground">Validade</dt><dd>{doc.validity ?? "—"}</dd></div>
-              <div><dt className="text-xs text-muted-foreground">Responsável</dt><dd>{doc.responsible ?? "—"}</dd></div>
-              <div><dt className="text-xs text-muted-foreground">Pasta / setor / processo</dt><dd>{[meta.folder, meta.sector, meta.process].filter(Boolean).join(" / ") || "—"}</dd></div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Código</dt>
+                <dd className="font-mono">{doc.code}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Categoria</dt>
+                <dd>{doc.category}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Versão</dt>
+                <dd className="font-mono">v{doc.version}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Validade</dt>
+                <dd>{doc.validity ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Responsável</dt>
+                <dd>{doc.responsible ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Pasta / setor / processo</dt>
+                <dd>
+                  {[meta.folder, meta.sector, meta.process].filter(Boolean).join(" / ") || "—"}
+                </dd>
+              </div>
             </dl>
           </section>
 
@@ -749,22 +1082,40 @@ function DocumentDetail() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <History className="size-4" /> Histórico de versões
-                <span className="text-xs font-normal text-muted-foreground">({versions.length + 1} no total)</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  ({versions.length + 1} no total)
+                </span>
               </h3>
             </div>
             <table className="w-full text-sm">
               <thead className="text-xs text-muted-foreground">
-                <tr className="text-left"><th className="py-1.5">Versão</th><th>Data</th><th>Autor</th><th>Motivo</th><th>Status</th><th className="text-right">Ações</th></tr>
+                <tr className="text-left">
+                  <th className="py-1.5">Versão</th>
+                  <th>Data</th>
+                  <th>Autor</th>
+                  <th>Motivo</th>
+                  <th>Status</th>
+                  <th className="text-right">Ações</th>
+                </tr>
               </thead>
               <tbody>
                 <tr className="border-t border-border bg-primary/5">
                   <td className="py-2 font-mono">v{doc.version}</td>
-                  <td>{doc.updated_at ? new Date(doc.updated_at).toLocaleDateString("pt-BR") : "—"}</td>
+                  <td>
+                    {doc.updated_at ? new Date(doc.updated_at).toLocaleDateString("pt-BR") : "—"}
+                  </td>
                   <td>{doc.responsible ?? "—"}</td>
                   <td className="text-muted-foreground italic">Versão vigente</td>
-                  <td><StatusBadge>{isObsolete ? "Obsoleta" : "Atual"}</StatusBadge></td>
+                  <td>
+                    <StatusBadge>{isObsolete ? "Obsoleta" : "Atual"}</StatusBadge>
+                  </td>
                   <td className="text-right">
-                    <Button size="sm" variant="ghost" onClick={() => handleDownload("download")} disabled={isObsolete}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDownload("download")}
+                      disabled={isObsolete}
+                    >
                       <Download className="size-3.5" /> Baixar
                     </Button>
                   </td>
@@ -774,13 +1125,28 @@ function DocumentDetail() {
                     <td className="py-2 font-mono">v{v.version}</td>
                     <td>{new Date(v.archived_at).toLocaleDateString("pt-BR")}</td>
                     <td>{v.archived_by_name ?? v.snapshot.responsible ?? "—"}</td>
-                    <td className="text-muted-foreground max-w-xs truncate" title={v.reason ?? ""}>{v.reason ?? <span className="italic">—</span>}</td>
-                    <td><StatusBadge>Substituída</StatusBadge></td>
-                    <td className="text-right"><Button size="sm" variant="ghost" onClick={() => downloadVersion(v)}><Download className="size-3.5" /> Baixar</Button></td>
+                    <td className="text-muted-foreground max-w-xs truncate" title={v.reason ?? ""}>
+                      {v.reason ?? <span className="italic">—</span>}
+                    </td>
+                    <td>
+                      <StatusBadge>Substituída</StatusBadge>
+                    </td>
+                    <td className="text-right">
+                      <Button size="sm" variant="ghost" onClick={() => downloadVersion(v)}>
+                        <Download className="size-3.5" /> Baixar
+                      </Button>
+                    </td>
                   </tr>
                 ))}
                 {versions.length === 0 && (
-                  <tr className="border-t border-border"><td colSpan={6} className="py-3 text-center text-xs text-muted-foreground italic">Nenhuma revisão anterior. Use “Nova revisão” para arquivar a versão atual.</td></tr>
+                  <tr className="border-t border-border">
+                    <td
+                      colSpan={6}
+                      className="py-3 text-center text-xs text-muted-foreground italic"
+                    >
+                      Nenhuma revisão anterior. Use “Nova revisão” para arquivar a versão atual.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -794,10 +1160,24 @@ function DocumentDetail() {
 
         <aside className="space-y-4">
           <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
-            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><FileText className="size-4" /> Arquivo vigente</h3>
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <FileText className="size-4" /> Arquivo vigente
+            </h3>
             <div className="border border-dashed border-border rounded-md p-4 text-center text-sm text-muted-foreground">
-              {doc.code}-v{doc.version}.pdf<br/>
-              {doc.file_url ? <a href={doc.file_url} className="text-xs underline" target="_blank" rel="noreferrer">Abrir</a> : <span className="text-xs italic">sem arquivo</span>}
+              {doc.code}-v{doc.version}.pdf
+              <br />
+              {doc.file_url ? (
+                <a
+                  href={doc.file_url}
+                  className="text-xs underline"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Abrir
+                </a>
+              ) : (
+                <span className="text-xs italic">sem arquivo</span>
+              )}
             </div>
           </section>
           <ReadConfirmationCard doc={doc} />

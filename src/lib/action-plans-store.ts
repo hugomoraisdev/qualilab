@@ -35,4 +35,5 @@ export const ORIGIN_TYPE_LABEL: Record<string, string> = {
   meeting: "Reunião",
   manual: "Manual",
   indicator: "Indicador",
+  sac: "Atendimento ao cliente",
 };
