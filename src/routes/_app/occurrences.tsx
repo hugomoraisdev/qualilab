@@ -69,10 +69,6 @@ function OccPage() {
   });
   const [draftDeadline, setDraftDeadline] = useState<string>("");
 
-  if (location.pathname !== "/occurrences") {
-    return <Outlet />;
-  }
-
 
   const kpis = useMemo(() => {
     let abertas = 0, analise = 0, concluidas = 0, atrasadas = 0;
