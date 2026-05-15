@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -207,11 +207,16 @@ function RiskFormDialog({ trigger, initial, onSaved }: { trigger: React.ReactNod
 
 function RisksPage() {
   useAuditAccess("risks");
+  const location = useLocation();
   const risks = useTableStore(risksStore);
   const navigate = useNavigate();
   const ids = useMemo(() => risks.map((r) => r.id), [risks]);
   const metaMap = useAllRiskMeta(ids);
   const [view, setView] = useState<"matrix" | "list">("matrix");
+
+  if (location.pathname.startsWith("/risks/")) {
+    return <Outlet />;
+  }
 
   const kpis = useMemo(() => {
     const ativos = risks.filter((r) => !["mitigado", "encerrado"].includes(r.status)).length;
