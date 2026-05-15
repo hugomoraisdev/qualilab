@@ -1,18 +1,34 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
-import { CalendarDays, Calculator, CheckCircle2, XCircle, Plus, Trash2, Layers } from "lucide-react";
+import {
+  CalendarDays,
+  Calculator,
+  CheckCircle2,
+  XCircle,
+  Plus,
+  Trash2,
+  Layers,
+  Paperclip,
+  Loader2,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  type CalibrationPoint, type CalibrationRow,
-  evaluatePoint, evaluateRecord, calibrationsStore, saveCalibration, newCalibrationId,
+  type CalibrationPoint,
+  type CalibrationRow,
+  evaluatePoint,
+  evaluateRecord,
+  calibrationsStore,
+  saveCalibration,
+  newCalibrationId,
 } from "@/lib/calibrations-store";
 import { equipmentsStore } from "@/lib/equipments-store";
 import { useTableStore } from "@/lib/table-store";
@@ -60,8 +76,29 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
   const [provider, setProvider] = useState("INMETRO");
   const [certificate, setCertificate] = useState("");
   const [certificateUrl, setCertificateUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [validity, setValidity] = useState("");
+
+  async function handleFileUpload(file: File) {
+    setUploading(true);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `calibrations/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from("certificates")
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("certificates").getPublicUrl(path);
+      setCertificateUrl(urlData.publicUrl);
+      toast.success("Certificado anexado", { description: file.name });
+    } catch (err) {
+      toast.error("Falha no upload", { description: (err as Error).message });
+    } finally {
+      setUploading(false);
+    }
+  }
   const [points, setPoints] = useState<CalibrationPoint[]>(() => [
     emptyPoint(firstCode, 0),
     emptyPoint(firstCode, 1),
@@ -80,7 +117,6 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
   // Atualiza limites/unidade dos pontos quando o equipamento muda
   useEffect(() => {
     setPoints((pts) => pts.map((p) => ({ ...p, maxError: cfg.maxError, unit: cfg.unit })));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [equipCode, cfg.maxError, cfg.unit]);
 
   const addPoint = () => setPoints((pts) => [...pts, emptyPoint(equipCode, pts.length)]);
@@ -96,12 +132,18 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
   }, [points]);
 
   async function handleSave() {
-    if (!equip) { toast.error("Selecione um equipamento."); return; }
+    if (!equip) {
+      toast.error("Selecione um equipamento.");
+      return;
+    }
     if (!certificate.trim() || !date || !validity) {
       toast.error("Preencha certificado, data e validade.");
       return;
     }
-    if (!points.length) { toast.error("Adicione ao menos um ponto."); return; }
+    if (!points.length) {
+      toast.error("Adicione ao menos um ponto.");
+      return;
+    }
     const status = evaluateRecord({ points });
     const rec: CalibrationRow = {
       id: newCalibrationId(),
@@ -118,10 +160,9 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
       responsible_id: user?.id ?? null,
     };
     void saveCalibration(rec);
-    toast[status === "Aprovada" ? "success" : "error"](
-      `Calibração ${status}`,
-      { description: `${equip.code} · ${points.length} ponto(s)` },
-    );
+    toast[status === "Aprovada" ? "success" : "error"](`Calibração ${status}`, {
+      description: `${equip.code} · ${points.length} ponto(s)`,
+    });
 
     const recipients = equipMetaMap[equip.id]?.notification_recipients ?? [];
     if (recipients.length > 0) {
@@ -145,6 +186,7 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
 
     setCertificate("");
     setCertificateUrl("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
     onSaved();
   }
 
@@ -152,12 +194,15 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
     <section className="bg-card border border-border rounded-lg p-5 shadow-sm mb-6">
       <div className="flex items-center gap-2 mb-1">
         <Layers className="size-4 text-primary" />
-        <h3 className="text-sm font-semibold">Nova calibração — múltiplos pontos por equipamento</h3>
+        <h3 className="text-sm font-semibold">
+          Nova calibração — múltiplos pontos por equipamento
+        </h3>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Adicione quantos pontos forem necessários (ex.: 0%, 50% e 100% da escala). Cada ponto possui valor nominal,
-        valor medido, incerteza e resultado individual. O resultado geral é <span className="font-medium">Aprovado</span> apenas
-        se <span className="font-medium">todos</span> os pontos forem conformes.
+        Adicione quantos pontos forem necessários (ex.: 0%, 50% e 100% da escala). Cada ponto possui
+        valor nominal, valor medido, incerteza e resultado individual. O resultado geral é{" "}
+        <span className="font-medium">Aprovado</span> apenas se{" "}
+        <span className="font-medium">todos</span> os pontos forem conformes.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
@@ -170,7 +215,9 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
           >
             {equipments.length === 0 && <option value="">— Cadastre um equipamento —</option>}
             {equipments.map((e) => (
-              <option key={e.id} value={e.code}>{e.code} — {e.name}</option>
+              <option key={e.id} value={e.code}>
+                {e.code} — {e.name}
+              </option>
             ))}
           </select>
           <div className="text-[11px] text-muted-foreground">
@@ -191,11 +238,58 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
         </div>
         <div className="space-y-1.5 md:col-span-2 lg:col-span-2">
           <Label className="text-xs">Certificado</Label>
-          <Input value={certificate} onChange={(e) => setCertificate(e.target.value)} placeholder="ex: CERT-2026-0001" />
+          <Input
+            value={certificate}
+            onChange={(e) => setCertificate(e.target.value)}
+            placeholder="ex: CERT-2026-0001"
+          />
         </div>
         <div className="space-y-1.5 md:col-span-2 lg:col-span-3">
-          <Label className="text-xs">URL do certificado (PDF/anexo)</Label>
-          <Input value={certificateUrl} onChange={(e) => setCertificateUrl(e.target.value)} placeholder="https://… (link do PDF/laudo)" />
+          <Label className="text-xs">Certificado (PDF/laudo)</Label>
+          <div className="flex gap-2">
+            <Input
+              value={certificateUrl}
+              onChange={(e) => setCertificateUrl(e.target.value)}
+              placeholder="Cole um link ou faça upload do arquivo →"
+              className="flex-1"
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleFileUpload(f);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Paperclip className="size-4" />
+              )}
+              {uploading ? "Enviando…" : "Anexar"}
+            </Button>
+          </div>
+          {certificateUrl && (
+            <a
+              href={certificateUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] text-primary hover:underline truncate block"
+            >
+              {certificateUrl}
+            </a>
+          )}
         </div>
       </div>
 
@@ -221,29 +315,71 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
           {points.map((p, idx) => {
             const ev = evaluatePoint(p);
             return (
-              <div key={p.id} className="grid grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_auto_auto] gap-2 px-3 py-2 items-center">
-                <Input className="h-9" value={p.label} onChange={(e) => updatePoint(p.id, { label: e.target.value })} placeholder={`Ponto ${idx + 1}`} />
-                <Input className="h-9" type="number" step="0.0001" value={p.nominal} onChange={(e) => updatePoint(p.id, { nominal: parseFloat(e.target.value) || 0 })} />
-                <Input className="h-9" type="number" step="0.0001" value={p.measured} onChange={(e) => updatePoint(p.id, { measured: parseFloat(e.target.value) || 0 })} />
+              <div
+                key={p.id}
+                className="grid grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_auto_auto] gap-2 px-3 py-2 items-center"
+              >
+                <Input
+                  className="h-9"
+                  value={p.label}
+                  onChange={(e) => updatePoint(p.id, { label: e.target.value })}
+                  placeholder={`Ponto ${idx + 1}`}
+                />
+                <Input
+                  className="h-9"
+                  type="number"
+                  step="0.0001"
+                  value={p.nominal}
+                  onChange={(e) => updatePoint(p.id, { nominal: parseFloat(e.target.value) || 0 })}
+                />
+                <Input
+                  className="h-9"
+                  type="number"
+                  step="0.0001"
+                  value={p.measured}
+                  onChange={(e) => updatePoint(p.id, { measured: parseFloat(e.target.value) || 0 })}
+                />
                 <div className="h-9 rounded-md border border-dashed border-border bg-muted/40 px-3 flex items-center text-xs font-mono">
                   {ev.error.toFixed(4)}
                 </div>
-                <Input className="h-9" type="number" step="0.0001" value={p.uncertainty} onChange={(e) => updatePoint(p.id, { uncertainty: parseFloat(e.target.value) || 0 })} />
-                <span className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold border",
-                  ev.approved ? "bg-success/15 text-success border-success/40" : "bg-destructive/15 text-destructive border-destructive/40"
-                )}>
-                  {ev.approved ? <CheckCircle2 className="size-3" /> : <XCircle className="size-3" />}
+                <Input
+                  className="h-9"
+                  type="number"
+                  step="0.0001"
+                  value={p.uncertainty}
+                  onChange={(e) =>
+                    updatePoint(p.id, { uncertainty: parseFloat(e.target.value) || 0 })
+                  }
+                />
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold border",
+                    ev.approved
+                      ? "bg-success/15 text-success border-success/40"
+                      : "bg-destructive/15 text-destructive border-destructive/40",
+                  )}
+                >
+                  {ev.approved ? (
+                    <CheckCircle2 className="size-3" />
+                  ) : (
+                    <XCircle className="size-3" />
+                  )}
                   {ev.approved ? "Conforme" : "Não conforme"}
                 </span>
-                <button onClick={() => removePoint(p.id)} className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-muted" aria-label="Remover ponto">
+                <button
+                  onClick={() => removePoint(p.id)}
+                  className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-muted"
+                  aria-label="Remover ponto"
+                >
                   <Trash2 className="size-3.5" />
                 </button>
               </div>
             );
           })}
           {!points.length && (
-            <div className="px-3 py-6 text-center text-sm text-muted-foreground">Nenhum ponto adicionado.</div>
+            <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+              Nenhum ponto adicionado.
+            </div>
           )}
         </div>
       </div>
@@ -252,14 +388,24 @@ function MultiPointForm({ onSaved }: { onSaved: () => void }) {
         <div className="text-xs text-muted-foreground">
           Resultado geral:{" "}
           {overall ? (
-            <span className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold border-2 ml-1",
-              overall.allOk ? "bg-success/15 text-success border-success" : "bg-destructive/15 text-destructive border-destructive",
-            )}>
-              {overall.allOk ? <CheckCircle2 className="size-3.5" /> : <XCircle className="size-3.5" />}
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold border-2 ml-1",
+                overall.allOk
+                  ? "bg-success/15 text-success border-success"
+                  : "bg-destructive/15 text-destructive border-destructive",
+              )}
+            >
+              {overall.allOk ? (
+                <CheckCircle2 className="size-3.5" />
+              ) : (
+                <XCircle className="size-3.5" />
+              )}
               {overall.allOk ? "APROVADA" : "REPROVADA"}
             </span>
-          ) : <span className="italic">aguardando pontos</span>}
+          ) : (
+            <span className="italic">aguardando pontos</span>
+          )}
         </div>
         <Button onClick={handleSave}>Salvar calibração</Button>
       </div>
@@ -285,25 +431,39 @@ function CalPage() {
 
   return (
     <>
-      <PageHeader title="Calibrações" description="Cronograma, certificados, rastreabilidade metrológica e múltiplos pontos por equipamento" />
+      <PageHeader
+        title="Calibrações"
+        description="Cronograma, certificados, rastreabilidade metrológica e múltiplos pontos por equipamento"
+      />
 
       <MultiPointForm onSaved={() => setRefreshTick((t) => t + 1)} />
 
       {upcoming.length > 0 && (
         <div className="bg-card border border-border rounded-lg p-5 shadow-sm mb-6">
-          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><CalendarDays className="size-4" /> Próximas calibrações</h3>
+          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <CalendarDays className="size-4" /> Próximas calibrações
+          </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {upcoming.map((c) => {
               const today = new Date().toISOString().slice(0, 10);
               const overdue = !!c.next_due_date && c.next_due_date < today;
               return (
-                <div key={c.id} className={`border rounded-md p-3 bg-background ${overdue ? "border-destructive" : "border-border"}`}>
-                  <div className="text-xs font-mono text-muted-foreground">{c.certificate_number ?? c.id.slice(0, 8)}</div>
+                <div
+                  key={c.id}
+                  className={`border rounded-md p-3 bg-background ${overdue ? "border-destructive" : "border-border"}`}
+                >
+                  <div className="text-xs font-mono text-muted-foreground">
+                    {c.certificate_number ?? c.id.slice(0, 8)}
+                  </div>
                   <div className="text-sm font-medium truncate">{equipLabel(c.equipment_id)}</div>
-                  <div className={`text-xs mt-1 ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                  <div
+                    className={`text-xs mt-1 ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}
+                  >
                     {overdue ? `Vencida em ${c.next_due_date}` : `Vence em ${c.next_due_date}`}
                   </div>
-                  <div className="mt-1.5"><StatusBadge>{c.points?.length ? evaluateRecord(c) : c.result}</StatusBadge></div>
+                  <div className="mt-1.5">
+                    <StatusBadge>{c.points?.length ? evaluateRecord(c) : c.result}</StatusBadge>
+                  </div>
                 </div>
               );
             })}
@@ -319,18 +479,57 @@ function CalPage() {
         hideNew
         exportName="calibracoes"
         columns={[
-          { key: "certificate_number", header: "Certificado", render: (r) => <span className="font-mono text-xs">{r.certificate_number ?? "—"}</span> },
-          { key: "equipment_id", header: "Equipamento", accessor: (r) => equipLabel(r.equipment_id), render: (r) => equipLabel(r.equipment_id) },
+          {
+            key: "certificate_number",
+            header: "Certificado",
+            render: (r) => <span className="font-mono text-xs">{r.certificate_number ?? "—"}</span>,
+          },
+          {
+            key: "equipment_id",
+            header: "Equipamento",
+            accessor: (r) => equipLabel(r.equipment_id),
+            render: (r) => equipLabel(r.equipment_id),
+          },
           { key: "performed_at", header: "Data" },
-          { key: "next_due_date", header: "Validade", render: (r) => {
-            if (!r.next_due_date) return "—";
-            const today = new Date().toISOString().slice(0, 10);
-            const overdue = r.next_due_date < today;
-            return <span className={overdue ? "text-destructive font-medium" : ""}>{r.next_due_date}</span>;
-          }},
+          {
+            key: "next_due_date",
+            header: "Validade",
+            render: (r) => {
+              if (!r.next_due_date) return "—";
+              const today = new Date().toISOString().slice(0, 10);
+              const overdue = r.next_due_date < today;
+              return (
+                <span className={overdue ? "text-destructive font-medium" : ""}>
+                  {r.next_due_date}
+                </span>
+              );
+            },
+          },
           { key: "provider", header: "Provedor", render: (r) => r.provider ?? "—" },
-          { key: "certificate_url", header: "Anexo", render: (r) => r.certificate_url ? <a href={r.certificate_url} target="_blank" rel="noreferrer" className="text-primary text-xs hover:underline">abrir</a> : <span className="text-muted-foreground text-xs">—</span> },
-          { key: "result", header: "Resultado", render: (r) => <StatusBadge>{r.points?.length ? evaluateRecord(r) : r.result}</StatusBadge> },
+          {
+            key: "certificate_url",
+            header: "Anexo",
+            render: (r) =>
+              r.certificate_url ? (
+                <a
+                  href={r.certificate_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary text-xs hover:underline"
+                >
+                  abrir
+                </a>
+              ) : (
+                <span className="text-muted-foreground text-xs">—</span>
+              ),
+          },
+          {
+            key: "result",
+            header: "Resultado",
+            render: (r) => (
+              <StatusBadge>{r.points?.length ? evaluateRecord(r) : r.result}</StatusBadge>
+            ),
+          },
         ]}
       />
     </>
