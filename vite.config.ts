@@ -12,4 +12,9 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  vite: {
+    ssr: {
+      noExternal: ["@dnd-kit/core", "@dnd-kit/sortable", "@dnd-kit/utilities"],
+    },
+  },
 });
