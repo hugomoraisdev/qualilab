@@ -123,19 +123,8 @@ function OccPage() {
       linked_document_id: null,
     };
     await occurrencesStore.upsert(row);
-    if (draftDeadline) {
-      await updateOccurrenceMeta(
-        row.id,
-        (prev) => ({ ...prev, deadline: draftDeadline }),
-        { action: "Ocorrência criada", detail: row.description.slice(0, 80) },
-      );
-    } else {
-      await updateOccurrenceMeta(
-        row.id,
-        (prev) => prev,
-        { action: "Ocorrência criada", detail: row.description.slice(0, 80) },
-      );
-    }
+    // Fecha o diálogo imediatamente — atualizações de metadados podem
+    // falhar offline e não devem bloquear a UI.
     setOpen(false);
     setDraft({
       type: "nao_conformidade",
@@ -146,6 +135,26 @@ function OccPage() {
     });
     setDraftDeadline("");
     toast.success("Ocorrência registrada");
+    const isOffline = typeof navigator !== "undefined" && navigator.onLine === false;
+    if (!isOffline) {
+      try {
+        if (draftDeadline) {
+          await updateOccurrenceMeta(
+            row.id,
+            (prev) => ({ ...prev, deadline: draftDeadline }),
+            { action: "Ocorrência criada", detail: row.description.slice(0, 80) },
+          );
+        } else {
+          await updateOccurrenceMeta(
+            row.id,
+            (prev) => prev,
+            { action: "Ocorrência criada", detail: row.description.slice(0, 80) },
+          );
+        }
+      } catch (err) {
+        console.warn("[occurrences] meta update falhou:", err);
+      }
+    }
     navigate({ to: "/occurrences/$id", params: { id: row.id } });
   };
 
