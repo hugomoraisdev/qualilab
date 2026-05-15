@@ -62,6 +62,15 @@ function RiskDetail() {
   const actions = useTableStore(actionPlansStore);
 
   if (!r) {
+    // Aguarda hidratação inicial do store antes de mostrar "não encontrado".
+    if (!risksStore.isHydrated()) {
+      return (
+        <>
+          <Link to="/risks" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"><ArrowLeft className="size-4 mr-1" /> Voltar</Link>
+          <PageHeader title="Carregando..." description={id} />
+        </>
+      );
+    }
     return (
       <>
         <Link to="/risks" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"><ArrowLeft className="size-4 mr-1" /> Voltar</Link>
