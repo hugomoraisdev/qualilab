@@ -454,6 +454,7 @@ ${linkedActions.length ? `<h3>Plano de ação</h3><ul>${linkedActions.map((a) =>
         <TabsContent value="participants">
           <ParticipantsPanel
             meetingId={meeting.id}
+            meeting={meeting}
             internalNames={meeting.participants}
             participants={meta.participants}
             onChange={refresh}
@@ -491,12 +492,14 @@ ${linkedActions.length ? `<h3>Plano de ação</h3><ul>${linkedActions.map((a) =>
 
 function ParticipantsPanel({
   meetingId,
+  meeting,
   internalNames,
   participants,
   onChange,
   duringMode,
 }: {
   meetingId: string;
+  meeting: MeetingRow;
   internalNames: string[];
   participants: MeetingParticipant[];
   onChange: () => void;
@@ -527,6 +530,22 @@ function ParticipantsPanel({
       (prev) => ({ ...prev, participants: [...prev.participants, p] }),
       { action: "participant_added", detail: `${p.name} — ${role} (${originLabel[origin]})` },
     );
+    if (p.email) {
+      sendEmail({
+        data: {
+          to: p.email,
+          subject: `Convite: ${meeting.type} (${meeting.meeting_date}${meeting.meeting_time ? " às " + meeting.meeting_time : ""})`,
+          html: `<p>Olá, <b>${p.name}</b>.</p>
+<p>Você foi adicionado(a) como participante da seguinte reunião:</p>
+<ul>
+  <li><b>Tipo:</b> ${meeting.type}</li>
+  <li><b>Data:</b> ${meeting.meeting_date}${meeting.meeting_time ? " às " + meeting.meeting_time : ""}</li>
+  <li><b>Função:</b> ${role}</li>
+</ul>
+<p>Qualilab — Sistema de Gestão da Qualidade</p>`,
+        },
+      }).catch(console.warn);
+    }
     setName("");
     setEmail("");
     setOrg("");

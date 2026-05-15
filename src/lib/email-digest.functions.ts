@@ -55,6 +55,8 @@ export const runEmailDigest = createServerFn({ method: "POST" })
       { data: supplierMetaRows },
       { data: userRoles },
       { data: alertRecipientsRow },
+      { data: upcomingMeetings },
+      { data: meetingMetaRows },
     ] = await Promise.all([
       supabaseAdmin.from("profiles").select("id,name,email"),
       supabaseAdmin
@@ -85,6 +87,14 @@ export const runEmailDigest = createServerFn({ method: "POST" })
       supabaseAdmin.from("app_data").select("key,value").like("key", "supplier-meta:%"),
       supabaseAdmin.from("user_roles").select("user_id,role").in("role", ["admin", "gestor"]),
       supabaseAdmin.from("app_data").select("value").eq("key", "alert-recipients").maybeSingle(),
+      supabaseAdmin
+        .from("meetings")
+        .select("id,type,meeting_date,meeting_time,status")
+        .gte("meeting_date", today())
+        .lte("meeting_date", addDays(2))
+        .in("status", ["Agendada"])
+        .is("deleted_at", null),
+      supabaseAdmin.from("app_data").select("key,value").like("key", "meeting-meta:%"),
     ]);
 
     // Config de destinatários por categoria
@@ -377,6 +387,31 @@ export const runEmailDigest = createServerFn({ method: "POST" })
             title: d < 0 ? "Seu documento venceu" : `Seu documento vence em ${d} dia(s)`,
           });
         }
+      }
+    }
+
+    // Reuniões (próximos 2 dias) — lembrete automático para participantes com e-mail
+    interface MeetingMetaParticipant {
+      email?: string | null;
+      name: string;
+    }
+    interface MeetingMetaValue {
+      participants?: MeetingMetaParticipant[];
+    }
+    for (const mtg of upcomingMeetings ?? []) {
+      const metaRow = meetingMetaRows?.find((r) => (r.key as string) === `meeting-meta:${mtg.id}`);
+      const metaVal = metaRow?.value as MeetingMetaValue | undefined;
+      const participants = metaVal?.participants ?? [];
+      const d = daysUntil(mtg.meeting_date);
+      const alert: DigestAlert = {
+        category: "Reunião",
+        level: "warning",
+        title: d === 0 ? "Reunião hoje" : `Reunião em ${d} dia(s)`,
+        description: `${mtg.type} · ${mtg.meeting_date}${mtg.meeting_time ? " às " + mtg.meeting_time : ""}`,
+        daysLeft: d,
+      };
+      for (const p of participants) {
+        if (p.email) addAlert(p.email, p.name, alert);
       }
     }
 

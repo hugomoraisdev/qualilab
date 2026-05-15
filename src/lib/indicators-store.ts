@@ -48,3 +48,39 @@ export const deleteResult = (id: string) => indicatorResultsStore.remove(id);
 export function newId(prefix: string) {
   return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
 }
+
+export interface IndicatorOverview {
+  total: number;
+  onTarget: number;
+  off: number;
+  noData: number;
+  pct: number;
+}
+
+export function computeIndicatorOverview(
+  indicators: IndicatorRow[],
+  results: IndicatorResultRow[],
+): IndicatorOverview {
+  const active = indicators.filter((i) => !i.deleted_at);
+  let onTarget = 0;
+  let off = 0;
+  let noData = 0;
+  active.forEach((i) => {
+    const rs = results
+      .filter((r) => r.indicator_id === i.id)
+      .sort((a, b) => a.period.localeCompare(b.period));
+    const last = rs.at(-1);
+    if (!last) { noData++; return; }
+    const meets = i.direction === "maior" ? last.value >= i.target : last.value <= i.target;
+    if (meets) onTarget++;
+    else off++;
+  });
+  const total = active.length;
+  return {
+    total,
+    onTarget,
+    off,
+    noData,
+    pct: total ? Math.round((onTarget / total) * 100) : 0,
+  };
+}
