@@ -99,9 +99,13 @@ export async function flushOutbox(): Promise<{ sent: number; failed: number }> {
         if (op.id != null) await clearOne(op.id);
         sent++;
       } catch (e) {
-        console.warn("[outbox] falha ao reenviar, mantendo na fila:", e);
+        // Itens legados/corrompidos não devem travar a fila para sempre.
+        // Descartamos após falha (a UI já refletiu a mutação localmente via table-store).
+        console.warn("[outbox] descartando item que falhou ao reenviar:", e);
+        if (op.id != null) {
+          try { await clearOne(op.id); } catch { /* ignore */ }
+        }
         failed++;
-        break; // mantém ordem; tenta de novo depois
       }
     }
   } finally {
