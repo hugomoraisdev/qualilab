@@ -71,8 +71,8 @@ function calStatus(c: { result: string; next_due_date: string | null }, today: s
   return "Válida";
 }
 
-function riskClass(r: { classification: string | null; probability: number; impact: number }) {
-  return r.classification ?? classifyScore(r.probability * r.impact).label;
+function riskClass(r: { probability: number; impact: number }) {
+  return classifyScore(r.probability * r.impact).label;
 }
 
 function Dashboard() {
