@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ArrowLeft, Star, AlertTriangle, ListChecks, Search } from "lucide-react";
+import { ArrowLeft, Star, AlertTriangle, ListChecks, Search, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -17,8 +17,13 @@ import {
   type TimelineRow,
 } from "@/lib/sac-store";
 import { saveActionPlan, type ActionPlanRow } from "@/lib/action-plans-store";
+import { saveOccurrence, type OccurrenceRow } from "@/lib/occurrences-store";
 import { useTableStore } from "@/lib/table-store";
 import { useAuth } from "@/lib/auth";
+import { useCustomFields } from "@/lib/custom-fields-store";
+import { CustomFieldsRenderer } from "@/components/CustomFieldsRenderer";
+import { CustomFieldsAdmin } from "@/components/CustomFieldsAdmin";
+import { useSacMeta, upsertSacMeta } from "@/lib/sac-meta-store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +52,9 @@ function TicketDetail() {
     .filter((e) => e.ticket_id === id)
     .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
   const t = tickets.find((x) => x.id === id);
+  const sacFields = useCustomFields("sac");
+  const [customValues, setCustomValues] = useSacMeta(id);
+  const [showCfAdmin, setShowCfAdmin] = useState(false);
   const [score, setScore] = useState<number>(0);
   const [investigation, setInvestigation] = useState("");
 
@@ -74,14 +82,31 @@ function TicketDetail() {
   };
 
   const linkOccurrence = async () => {
+    const ocId = newId("OC");
+    const oc: OccurrenceRow = {
+      id: ocId,
+      code: null,
+      type: "Não Conformidade",
+      origin: "SAC",
+      description: `[SAC ${t.protocol}] ${t.description}`,
+      occurred_at: new Date().toISOString().slice(0, 10),
+      responsible_id: t.assigned_to,
+      severity: t.priority === "critica" ? "Crítica" : t.priority === "alta" ? "Alta" : "Média",
+      status: "Aberta",
+      immediate_action: null,
+      root_cause: null,
+      linked_audit_id: null,
+      linked_document_id: null,
+    };
+    await saveOccurrence(oc);
     await update(
-      { linked_occurrence_id: "OC-" + Math.floor(Math.random() * 900 + 100) },
-      "Não conformidade aberta a partir deste atendimento",
+      { linked_occurrence_id: ocId },
+      `Não conformidade ${ocId} aberta a partir deste atendimento`,
     );
-    toast.success("Não conformidade vinculada", {
-      description: "Redirecionando para nova ocorrência…",
+    toast.success("Não conformidade criada", {
+      description: `Protocolo vinculado: ${ocId}. Redirecionando…`,
     });
-    setTimeout(() => navigate({ to: "/occurrences" }), 800);
+    setTimeout(() => navigate({ to: "/occurrences/$id", params: { id: ocId } }), 800);
   };
 
   const setSat = async (n: number) => {
@@ -207,6 +232,54 @@ function TicketDetail() {
               </div>
             )}
           </div>
+
+          {(sacFields.length > 0 || showCfAdmin) && (
+            <div className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Settings2 className="size-4 text-primary" /> Campos personalizados
+                </h3>
+                <button
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowCfAdmin((v) => !v)}
+                >
+                  {showCfAdmin ? "Fechar admin" : "Configurar campos"}
+                </button>
+              </div>
+              {showCfAdmin && <CustomFieldsAdmin scope="sac" />}
+              {!showCfAdmin && sacFields.length > 0 && (
+                <>
+                  <CustomFieldsRenderer
+                    fields={sacFields}
+                    values={customValues}
+                    onChange={(key, val) => setCustomValues({ ...customValues, [key]: val })}
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        await upsertSacMeta(id, customValues);
+                        toast.success("Campos salvos");
+                      }}
+                    >
+                      Salvar campos
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {sacFields.length === 0 && !showCfAdmin && (
+            <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
+              <button
+                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5"
+                onClick={() => setShowCfAdmin(true)}
+              >
+                <Settings2 className="size-3" /> Configurar campos personalizados para este módulo
+              </button>
+            </div>
+          )}
 
           <div className="bg-card border border-border rounded-lg p-5 shadow-sm">
             <h3 className="text-sm font-semibold mb-3">Linha do tempo ({timeline.length})</h3>

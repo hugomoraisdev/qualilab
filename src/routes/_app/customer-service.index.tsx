@@ -7,7 +7,17 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { useTableStore } from "@/lib/table-store";
 import { ticketsStore } from "@/lib/sac-store";
-import { Plus, Headset, MessageSquare, AlertTriangle, CheckCircle2, Star } from "lucide-react";
+import {
+  Plus,
+  Headset,
+  MessageSquare,
+  AlertTriangle,
+  CheckCircle2,
+  Star,
+  Clock,
+  Copy,
+} from "lucide-react";
+import { toast } from "sonner";
 import {
   ResponsiveContainer,
   BarChart,
@@ -52,6 +62,7 @@ const TOOLTIP_STYLE = {
 };
 
 type Period = "30d" | "90d" | "180d" | "ano";
+const SLA_HOURS: Record<string, number> = { critica: 4, alta: 24, media: 72, baixa: 168 };
 
 function cutoffDate(period: Period): Date {
   const d = new Date();
@@ -73,15 +84,22 @@ function SacPage() {
     return tickets.filter((t) => !t.created_at || new Date(t.created_at) >= cutoff);
   }, [tickets, period]);
 
-  const stats = useMemo(
-    () => ({
+  const stats = useMemo(() => {
+    const now = Date.now();
+    const overdue = tickets.filter((t) => {
+      if (t.status === "encerrado") return false;
+      if (!t.created_at) return false;
+      const age = (now - new Date(t.created_at).getTime()) / 3600000;
+      return age > (SLA_HOURS[t.priority] ?? 72);
+    }).length;
+    return {
       total: tickets.length,
       open: tickets.filter((t) => t.status !== "encerrado").length,
+      overdue,
       high: tickets.filter((t) => t.priority === "alta" || t.priority === "critica").length,
       closed: tickets.filter((t) => t.status === "encerrado").length,
-    }),
-    [tickets],
-  );
+    };
+  }, [tickets]);
 
   const ticketsByMonth = useMemo(() => {
     const map: Record<string, number> = {};
@@ -148,9 +166,15 @@ function SacPage() {
         }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
         <Card icon={Headset} label="Total" value={stats.total} />
         <Card icon={MessageSquare} label="Em aberto" value={stats.open} tone="warning" />
+        <Card
+          icon={Clock}
+          label="Atrasados"
+          value={stats.overdue}
+          tone={stats.overdue > 0 ? "destructive" : "info"}
+        />
         <Card icon={AlertTriangle} label="Alta / Crítica" value={stats.high} tone="destructive" />
         <Card icon={CheckCircle2} label="Encerrados" value={stats.closed} tone="success" />
       </div>
@@ -350,12 +374,21 @@ function SacPage() {
         ]}
       />
 
-      <div className="mt-4 text-xs text-muted-foreground">
+      <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
         Portal público de reclamações disponível em{" "}
         <a href="/sac" target="_blank" className="text-primary underline">
           /sac
         </a>{" "}
         (sem login).
+        <button
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border border-border rounded px-2 py-0.5"
+          onClick={() => {
+            void navigator.clipboard.writeText(window.location.origin + "/sac");
+            toast.success("Link copiado!");
+          }}
+        >
+          <Copy className="size-3" /> Copiar link
+        </button>
       </div>
     </>
   );

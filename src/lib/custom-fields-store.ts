@@ -41,7 +41,7 @@ export interface CustomFieldDef {
 
 export type CustomFieldValue = string | string[] | boolean | number | null;
 
-export type CustomFieldScope = "documents";
+export type CustomFieldScope = "documents" | "sac";
 
 const keyFor = (scope: CustomFieldScope) => `custom-fields:${scope}`;
 
