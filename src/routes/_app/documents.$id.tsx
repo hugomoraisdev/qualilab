@@ -818,85 +818,157 @@ function AccessLogCard({ doc }: { doc: DocumentRow }) {
 
 function TaxonomyCard({ doc }: { doc: DocumentRow }) {
   const meta = useDocumentMeta(doc.id);
+  const customFields = useCustomFields("documents");
   const [folder, setFolder] = useState(meta.folder ?? "");
   const [sector, setSector] = useState(meta.sector ?? "");
   const [process, setProcess] = useState(meta.process ?? "");
-  const [newKey, setNewKey] = useState("");
-  const [newVal, setNewVal] = useState("");
+  const [folderFree, setFolderFree] = useState(false);
+  const [sectorFree, setSectorFree] = useState(false);
+  const [processFree, setProcessFree] = useState(false);
 
   useEffect(() => {
     setFolder(meta.folder ?? "");
     setSector(meta.sector ?? "");
     setProcess(meta.process ?? "");
+    setFolderFree(!!meta.folder && !DOCUMENT_FOLDERS.includes(meta.folder as never));
+    setSectorFree(!!meta.sector && !DOCUMENT_SECTORS.includes(meta.sector as never));
+    setProcessFree(!!meta.process && !DOCUMENT_PROCESSES.includes(meta.process as never));
   }, [meta.folder, meta.sector, meta.process]);
+
+  const FREE = "__livre__";
+
+  const renderTaxonomySelect = (
+    label: string,
+    value: string,
+    free: boolean,
+    setFree: (b: boolean) => void,
+    setValue: (v: string) => void,
+    options: readonly string[],
+    persist: (v: string | null) => void,
+  ) => (
+    <div>
+      <Label className="text-xs">{label}</Label>
+      <Select
+        value={free ? FREE : value || undefined}
+        onValueChange={(v) => {
+          if (v === FREE) {
+            setFree(true);
+            setValue("");
+            persist(null);
+          } else {
+            setFree(false);
+            setValue(v);
+            persist(v);
+          }
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Selecione…" />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem key={o} value={o}>
+              {o}
+            </SelectItem>
+          ))}
+          <SelectItem value={FREE}>Outro / digitar manualmente</SelectItem>
+        </SelectContent>
+      </Select>
+      {free && (
+        <Input
+          className="mt-1"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={() => persist(value.trim() || null)}
+          placeholder="Digite…"
+        />
+      )}
+    </div>
+  );
+
+  // Mantém valores antigos vindos de campos personalizados que não estão mais
+  // definidos na configuração — apenas exibimos como leitura para não perdê-los.
+  const definedKeys = new Set(customFields.map((f) => f.key));
+  const legacyEntries = Object.entries(meta.custom_fields).filter(([k]) => !definedKeys.has(k));
 
   return (
     <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
       <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
         <Folder className="size-4" /> Organização & campos personalizados
       </h3>
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        <div>
-          <Label className="text-xs">Pasta</Label>
-          <Input
-            value={folder}
-            onChange={(e) => setFolder(e.target.value)}
-            onBlur={() => setDocumentTaxonomy(doc.id, { folder: folder.trim() || null })}
-          />
-        </div>
-        <div>
-          <Label className="text-xs">Setor</Label>
-          <Input
-            value={sector}
-            onChange={(e) => setSector(e.target.value)}
-            onBlur={() => setDocumentTaxonomy(doc.id, { sector: sector.trim() || null })}
-          />
-        </div>
-        <div>
-          <Label className="text-xs">Processo</Label>
-          <Input
-            value={process}
-            onChange={(e) => setProcess(e.target.value)}
-            onBlur={() => setDocumentTaxonomy(doc.id, { process: process.trim() || null })}
-          />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        {renderTaxonomySelect(
+          "Pasta",
+          folder,
+          folderFree,
+          setFolderFree,
+          setFolder,
+          DOCUMENT_FOLDERS,
+          (v) => setDocumentTaxonomy(doc.id, { folder: v }),
+        )}
+        {renderTaxonomySelect(
+          "Setor",
+          sector,
+          sectorFree,
+          setSectorFree,
+          setSector,
+          DOCUMENT_SECTORS,
+          (v) => setDocumentTaxonomy(doc.id, { sector: v }),
+        )}
+        {renderTaxonomySelect(
+          "Processo",
+          process,
+          processFree,
+          setProcessFree,
+          setProcess,
+          DOCUMENT_PROCESSES,
+          (v) => setDocumentTaxonomy(doc.id, { process: v }),
+        )}
       </div>
+
       <div className="border-t border-border pt-3">
         <div className="text-xs font-semibold mb-2">Campos personalizados</div>
-        {Object.keys(meta.custom_fields).length === 0 && (
-          <p className="text-xs text-muted-foreground italic mb-2">Nenhum campo personalizado.</p>
-        )}
-        <ul className="space-y-1 mb-2">
-          {Object.entries(meta.custom_fields).map(([k, v]) => (
-            <li key={k} className="flex items-center gap-2 text-sm">
-              <span className="font-medium min-w-[120px]">{k}:</span>
-              <span className="flex-1 text-muted-foreground">{v}</span>
-              <Button size="sm" variant="ghost" onClick={() => removeCustomField(doc.id, k)}>
-                <Trash2 className="size-3.5" />
-              </Button>
-            </li>
-          ))}
-        </ul>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Campo (ex.: Cliente)"
-            value={newKey}
-            onChange={(e) => setNewKey(e.target.value)}
-            className="max-w-[180px]"
-          />
-          <Input placeholder="Valor" value={newVal} onChange={(e) => setNewVal(e.target.value)} />
-          <Button
-            size="sm"
-            onClick={async () => {
-              if (!newKey.trim()) return;
-              await setCustomField(doc.id, newKey.trim(), newVal.trim());
-              setNewKey("");
-              setNewVal("");
+        {customFields.filter((f) => f.active).length === 0 ? (
+          <p className="text-xs text-muted-foreground italic mb-2">
+            Nenhum campo personalizado configurado. Configure em <strong>Configurações → Campos
+            Personalizados → Documentos</strong>.
+          </p>
+        ) : (
+          <CustomFieldsRenderer
+            fields={customFields}
+            values={meta.custom_fields as Record<string, never>}
+            onChange={(k, v) => {
+              void setCustomField(doc.id, k, v);
             }}
-          >
-            Adicionar
-          </Button>
-        </div>
+          />
+        )}
+
+        {legacyEntries.length > 0 && (
+          <div className="mt-4 border-t border-dashed border-border pt-3">
+            <div className="text-[11px] text-muted-foreground mb-1">
+              Campos legados (preservados, sem definição ativa):
+            </div>
+            <ul className="space-y-1">
+              {legacyEntries.map(([k, v]) => (
+                <li key={k} className="flex items-center gap-2 text-sm">
+                  <span className="font-medium min-w-[120px]">{k}:</span>
+                  <span className="flex-1 text-muted-foreground">
+                    {v === null || v === undefined
+                      ? "—"
+                      : Array.isArray(v)
+                        ? v.join(", ")
+                        : typeof v === "boolean"
+                          ? v ? "Sim" : "Não"
+                          : String(v)}
+                  </span>
+                  <Button size="sm" variant="ghost" onClick={() => removeCustomField(doc.id, k)}>
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </section>
   );
