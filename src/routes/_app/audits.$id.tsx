@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -8,16 +8,40 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Trash2, FileDown, Paperclip, ListPlus, BookmarkPlus, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  FileDown,
+  Paperclip,
+  ListPlus,
+  BookmarkPlus,
+  ExternalLink,
+  Loader2,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useTableStore } from "@/lib/table-store";
 import {
-  auditsStore, auditFindingsStore, saveAudit, saveFinding, deleteFinding, newId,
+  auditsStore,
+  auditFindingsStore,
+  saveAudit,
+  saveFinding,
+  deleteFinding,
+  newId,
   type AuditFindingRow,
 } from "@/lib/audits-store";
 import {
-  useAllFindingMeta, updateFindingMeta, useChecklistTemplates, saveTemplate,
+  useAllFindingMeta,
+  updateFindingMeta,
+  useChecklistTemplates,
+  saveTemplate,
   type ChecklistTemplate,
 } from "@/lib/audit-meta-store";
 import { actionPlansStore, saveActionPlan, type ActionPlanRow } from "@/lib/action-plans-store";
@@ -64,10 +88,47 @@ function AuditDetail() {
   const [actDeadline, setActDeadline] = useState("");
   const [actPriority, setActPriority] = useState("media");
 
+  const [uploadingFindingId, setUploadingFindingId] = useState<string | null>(null);
+  const pendingFindingRef = useRef<string | null>(null);
+  const evidenceFileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleEvidenceUpload(findingId: string, file: File) {
+    setUploadingFindingId(findingId);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `evidence/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from("certificates")
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("certificates").getPublicUrl(path);
+      await updateFindingMeta(findingId, (p) => ({
+        ...p,
+        evidence_urls: [urlData.publicUrl],
+      }));
+      toast.success("Evidência anexada", { description: file.name });
+    } catch (err) {
+      toast.error("Falha no upload da evidência", { description: (err as Error).message });
+    } finally {
+      setUploadingFindingId(null);
+    }
+  }
+
+  const counts = useMemo(() => {
+    const c = { conforme: 0, nao_conforme: 0, observacao: 0, nao_aplicavel: 0 };
+    findings.forEach((f) => {
+      c[f.result as keyof typeof c] = (c[f.result as keyof typeof c] ?? 0) + 1;
+    });
+    return c;
+  }, [findings]);
+
   if (!a) {
     return (
       <>
-        <Link to="/audits" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+        <Link
+          to="/audits"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
+        >
           <ArrowLeft className="size-4 mr-1" /> Voltar
         </Link>
         <div className="text-sm text-muted-foreground">Auditoria não encontrada.</div>
@@ -178,21 +239,21 @@ function AuditDetail() {
       }
     }
     await updateFindingMeta(f.id, (prev) => ({
-      ...prev, action_plan_id: ap.id, responsible: actResp.trim() || null, deadline: actDeadline || null,
+      ...prev,
+      action_plan_id: ap.id,
+      responsible: actResp.trim() || null,
+      deadline: actDeadline || null,
     }));
     toast.success("Plano de ação criado.");
     setActionDlg(null);
   };
 
-  const counts = useMemo(() => {
-    const c = { conforme: 0, nao_conforme: 0, observacao: 0, nao_aplicavel: 0 };
-    findings.forEach((f) => { c[f.result as keyof typeof c] = (c[f.result as keyof typeof c] ?? 0) + 1; });
-    return c;
-  }, [findings]);
-
   return (
     <>
-      <Link to="/audits" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+      <Link
+        to="/audits"
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
+      >
         <ArrowLeft className="size-4 mr-1" /> Voltar
       </Link>
       <PageHeader
@@ -201,33 +262,42 @@ function AuditDetail() {
         actions={
           <>
             <StatusBadge>{a.status}</StatusBadge>
-            <Button size="sm" variant="outline" onClick={() => exportAuditReportPdf({
-              code: a.code ?? a.id,
-              type: a.type,
-              scope: a.scope,
-              area: a.area,
-              auditor: a.auditor_name,
-              planned_at: a.planned_at,
-              performed_at: a.performed_at,
-              status: a.status,
-              notes: a.notes,
-              findings: findings.map((f) => {
-                const m = metaMap[f.id];
-                const ap = m?.action_plan_id ? actionPlans.find((x) => x.id === m.action_plan_id) : null;
-                return {
-                  requirement: f.requirement,
-                  result: f.result,
-                  severity: f.severity,
-                  observation: f.observation,
-                  evidence: m?.evidence_urls?.length
-                    ? m.evidence_urls.join("\n") + (m.evidence_notes ? "\n" + m.evidence_notes : "")
-                    : (m?.evidence_notes ?? null),
-                  responsible: ap?.responsible_id ?? m?.responsible ?? null,
-                  deadline: ap?.deadline ?? m?.deadline ?? null,
-                  action_status: ap?.status ?? null,
-                };
-              }),
-            })}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                exportAuditReportPdf({
+                  code: a.code ?? a.id,
+                  type: a.type,
+                  scope: a.scope,
+                  area: a.area,
+                  auditor: a.auditor_name,
+                  planned_at: a.planned_at,
+                  performed_at: a.performed_at,
+                  status: a.status,
+                  notes: a.notes,
+                  findings: findings.map((f) => {
+                    const m = metaMap[f.id];
+                    const ap = m?.action_plan_id
+                      ? actionPlans.find((x) => x.id === m.action_plan_id)
+                      : null;
+                    return {
+                      requirement: f.requirement,
+                      result: f.result,
+                      severity: f.severity,
+                      observation: f.observation,
+                      evidence: m?.evidence_urls?.length
+                        ? m.evidence_urls.join("\n") +
+                          (m.evidence_notes ? "\n" + m.evidence_notes : "")
+                        : (m?.evidence_notes ?? null),
+                      responsible: ap?.responsible_id ?? m?.responsible ?? null,
+                      deadline: ap?.deadline ?? m?.deadline ?? null,
+                      action_status: ap?.status ?? null,
+                    };
+                  }),
+                })
+              }
+            >
               <FileDown className="size-4" /> Exportar PDF
             </Button>
           </>
@@ -266,13 +336,20 @@ function AuditDetail() {
               >
                 <option value="">Carregar template…</option>
                 {templates.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name} ({t.requirements.length})</option>
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.requirements.length})
+                  </option>
                 ))}
               </select>
               <Button size="sm" variant="outline" disabled={!tplId} onClick={loadTemplate}>
                 <ListPlus className="size-4" /> Carregar
               </Button>
-              <Button size="sm" variant="outline" disabled={findings.length === 0} onClick={() => setSaveTplOpen(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={findings.length === 0}
+                onClick={() => setSaveTplOpen(true)}
+              >
                 <BookmarkPlus className="size-4" /> Salvar como template
               </Button>
             </div>
@@ -281,7 +358,9 @@ function AuditDetail() {
           <div className="space-y-2">
             {findings.map((c) => {
               const meta = metaMap[c.id];
-              const ap = meta?.action_plan_id ? actionPlans.find((x) => x.id === meta.action_plan_id) : null;
+              const ap = meta?.action_plan_id
+                ? actionPlans.find((x) => x.id === meta.action_plan_id)
+                : null;
               const isNC = c.result === "nao_conforme" || c.result === "observacao";
               return (
                 <div key={c.id} className="border border-border rounded-md p-3 bg-background/40">
@@ -296,16 +375,31 @@ function AuditDetail() {
                       onChange={(e) => updateFinding(c, { result: e.target.value })}
                       className="h-8 rounded-md border border-input bg-background px-2 text-xs"
                     >
-                      {RESULTS.map((r) => <option key={r} value={r}>{r}</option>)}
+                      {RESULTS.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
                     </select>
                     <select
                       value={c.severity ?? "—"}
-                      onChange={(e) => updateFinding(c, { severity: e.target.value === "—" ? null : e.target.value })}
+                      onChange={(e) =>
+                        updateFinding(c, {
+                          severity: e.target.value === "—" ? null : e.target.value,
+                        })
+                      }
                       className="h-8 rounded-md border border-input bg-background px-2 text-xs"
                     >
-                      {SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      {SEVERITIES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
                     </select>
-                    <button onClick={() => deleteFinding(c.id)} className="text-muted-foreground hover:text-destructive p-1.5">
+                    <button
+                      onClick={() => deleteFinding(c.id)}
+                      className="text-muted-foreground hover:text-destructive p-1.5"
+                    >
                       <Trash2 className="size-4" />
                     </button>
                   </div>
@@ -316,17 +410,45 @@ function AuditDetail() {
                       value={c.observation ?? ""}
                       onChange={(e) => updateFinding(c, { observation: e.target.value })}
                     />
-                    <Input
-                      className="h-8"
-                      placeholder="Evidência (URL — anexo, foto, link)"
-                      value={meta?.evidence_urls?.[0] ?? ""}
-                      onChange={(e) => updateFindingMeta(c.id, (p) => ({ ...p, evidence_urls: e.target.value ? [e.target.value] : [] }))}
-                    />
+                    <div className="flex gap-1.5">
+                      <Input
+                        className="h-8 flex-1"
+                        placeholder="Evidência (URL ou use o botão →)"
+                        value={meta?.evidence_urls?.[0] ?? ""}
+                        onChange={(e) =>
+                          updateFindingMeta(c.id, (p) => ({
+                            ...p,
+                            evidence_urls: e.target.value ? [e.target.value] : [],
+                          }))
+                        }
+                      />
+                      <button
+                        type="button"
+                        disabled={uploadingFindingId === c.id}
+                        title="Anexar arquivo de evidência"
+                        className="h-8 px-2 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50 shrink-0"
+                        onClick={() => {
+                          pendingFindingRef.current = c.id;
+                          evidenceFileInputRef.current?.click();
+                        }}
+                      >
+                        {uploadingFindingId === c.id ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Paperclip className="size-3.5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
                       {meta?.evidence_urls?.[0] && (
-                        <a href={meta.evidence_urls[0]} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:text-foreground">
+                        <a
+                          href={meta.evidence_urls[0]}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 hover:text-foreground"
+                        >
                           <Paperclip className="size-3" /> ver evidência
                         </a>
                       )}
@@ -336,7 +458,8 @@ function AuditDetail() {
                           className="inline-flex items-center gap-1 hover:text-foreground"
                         >
                           <ExternalLink className="size-3" />
-                          Plano: {ap.responsible_id ?? "sem responsável"} · {ap.deadline ?? "sem prazo"} · {ap.status}
+                          Plano: {ap.responsible_id ?? "sem responsável"} ·{" "}
+                          {ap.deadline ?? "sem prazo"} · {ap.status}
                         </button>
                       )}
                     </div>
@@ -350,7 +473,9 @@ function AuditDetail() {
               );
             })}
             {findings.length === 0 && (
-              <div className="py-4 text-center text-xs text-muted-foreground italic">Nenhum requisito avaliado.</div>
+              <div className="py-4 text-center text-xs text-muted-foreground italic">
+                Nenhum requisito avaliado.
+              </div>
             )}
           </div>
 
@@ -371,30 +496,87 @@ function AuditDetail() {
           <section className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-3">
             <h3 className="text-sm font-semibold">Dados da auditoria</h3>
             <div className="space-y-2 text-sm">
-              <div className="space-y-1"><Label className="text-xs">Tipo</Label>
-                <select value={a.type} onChange={(e) => updateAudit({ type: e.target.value })} className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs">
-                  <option>Interna</option><option>Externa</option>
+              <div className="space-y-1">
+                <Label className="text-xs">Tipo</Label>
+                <select
+                  value={a.type}
+                  onChange={(e) => updateAudit({ type: e.target.value })}
+                  className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                >
+                  <option>Interna</option>
+                  <option>Externa</option>
                 </select>
               </div>
-              <div className="space-y-1"><Label className="text-xs">Escopo</Label><Input className="h-8" value={a.scope} onChange={(e) => updateAudit({ scope: e.target.value })} /></div>
-              <div className="space-y-1"><Label className="text-xs">Área</Label><Input className="h-8" value={a.area ?? ""} onChange={(e) => updateAudit({ area: e.target.value })} /></div>
-              <div className="space-y-1"><Label className="text-xs">Auditor</Label><Input className="h-8" value={a.auditor_name ?? ""} onChange={(e) => updateAudit({ auditor_name: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-2">
-                <div><Label className="text-xs">Planejada</Label><Input className="h-8" type="date" value={a.planned_at ?? ""} onChange={(e) => updateAudit({ planned_at: e.target.value || null })} /></div>
-                <div><Label className="text-xs">Realizada</Label><Input className="h-8" type="date" value={a.performed_at ?? ""} onChange={(e) => updateAudit({ performed_at: e.target.value || null })} /></div>
+              <div className="space-y-1">
+                <Label className="text-xs">Escopo</Label>
+                <Input
+                  className="h-8"
+                  value={a.scope}
+                  onChange={(e) => updateAudit({ scope: e.target.value })}
+                />
               </div>
-              <div className="space-y-1"><Label className="text-xs">Status</Label>
-                <select value={a.status} onChange={(e) => updateAudit({ status: e.target.value })} className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs">
+              <div className="space-y-1">
+                <Label className="text-xs">Área</Label>
+                <Input
+                  className="h-8"
+                  value={a.area ?? ""}
+                  onChange={(e) => updateAudit({ area: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Auditor</Label>
+                <Input
+                  className="h-8"
+                  value={a.auditor_name ?? ""}
+                  onChange={(e) => updateAudit({ auditor_name: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Planejada</Label>
+                  <Input
+                    className="h-8"
+                    type="date"
+                    value={a.planned_at ?? ""}
+                    onChange={(e) => updateAudit({ planned_at: e.target.value || null })}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Realizada</Label>
+                  <Input
+                    className="h-8"
+                    type="date"
+                    value={a.performed_at ?? ""}
+                    onChange={(e) => updateAudit({ performed_at: e.target.value || null })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Status</Label>
+                <select
+                  value={a.status}
+                  onChange={(e) => updateAudit({ status: e.target.value })}
+                  className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                >
                   <option value="planejada">Planejada</option>
                   <option value="em_andamento">Em andamento</option>
                   <option value="concluida">Concluída</option>
                   <option value="cancelada">Cancelada</option>
                 </select>
               </div>
-              <div className="space-y-1"><Label className="text-xs">Observações gerais</Label>
-                <Textarea rows={3} value={a.notes ?? ""} onChange={(e) => updateAudit({ notes: e.target.value })} />
+              <div className="space-y-1">
+                <Label className="text-xs">Observações gerais</Label>
+                <Textarea
+                  rows={3}
+                  value={a.notes ?? ""}
+                  onChange={(e) => updateAudit({ notes: e.target.value })}
+                />
               </div>
-              <Button size="sm" className="w-full" onClick={() => updateAudit({ findings_count: findings.length })}>
+              <Button
+                size="sm"
+                className="w-full"
+                onClick={() => updateAudit({ findings_count: findings.length })}
+              >
                 Atualizar contador de achados
               </Button>
             </div>
@@ -402,28 +584,62 @@ function AuditDetail() {
 
           <section className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-2 text-sm">
             <h3 className="text-sm font-semibold">Planejamento</h3>
-            <div><div className="text-xs text-muted-foreground">Objetivo</div><div>{plan.objective || <span className="italic text-muted-foreground">não informado</span>}</div></div>
-            <div><div className="text-xs text-muted-foreground">Critério</div><div>{plan.criterion || <span className="italic text-muted-foreground">não informado</span>}</div></div>
+            <div>
+              <div className="text-xs text-muted-foreground">Objetivo</div>
+              <div>
+                {plan.objective || (
+                  <span className="italic text-muted-foreground">não informado</span>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Critério</div>
+              <div>
+                {plan.criterion || (
+                  <span className="italic text-muted-foreground">não informado</span>
+                )}
+              </div>
+            </div>
             {(plan.start_time || plan.end_time) && (
-              <div><div className="text-xs text-muted-foreground">Horário</div><div>{plan.start_time ?? "—"} → {plan.end_time ?? "—"}</div></div>
+              <div>
+                <div className="text-xs text-muted-foreground">Horário</div>
+                <div>
+                  {plan.start_time ?? "—"} → {plan.end_time ?? "—"}
+                </div>
+              </div>
             )}
             {plan.scope_areas && (
-              <div><div className="text-xs text-muted-foreground">Processos / áreas</div><div>{plan.scope_areas}</div></div>
+              <div>
+                <div className="text-xs text-muted-foreground">Processos / áreas</div>
+                <div>{plan.scope_areas}</div>
+              </div>
             )}
             {plan.followers && (
-              <div><div className="text-xs text-muted-foreground">Acompanhamento</div><div>{plan.followers}</div></div>
+              <div>
+                <div className="text-xs text-muted-foreground">Acompanhamento</div>
+                <div>{plan.followers}</div>
+              </div>
             )}
             {plan.roteiro_notes && (
-              <div><div className="text-xs text-muted-foreground">Roteiro</div><div className="whitespace-pre-wrap">{plan.roteiro_notes}</div></div>
+              <div>
+                <div className="text-xs text-muted-foreground">Roteiro</div>
+                <div className="whitespace-pre-wrap">{plan.roteiro_notes}</div>
+              </div>
             )}
             {plan.participants.length > 0 && (
               <div>
-                <div className="text-xs text-muted-foreground mb-1">Participantes ({plan.participants.length})</div>
+                <div className="text-xs text-muted-foreground mb-1">
+                  Participantes ({plan.participants.length})
+                </div>
                 <ul className="space-y-1">
                   {plan.participants.map((p) => (
                     <li key={p.id} className="text-xs">
                       <span className="font-medium">{p.name}</span>
-                      <span className="text-muted-foreground"> · {p.role.replace(/_/g, " ")}{p.email ? ` · ${p.email}` : ""}</span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · {p.role.replace(/_/g, " ")}
+                        {p.email ? ` · ${p.email}` : ""}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -433,7 +649,9 @@ function AuditDetail() {
               <div className="text-xs">
                 <span className="text-muted-foreground">Checklist: </span>
                 {templates.find((t) => t.id === plan.checklist_template_id)?.name ?? "—"}
-                {plan.checklist_required && <span className="ml-1 text-destructive">(obrigatório)</span>}
+                {plan.checklist_required && (
+                  <span className="ml-1 text-destructive">(obrigatório)</span>
+                )}
               </div>
             )}
             {plan.document_ref_ids.length > 0 && (
@@ -446,7 +664,8 @@ function AuditDetail() {
                     return (
                       <li key={did} className="text-xs">
                         <Link to="/documents/$id" params={{ id: d.id }} className="hover:underline">
-                          <span className="font-mono text-muted-foreground">{d.code}</span> {d.title}
+                          <span className="font-mono text-muted-foreground">{d.code}</span>{" "}
+                          {d.title}
                         </Link>
                       </li>
                     );
@@ -463,15 +682,27 @@ function AuditDetail() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Salvar checklist como template</DialogTitle>
-            <DialogDescription>Reaproveite os {findings.length} requisitos atuais em futuras auditorias.</DialogDescription>
+            <DialogDescription>
+              Reaproveite os {findings.length} requisitos atuais em futuras auditorias.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <div><Label className="text-xs">Nome</Label><Input value={tplName} onChange={(e) => setTplName(e.target.value)} /></div>
-            <div><Label className="text-xs">Descrição</Label><Textarea rows={2} value={tplDesc} onChange={(e) => setTplDesc(e.target.value)} /></div>
+            <div>
+              <Label className="text-xs">Nome</Label>
+              <Input value={tplName} onChange={(e) => setTplName(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Descrição</Label>
+              <Textarea rows={2} value={tplDesc} onChange={(e) => setTplDesc(e.target.value)} />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSaveTplOpen(false)}>Cancelar</Button>
-            <Button onClick={saveAsTemplate} disabled={!tplName.trim()}>Salvar</Button>
+            <Button variant="outline" onClick={() => setSaveTplOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={saveAsTemplate} disabled={!tplName.trim()}>
+              Salvar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -484,19 +715,35 @@ function AuditDetail() {
             <DialogDescription>Vincula este achado a um plano de ação corretivo.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <div><Label className="text-xs">Descrição da ação</Label>
+            <div>
+              <Label className="text-xs">Descrição da ação</Label>
               <Textarea rows={3} value={actDesc} onChange={(e) => setActDesc(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div><Label className="text-xs">Responsável</Label>
-                <Input value={actResp} onChange={(e) => setActResp(e.target.value)} placeholder={user?.name ?? ""} />
+              <div>
+                <Label className="text-xs">Responsável</Label>
+                <Input
+                  value={actResp}
+                  onChange={(e) => setActResp(e.target.value)}
+                  placeholder={user?.name ?? ""}
+                />
               </div>
-              <div><Label className="text-xs">Prazo</Label>
-                <Input type="date" value={actDeadline} onChange={(e) => setActDeadline(e.target.value)} />
+              <div>
+                <Label className="text-xs">Prazo</Label>
+                <Input
+                  type="date"
+                  value={actDeadline}
+                  onChange={(e) => setActDeadline(e.target.value)}
+                />
               </div>
             </div>
-            <div><Label className="text-xs">Prioridade</Label>
-              <select value={actPriority} onChange={(e) => setActPriority(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+            <div>
+              <Label className="text-xs">Prioridade</Label>
+              <select
+                value={actPriority}
+                onChange={(e) => setActPriority(e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              >
                 <option value="baixa">Baixa</option>
                 <option value="media">Média</option>
                 <option value="alta">Alta</option>
@@ -504,11 +751,29 @@ function AuditDetail() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setActionDlg(null)}>Cancelar</Button>
-            <Button onClick={createActionPlan} disabled={!actDesc.trim()}>Criar ação</Button>
+            <Button variant="outline" onClick={() => setActionDlg(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={createActionPlan} disabled={!actDesc.trim()}>
+              Criar ação
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Input oculto compartilhado para upload de evidências */}
+      <input
+        ref={evidenceFileInputRef}
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png,.webp"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          const findingId = pendingFindingRef.current;
+          if (file && findingId) void handleEvidenceUpload(findingId, file);
+          e.target.value = "";
+        }}
+      />
     </>
   );
 }

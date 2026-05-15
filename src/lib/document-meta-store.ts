@@ -66,6 +66,11 @@ export interface DocumentMeta {
   custom_fields: Record<string, string | string[] | boolean | number | null>;
   obsolete: boolean;
   body: string | null;
+  // Campos para documentos externos (normas, regulamentos)
+  external_issuer: string | null;
+  external_ref: string | null;
+  external_validity: string | null; // ISO date
+  external_url: string | null;
 }
 
 const emptyAssignment = (): StageAssignment => ({
@@ -92,6 +97,10 @@ export const emptyMeta = (): DocumentMeta => ({
   custom_fields: {},
   obsolete: false,
   body: null,
+  external_issuer: null,
+  external_ref: null,
+  external_validity: null,
+  external_url: null,
 });
 
 const keyFor = (id: string) => `doc-meta:${id}`;
@@ -271,6 +280,18 @@ export async function removeCustomField(documentId: string, key: string): Promis
 
 export async function setDocumentBody(documentId: string, body: string | null): Promise<void> {
   await updateDocumentMeta(documentId, (prev) => ({ ...prev, body: body ?? null }));
+}
+
+export async function setExternalMeta(
+  documentId: string,
+  patch: {
+    external_issuer?: string | null;
+    external_ref?: string | null;
+    external_validity?: string | null;
+    external_url?: string | null;
+  },
+): Promise<void> {
+  await updateDocumentMeta(documentId, (prev) => ({ ...prev, ...patch }));
 }
 
 /** Hook reativo. */
