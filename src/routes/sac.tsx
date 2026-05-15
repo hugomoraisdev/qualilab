@@ -3,10 +3,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  saveTicket, addTimeline, nextProtocol, newId,
-  type TicketRow, type TicketType, type TimelineRow,
-} from "@/lib/sac-store";
+import { nextProtocol, newId, type TicketType } from "@/lib/sac-store";
+import { createPublicTicket } from "@/lib/create-ticket.functions";
 import { CheckCircle2 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -36,31 +34,34 @@ function SacPublic() {
     setSubmitError(null);
     try {
       const proto = await nextProtocol();
-      const t: TicketRow = {
-        id: newId("SAC"),
-        protocol: proto,
-        customer_name: customerName,
-        contact_email: contactEmail,
-        type,
-        description,
-        status: "aberto",
-        priority: "media",
-        origin: "portal",
-        linked_occurrence_id: null,
-        satisfaction_score: null,
-        assigned_to: null,
-        assigned_to_name: null,
-      };
-      await saveTicket(t);
-      const ev: TimelineRow = {
-        id: newId("TL"),
-        ticket_id: t.id,
-        author_id: null,
-        author_name: "Portal Público",
-        action: "Ticket aberto via /sac",
-      };
-      await addTimeline(ev);
-      setProtocol(proto);
+      const ticketId = newId();
+      const { protocol: saved } = await createPublicTicket({
+        data: {
+          ticket: {
+            id: ticketId,
+            protocol: proto,
+            customer_name: customerName,
+            contact_email: contactEmail,
+            type,
+            description,
+            status: "aberto",
+            priority: "media",
+            origin: "portal",
+            linked_occurrence_id: null,
+            satisfaction_score: null,
+            assigned_to: null,
+            assigned_to_name: null,
+          },
+          timeline: {
+            id: newId(),
+            ticket_id: ticketId,
+            author_id: null,
+            author_name: "Portal Público",
+            action: "Ticket aberto via /sac",
+          },
+        },
+      });
+      setProtocol(saved);
     } catch (err) {
       const anyErr = err as Record<string, unknown> | null;
       setSubmitError(String(anyErr?.message ?? "Erro ao enviar manifestação. Tente novamente."));
