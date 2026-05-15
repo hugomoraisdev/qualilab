@@ -127,7 +127,7 @@ export function useOccurrenceMeta(id: string | undefined): {
     const handler = () => { void load(); };
     window.addEventListener(`storage:occ-meta:${id}`, handler);
     const channel = supabase
-      .channel(`occ-meta:${id}`)
+      .channel(`occ-meta:${id}:${crypto.randomUUID()}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "app_data", filter: `key=eq.${occKey(id)}` }, () => { void load(); })
       .subscribe();
     return () => {
