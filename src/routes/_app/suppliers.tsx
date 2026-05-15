@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
@@ -32,12 +32,15 @@ const emptyDraft = (): Draft => ({ name: "", cnpj: "", category: "", contact_nam
 
 function SupPage() {
   useAuditAccess("suppliers");
+  const location = useLocation();
   const suppliers = useTableStore(suppliersStore);
   useTableStore(supplierPortalStore);
   const navigate = useNavigate();
   const pending = countPendingSubmissions();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft());
+
+  if (location.pathname !== "/suppliers") return <Outlet />;
 
   const create = async () => {
     if (!draft.name.trim()) { toast.error("Informe a razão social"); return; }
