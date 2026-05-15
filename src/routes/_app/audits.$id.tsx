@@ -204,22 +204,31 @@ function AuditDetail() {
   const createActionPlan = async () => {
     if (!actionDlg) return;
     const f = actionDlg.finding;
+    const respTrim = actResp.trim();
+    const profile = respTrim
+      ? listProfiles().find((p) => p.name.toLowerCase() === respTrim.toLowerCase())
+      : null;
     const ap: ActionPlanRow = {
       id: crypto.randomUUID(),
       code: null,
       origin_type: "audit_finding",
       origin_id: f.id,
       description: actDesc.trim(),
-      responsible_id: actResp.trim() || null,
+      responsible_id: profile?.id ?? null,
       deadline: actDeadline || null,
       priority: actPriority,
       status: "pendente",
       progress: 0,
-      notes: `Auditoria ${a.code ?? a.id}`,
+      notes: `Auditoria ${a.code ?? a.id}${respTrim && !profile ? ` · Responsável: ${respTrim}` : ""}`,
     };
-    await saveActionPlan(ap);
-    if (actResp.trim()) {
-      const profile = listProfiles().find((p) => p.name === actResp.trim());
+    try {
+      await saveActionPlan(ap);
+    } catch (err) {
+      console.error("createActionPlan failed", err);
+      toast.error("Não foi possível criar o plano de ação.");
+      return;
+    }
+    if (respTrim) {
       if (profile?.email) {
         sendEmail({
           data: {
