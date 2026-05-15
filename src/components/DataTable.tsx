@@ -65,12 +65,22 @@ export function DataTable<T extends Record<string, any>>({
     let rows = data;
     if (q.trim()) {
       const term = q.toLowerCase();
+      // Busca em searchKeys (usando accessor da coluna correspondente quando existir)
+      // E TAMBÉM em todas as colunas que têm accessor — assim campos como
+      // "Responsável", "Fornecedor", "Auditor" (que armazenam id mas exibem nome
+      // via accessor) ficam pesquisáveis pelo nome automaticamente.
+      const accessors: Array<(r: T) => string | number | null | undefined> = [];
+      for (const k of searchKeys) {
+        const col = columns.find((c) => c.key === k);
+        accessors.push(col?.accessor ? col.accessor : (r: T) => r[k]);
+      }
+      for (const c of columns) {
+        if (c.accessor && !searchKeys.includes(c.key as keyof T)) {
+          accessors.push(c.accessor);
+        }
+      }
       rows = rows.filter((r) =>
-        searchKeys.some((k) => {
-          const col = columns.find((c) => c.key === k);
-          const val = col?.accessor ? col.accessor(r) : r[k];
-          return String(val ?? "").toLowerCase().includes(term);
-        })
+        accessors.some((acc) => String(acc(r) ?? "").toLowerCase().includes(term))
       );
     }
     for (const [key, raw] of Object.entries(filters)) {
