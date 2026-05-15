@@ -1202,8 +1202,13 @@ function DocumentDetail() {
                       <StatusBadge>Substituída</StatusBadge>
                     </td>
                     <td className="text-right">
-                      <Button size="sm" variant="ghost" onClick={() => downloadVersion(v)}>
-                        <Download className="size-3.5" /> Baixar
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled
+                        title="Apenas a versão vigente pode ser aberta"
+                      >
+                        <Lock className="size-3.5" /> Bloqueada
                       </Button>
                     </td>
                   </tr>
