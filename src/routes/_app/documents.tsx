@@ -124,10 +124,35 @@ function NewDocumentDialog({
             <Input id="doc-resp" value={form.responsible}
               onChange={(e) => setForm({ ...form, responsible: e.target.value })} />
           </div>
-          <div className="col-span-2">
-            <Label htmlFor="doc-file">URL do arquivo (opcional)</Label>
-            <Input id="doc-file" placeholder="https://…/doc.pdf" value={form.file_url}
+          <div className="col-span-2 space-y-2">
+            <Label htmlFor="doc-file-upload">Arquivo (opcional)</Label>
+            <Input
+              id="doc-file-upload"
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.size > 10 * 1024 * 1024) {
+                  toast.error("Arquivo muito grande", { description: "Limite de 10 MB." });
+                  e.target.value = "";
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => {
+                  setForm((f) => ({ ...f, file_url: String(reader.result ?? "") }));
+                  toast.success("Arquivo anexado", { description: file.name });
+                };
+                reader.onerror = () => toast.error("Falha ao ler arquivo");
+                reader.readAsDataURL(file);
+              }}
+            />
+            <div className="text-xs text-muted-foreground">ou informe uma URL pública abaixo</div>
+            <Input id="doc-file" placeholder="https://…/doc.pdf" value={form.file_url.startsWith("data:") ? "" : form.file_url}
               onChange={(e) => setForm({ ...form, file_url: e.target.value })} />
+            {form.file_url.startsWith("data:") && (
+              <div className="text-xs text-muted-foreground">Arquivo carregado localmente ({Math.round(form.file_url.length / 1024)} KB).</div>
+            )}
           </div>
           <div className="col-span-2">
             <Label htmlFor="doc-desc">Descrição</Label>
