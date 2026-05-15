@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
@@ -38,8 +38,11 @@ import {
   FileSpreadsheet,
   Save,
   X,
+  Paperclip,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import {
   competenciesStore,
   type CompetencyRow,
@@ -788,6 +791,27 @@ function CompetencyForm({
   const [form, setForm] = useState<CompetencyRow | null>(row);
   const [extra, setExtraState] = useState<CompetencyExtra>({});
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const certFileRef = useRef<HTMLInputElement>(null);
+
+  async function handleCertUpload(file: File) {
+    setUploading(true);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `certificates/comp-${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from("certificates")
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("certificates").getPublicUrl(path);
+      setExtraState((prev) => ({ ...prev, certificate_url: urlData.publicUrl }));
+      toast.success("Certificado anexado", { description: file.name });
+    } catch (err) {
+      toast.error("Falha no upload", { description: (err as Error).message });
+    } finally {
+      setUploading(false);
+    }
+  }
 
   useEffect(() => {
     setForm(row);
@@ -958,12 +982,49 @@ function CompetencyForm({
             </Select>
           </div>
           <div className="md:col-span-2">
-            <Label>URL do certificado (PDF / link)</Label>
-            <Input
-              value={extra.certificate_url ?? ""}
-              onChange={(e) => setEx("certificate_url", e.target.value || null)}
-              placeholder="https://..."
-            />
+            <Label>Certificado (PDF / link)</Label>
+            <div className="flex gap-1.5">
+              <Input
+                className="flex-1"
+                value={extra.certificate_url ?? ""}
+                onChange={(e) => setEx("certificate_url", e.target.value || null)}
+                placeholder="Cole um link ou faça upload →"
+              />
+              <input
+                ref={certFileRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleCertUpload(f);
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                title="Fazer upload do certificado"
+                disabled={uploading}
+                className="h-9 px-2.5 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50 shrink-0"
+                onClick={() => certFileRef.current?.click()}
+              >
+                {uploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Paperclip className="size-4" />
+                )}
+              </button>
+            </div>
+            {extra.certificate_url && (
+              <a
+                href={extra.certificate_url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-primary hover:underline truncate block mt-1"
+              >
+                {extra.certificate_url}
+              </a>
+            )}
           </div>
           <div className="md:col-span-2">
             <Label>Evidência (descrição)</Label>
