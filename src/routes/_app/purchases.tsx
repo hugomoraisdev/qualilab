@@ -70,14 +70,14 @@ function PurchasesPage() {
     <>
       <PageHeader title="Processos de Compra" description="Solicitações, aprovação e inspeção de recebimento" />
       <DataTable
-        data={purchases.map((p) => ({ ...p, supplier_name: supplierName(p.supplier_id) }))}
-        searchKeys={["code", "description", "status", "supplier_name"]}
+        data={purchases}
+        searchKeys={["code", "description", "status", "supplier_id"]}
         newLabel="Nova solicitação"
         onNew={() => { setDraft(emptyDraft()); setOpen(true); }}
         onRowClick={(r) => navigate({ to: "/purchases/$id", params: { id: r.id } })}
         columns={[
           { key: "code", header: "Código", render: (r) => <span className="font-mono text-xs">{r.code ?? r.id.slice(0, 8)}</span> },
-          { key: "supplier_id", header: "Fornecedor", render: (r) => supplierName(r.supplier_id) },
+          { key: "supplier_id", header: "Fornecedor", accessor: (r) => supplierName(r.supplier_id), render: (r) => supplierName(r.supplier_id) },
           { key: "description", header: "Item / Serviço", render: (r) => <span className="font-medium">{r.description}</span> },
           { key: "total", header: "Valor", render: (r) => r.total != null ? `R$ ${Number(r.total).toFixed(2)}` : "—" },
           { key: "requested_at", header: "Solicitado" },
