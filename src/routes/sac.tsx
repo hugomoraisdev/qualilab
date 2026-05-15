@@ -26,36 +26,47 @@ function SacPublic() {
   const [type, setType] = useState<TicketType>("reclamacao");
   const [description, setDescription] = useState("");
   const [protocol, setProtocol] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim() || !description.trim() || !contactEmail.trim()) return;
-    const proto = await nextProtocol();
-    const t: TicketRow = {
-      id: newId("SAC"),
-      protocol: proto,
-      customer_name: customerName,
-      contact_email: contactEmail,
-      type,
-      description,
-      status: "aberto",
-      priority: "media",
-      origin: "portal",
-      linked_occurrence_id: null,
-      satisfaction_score: null,
-      assigned_to: null,
-      assigned_to_name: null,
-    };
-    await saveTicket(t);
-    const ev: TimelineRow = {
-      id: newId("TL"),
-      ticket_id: t.id,
-      author_id: null,
-      author_name: "Portal Público",
-      action: "Ticket aberto via /sac",
-    };
-    await addTimeline(ev);
-    setProtocol(proto);
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const proto = await nextProtocol();
+      const t: TicketRow = {
+        id: newId("SAC"),
+        protocol: proto,
+        customer_name: customerName,
+        contact_email: contactEmail,
+        type,
+        description,
+        status: "aberto",
+        priority: "media",
+        origin: "portal",
+        linked_occurrence_id: null,
+        satisfaction_score: null,
+        assigned_to: null,
+        assigned_to_name: null,
+      };
+      await saveTicket(t);
+      const ev: TimelineRow = {
+        id: newId("TL"),
+        ticket_id: t.id,
+        author_id: null,
+        author_name: "Portal Público",
+        action: "Ticket aberto via /sac",
+      };
+      await addTimeline(ev);
+      setProtocol(proto);
+    } catch (err) {
+      const anyErr = err as Record<string, unknown> | null;
+      setSubmitError(String(anyErr?.message ?? "Erro ao enviar manifestação. Tente novamente."));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -97,7 +108,12 @@ function SacPublic() {
               </select>
             </div>
             <div className="space-y-1.5"><Label>Descrição *</Label><textarea required maxLength={1500} className="w-full min-h-32 rounded-md border border-input bg-background px-3 py-2 text-sm" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-            <Button type="submit" className="w-full">Enviar manifestação</Button>
+            {submitError && (
+              <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">{submitError}</p>
+            )}
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? "Enviando…" : "Enviar manifestação"}
+            </Button>
             <div className="text-center text-xs text-muted-foreground">
               <Link to="/" className="underline hover:text-foreground">Voltar ao site</Link>
             </div>
