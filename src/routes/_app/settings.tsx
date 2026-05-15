@@ -38,6 +38,41 @@ import {
 import { profilesStore } from "@/lib/profiles-store";
 import { useTableStore } from "@/lib/table-store";
 import { toast } from "sonner";
+import { CustomFieldsAdmin } from "@/components/CustomFieldsAdmin";
+
+function CustomFieldsPanel() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-card border border-border rounded-lg shadow-sm col-span-full">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-4 p-4 text-left"
+      >
+        <div className="flex items-center gap-3">
+          <div className="size-9 rounded-lg bg-primary/10 grid place-items-center text-primary shrink-0">
+            <FileText className="size-4" />
+          </div>
+          <div>
+            <div className="font-medium text-sm">Campos Personalizados → Documentos</div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              Crie campos extras que aparecem no cadastro/edição e na Lista Mestra.
+            </div>
+          </div>
+        </div>
+        {open ? (
+          <ChevronUp className="size-4 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronDown className="size-4 text-muted-foreground shrink-0" />
+        )}
+      </button>
+      {open && (
+        <div className="border-t border-border p-4">
+          <CustomFieldsAdmin scope="documents" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 const SECTIONS: {
   icon: React.ComponentType<{ className?: string }>;
