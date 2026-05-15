@@ -22,18 +22,22 @@ function daysUntil(iso: string): number {
   return Math.round((a - b) / 86_400_000);
 }
 
-export const runEmailDigest = createServerFn({ method: "POST" }).handler(async () => {
-  const digestKey = `email-digest:${today()}`;
+export const runEmailDigest = createServerFn({ method: "POST" })
+  .inputValidator((input: { force?: boolean } | undefined) => input ?? {})
+  .handler(async ({ data }) => {
+    const force = data?.force === true;
+    const digestKey = `email-digest:${today()}`;
 
-  // Idempotência: tenta inserir a chave; se já existe, sai
-  const { data: existing } = await supabaseAdmin
-    .from("app_data")
-    .select("key")
-    .eq("key", digestKey)
-    .maybeSingle();
-  if (existing) return { skipped: true };
-
-  await supabaseAdmin.from("app_data").upsert({ key: digestKey, value: { sent: true } });
+    if (!force) {
+      // Idempotência diária para o disparo automático
+      const { data: existing } = await supabaseAdmin
+        .from("app_data")
+        .select("key")
+        .eq("key", digestKey)
+        .maybeSingle();
+      if (existing) return { skipped: true };
+      await supabaseAdmin.from("app_data").upsert({ key: digestKey, value: { sent: true } });
+    }
 
   // Carrega dados base
   const [

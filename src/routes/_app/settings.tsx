@@ -29,15 +29,11 @@ function EmailTestCard() {
   const handleSendTest = async () => {
     setSending(true);
     try {
-      const result = await runEmailDigest({ data: undefined });
-      if ((result as any)?.skipped) {
-        toast.info("Digest já enviado hoje", { description: "O digest deste dia já foi processado." });
-      } else {
-        const { sent } = result as { sent: number };
-        toast.success("Email digest enviado", {
-          description: sent > 0 ? `${sent} destinatário(s) notificado(s).` : "Nenhum alerta pendente no momento.",
-        });
-      }
+      const result = await runEmailDigest({ data: { force: true } });
+      const { sent } = result as { sent: number };
+      toast.success("Email digest enviado", {
+        description: sent > 0 ? `${sent} destinatário(s) notificado(s).` : "Nenhum alerta pendente no momento.",
+      });
     } catch (e: any) {
       toast.error("Falha ao enviar email de teste", { description: e?.message ?? "Erro desconhecido" });
     } finally {
