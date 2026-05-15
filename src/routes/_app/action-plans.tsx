@@ -52,6 +52,59 @@ function draftFromRow(r: ActionPlanRow): Draft {
   };
 }
 
+type Profile = { id: string; name: string };
+
+function DraftFields({ d, set, profiles }: { d: Draft; set: (fn: (prev: Draft) => Draft) => void; profiles: Profile[] }) {
+  return (
+    <>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Descrição da ação *</Label>
+        <Textarea rows={2} placeholder="Descreva a ação" value={d.description}
+          onChange={(e) => set((p) => ({ ...p, description: e.target.value }))} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Responsável</Label>
+          <Select value={d.responsible_id || "none"} onValueChange={(v) => set((p) => ({ ...p, responsible_id: v === "none" ? "" : v }))}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">— Nenhum —</SelectItem>
+              {profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Prazo</Label>
+          <Input type="date" value={d.deadline} onChange={(e) => set((p) => ({ ...p, deadline: e.target.value }))} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Prioridade</Label>
+          <Select value={d.priority} onValueChange={(v) => set((p) => ({ ...p, priority: v }))}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="baixa">Baixa</SelectItem>
+              <SelectItem value="media">Média</SelectItem>
+              <SelectItem value="alta">Alta</SelectItem>
+              <SelectItem value="critica">Crítica</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Origem</Label>
+          <Select value={d.origin_type} onValueChange={(v) => set((p) => ({ ...p, origin_type: v }))}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Object.entries(ORIGIN_TYPE_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function APPage() {
   useAuditAccess("action_plans");
   const actionPlans = useTableStore(actionPlansStore);
@@ -105,55 +158,6 @@ function APPage() {
     setEditRow(null);
   };
 
-  const DraftFields = ({ d, set }: { d: Draft; set: (fn: (prev: Draft) => Draft) => void }) => (
-    <>
-      <div className="space-y-1.5">
-        <Label className="text-xs">Descrição da ação *</Label>
-        <Textarea rows={2} placeholder="Descreva a ação" value={d.description}
-          onChange={(e) => set((p) => ({ ...p, description: e.target.value }))} />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-xs">Responsável</Label>
-          <Select value={d.responsible_id || "none"} onValueChange={(v) => set((p) => ({ ...p, responsible_id: v === "none" ? "" : v }))}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">— Nenhum —</SelectItem>
-              {profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Prazo</Label>
-          <Input type="date" value={d.deadline} onChange={(e) => set((p) => ({ ...p, deadline: e.target.value }))} />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-xs">Prioridade</Label>
-          <Select value={d.priority} onValueChange={(v) => set((p) => ({ ...p, priority: v }))}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="baixa">Baixa</SelectItem>
-              <SelectItem value="media">Média</SelectItem>
-              <SelectItem value="alta">Alta</SelectItem>
-              <SelectItem value="critica">Crítica</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Origem</Label>
-          <Select value={d.origin_type} onValueChange={(v) => set((p) => ({ ...p, origin_type: v }))}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {Object.entries(ORIGIN_TYPE_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-    </>
-  );
-
   return (
     <>
       <PageHeader title="Planos de Ação" description="Ações vinculadas a ocorrências, riscos, auditorias, fornecedores e calibrações" />
@@ -189,7 +193,7 @@ function APPage() {
             <DialogTitle className="flex items-center gap-2"><Plus className="size-4" /> Novo plano de ação</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
-            <DraftFields d={draft} set={setDraft} />
+            <DraftFields d={draft} set={setDraft} profiles={profiles} />
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
               <Button onClick={create}>Criar plano</Button>
@@ -205,7 +209,7 @@ function APPage() {
             <DialogTitle className="flex items-center gap-2"><Pencil className="size-4" /> Editar plano</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
-            <DraftFields d={draft} set={setDraft} />
+            <DraftFields d={draft} set={setDraft} profiles={profiles} />
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Status</Label>

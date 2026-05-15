@@ -41,6 +41,7 @@ import { Route as AppAuditsRouteImport } from './routes/_app/audits'
 import { Route as AppAuditLogRouteImport } from './routes/_app/audit-log'
 import { Route as AppActionPlansRouteImport } from './routes/_app/action-plans'
 import { Route as AppMeetingsIndexRouteImport } from './routes/_app/meetings.index'
+import { Route as AppCustomerServiceIndexRouteImport } from './routes/_app/customer-service.index'
 import { Route as AppSuppliersIdRouteImport } from './routes/_app/suppliers.$id'
 import { Route as AppRisksIdRouteImport } from './routes/_app/risks.$id'
 import { Route as AppPurchasesIdRouteImport } from './routes/_app/purchases.$id'
@@ -217,6 +218,11 @@ const AppMeetingsIndexRoute = AppMeetingsIndexRouteImport.update({
   path: '/meetings/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCustomerServiceIndexRoute = AppCustomerServiceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppCustomerServiceRoute,
+} as any)
 const AppSuppliersIdRoute = AppSuppliersIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -345,6 +351,7 @@ export interface FileRoutesByFullPath {
   '/purchases/$id': typeof AppPurchasesIdRoute
   '/risks/$id': typeof AppRisksIdRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
+  '/customer-service/': typeof AppCustomerServiceIndexRoute
   '/meetings/': typeof AppMeetingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -358,7 +365,6 @@ export interface FileRoutesByTo {
   '/calibrations': typeof AppCalibrationsRoute
   '/competencies': typeof AppCompetenciesRoute
   '/compliance': typeof AppComplianceRoute
-  '/customer-service': typeof AppCustomerServiceRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/data-migration': typeof AppDataMigrationRoute
   '/documents': typeof AppDocumentsRouteWithChildren
@@ -394,6 +400,7 @@ export interface FileRoutesByTo {
   '/purchases/$id': typeof AppPurchasesIdRoute
   '/risks/$id': typeof AppRisksIdRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
+  '/customer-service': typeof AppCustomerServiceIndexRoute
   '/meetings': typeof AppMeetingsIndexRoute
 }
 export interface FileRoutesById {
@@ -445,6 +452,7 @@ export interface FileRoutesById {
   '/_app/purchases/$id': typeof AppPurchasesIdRoute
   '/_app/risks/$id': typeof AppRisksIdRoute
   '/_app/suppliers/$id': typeof AppSuppliersIdRoute
+  '/_app/customer-service/': typeof AppCustomerServiceIndexRoute
   '/_app/meetings/': typeof AppMeetingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -496,6 +504,7 @@ export interface FileRouteTypes {
     | '/purchases/$id'
     | '/risks/$id'
     | '/suppliers/$id'
+    | '/customer-service/'
     | '/meetings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -509,7 +518,6 @@ export interface FileRouteTypes {
     | '/calibrations'
     | '/competencies'
     | '/compliance'
-    | '/customer-service'
     | '/dashboard'
     | '/data-migration'
     | '/documents'
@@ -545,6 +553,7 @@ export interface FileRouteTypes {
     | '/purchases/$id'
     | '/risks/$id'
     | '/suppliers/$id'
+    | '/customer-service'
     | '/meetings'
   id:
     | '__root__'
@@ -595,6 +604,7 @@ export interface FileRouteTypes {
     | '/_app/purchases/$id'
     | '/_app/risks/$id'
     | '/_app/suppliers/$id'
+    | '/_app/customer-service/'
     | '/_app/meetings/'
   fileRoutesById: FileRoutesById
 }
@@ -833,6 +843,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMeetingsIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/customer-service/': {
+      id: '/_app/customer-service/'
+      path: '/'
+      fullPath: '/customer-service/'
+      preLoaderRoute: typeof AppCustomerServiceIndexRouteImport
+      parentRoute: typeof AppCustomerServiceRoute
+    }
     '/_app/suppliers/$id': {
       id: '/_app/suppliers/$id'
       path: '/$id'
@@ -963,11 +980,13 @@ const AppAuditsRouteWithChildren = AppAuditsRoute._addFileChildren(
 interface AppCustomerServiceRouteChildren {
   AppCustomerServiceIdRoute: typeof AppCustomerServiceIdRoute
   AppCustomerServiceNewRoute: typeof AppCustomerServiceNewRoute
+  AppCustomerServiceIndexRoute: typeof AppCustomerServiceIndexRoute
 }
 
 const AppCustomerServiceRouteChildren: AppCustomerServiceRouteChildren = {
   AppCustomerServiceIdRoute: AppCustomerServiceIdRoute,
   AppCustomerServiceNewRoute: AppCustomerServiceNewRoute,
+  AppCustomerServiceIndexRoute: AppCustomerServiceIndexRoute,
 }
 
 const AppCustomerServiceRouteWithChildren =
@@ -1159,3 +1178,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
