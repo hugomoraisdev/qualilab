@@ -97,7 +97,7 @@ function SupDetail() {
   const [evalDate, setEvalDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
   const [newActionDesc, setNewActionDesc] = useState("");
-  const [newActionResponsible, setNewActionResponsible] = useState("");
+  const [newActionResponsible, setNewActionResponsible] = useState("none");
   const [newActionDeadline, setNewActionDeadline] = useState("");
   const [newActionPriority, setNewActionPriority] = useState("media");
   const [newOrder, setNewOrder] = useState<{
@@ -407,7 +407,7 @@ function SupDetail() {
       origin_type: "supplier",
       origin_id: s.id,
       description: newActionDesc.trim(),
-      responsible_id: newActionResponsible || null,
+      responsible_id: newActionResponsible === "none" ? null : newActionResponsible || null,
       deadline: newActionDeadline || null,
       priority: newActionPriority,
       status: "pendente",
@@ -416,7 +416,7 @@ function SupDetail() {
     };
     await saveActionPlan(row);
     setNewActionDesc("");
-    setNewActionResponsible("");
+    setNewActionResponsible("none");
     setNewActionDeadline("");
     setNewActionPriority("media");
     toast.success("Ação criada");
@@ -1186,7 +1186,7 @@ function SupDetail() {
                   <SelectValue placeholder="Responsável" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">— Sem responsável —</SelectItem>
+                  <SelectItem value="none">— Sem responsável —</SelectItem>
                   {profiles.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
