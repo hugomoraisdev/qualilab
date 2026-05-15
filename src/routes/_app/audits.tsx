@@ -20,6 +20,7 @@ import {
   saveAudit,
   saveFinding,
   newId,
+  newCode,
   type AuditRow,
   type AuditFindingRow,
 } from "@/lib/audits-store";
@@ -248,10 +249,11 @@ function NewAuditDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
       return;
     }
     setSaving(true);
-    const id = newId("AUD");
+    const id = crypto.randomUUID();
+    const code = newCode("AUD");
     const a: AuditRow = {
       id,
-      code: id,
+      code,
       type: draft.type,
       scope: draft.scope.trim(),
       area: draft.area.trim() || null,
@@ -274,7 +276,7 @@ function NewAuditDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
         let pos = 0;
         for (const req of tpl.requirements) {
           const f: AuditFindingRow = {
-            id: newId("F"),
+            id: crypto.randomUUID(),
             audit_id: id,
             requirement: req,
             result: "conforme",
