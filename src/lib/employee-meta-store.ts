@@ -23,7 +23,7 @@ const APP_KEY = "employee-extras";
 
 export async function readEmployeeExtras(): Promise<EmployeeExtrasMap> {
   const { data } = await supabase.from("app_data").select("value").eq("key", APP_KEY).maybeSingle();
-  return (data?.value as EmployeeExtrasMap) ?? {};
+  return (data?.value as unknown as EmployeeExtrasMap) ?? {};
 }
 
 export async function writeEmployeeExtras(map: EmployeeExtrasMap): Promise<void> {
