@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useLocation, Outlet } from "@tanstack/react-router";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
@@ -11,6 +11,8 @@ export const Route = createFileRoute("/_app/forms")({ component: FormsPage });
 
 function FormsPage() {
   useAuditAccess("forms");
+  const location = useLocation();
+  if (location.pathname !== "/forms") return <Outlet />;
   const navigate = useNavigate();
   const forms = useTableStore(formsStore).filter((f) => !f.deleted_at);
   const responses = useTableStore(responsesStore);
