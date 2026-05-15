@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Plus, Calendar, Users, LayoutGrid, GanttChart, GripVertical, Pencil, Trash2, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createCloudStore } from "@/lib/cloud-store";
 
 type Status = string;
 interface Project {
