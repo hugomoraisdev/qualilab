@@ -39,6 +39,7 @@ import {
 import { exportTablePdf } from "@/lib/pdf-export";
 import { AlertTriangle, CheckCircle2, Clock, FileText, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 export const Route = createFileRoute("/_app/occurrences")({ component: OccPage });
 
@@ -69,9 +70,11 @@ function OccPage() {
   });
   const [draftDeadline, setDraftDeadline] = useState<string>("");
 
-
   const kpis = useMemo(() => {
-    let abertas = 0, analise = 0, concluidas = 0, atrasadas = 0;
+    let abertas = 0,
+      analise = 0,
+      concluidas = 0,
+      atrasadas = 0;
     occurrences.forEach((o) => {
       if (o.status === "concluida") concluidas++;
       else if (o.status === "em_analise" || o.status === "em_tratamento") analise++;
@@ -145,17 +148,15 @@ function OccPage() {
     if (!isOffline) {
       try {
         if (draftDeadline) {
-          await updateOccurrenceMeta(
-            row.id,
-            (prev) => ({ ...prev, deadline: draftDeadline }),
-            { action: "Ocorrência criada", detail: row.description.slice(0, 80) },
-          );
+          await updateOccurrenceMeta(row.id, (prev) => ({ ...prev, deadline: draftDeadline }), {
+            action: "Ocorrência criada",
+            detail: row.description.slice(0, 80),
+          });
         } else {
-          await updateOccurrenceMeta(
-            row.id,
-            (prev) => prev,
-            { action: "Ocorrência criada", detail: row.description.slice(0, 80) },
-          );
+          await updateOccurrenceMeta(row.id, (prev) => prev, {
+            action: "Ocorrência criada",
+            detail: row.description.slice(0, 80),
+          });
         }
       } catch (err) {
         console.warn("[occurrences] meta update falhou:", err);
@@ -198,12 +199,34 @@ function OccPage() {
         }
       />
 
+      <OfflineBanner stores={[occurrencesStore]} />
+
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
         <Kpi label="Total" value={kpis.total} icon={<FileText className="size-4" />} />
-        <Kpi label="Abertas" value={kpis.abertas} tone="warning" icon={<Clock className="size-4" />} />
-        <Kpi label="Em análise/tratamento" value={kpis.analise} tone="info" icon={<TrendingUp className="size-4" />} />
-        <Kpi label="Atrasadas" value={kpis.atrasadas} tone="danger" icon={<AlertTriangle className="size-4" />} />
-        <Kpi label="Concluídas" value={kpis.concluidas} tone="success" icon={<CheckCircle2 className="size-4" />} />
+        <Kpi
+          label="Abertas"
+          value={kpis.abertas}
+          tone="warning"
+          icon={<Clock className="size-4" />}
+        />
+        <Kpi
+          label="Em análise/tratamento"
+          value={kpis.analise}
+          tone="info"
+          icon={<TrendingUp className="size-4" />}
+        />
+        <Kpi
+          label="Atrasadas"
+          value={kpis.atrasadas}
+          tone="danger"
+          icon={<AlertTriangle className="size-4" />}
+        />
+        <Kpi
+          label="Concluídas"
+          value={kpis.concluidas}
+          tone="success"
+          icon={<CheckCircle2 className="size-4" />}
+        />
       </div>
 
       <section className="bg-card border border-border rounded-lg p-4 shadow-sm mb-4">
@@ -216,7 +239,10 @@ function OccPage() {
             <div key={m.key} className="flex-1 flex flex-col items-center gap-1">
               <div
                 className="w-full bg-primary/80 rounded-t-sm transition-all"
-                style={{ height: `${(m.count / trend.max) * 100}%`, minHeight: m.count > 0 ? 4 : 0 }}
+                style={{
+                  height: `${(m.count / trend.max) * 100}%`,
+                  minHeight: m.count > 0 ? 4 : 0,
+                }}
                 title={`${m.count} ocorrência(s)`}
               />
               <span className="text-[10px] text-muted-foreground capitalize">{m.label}</span>
@@ -234,12 +260,24 @@ function OccPage() {
         onNew={() => setOpen(true)}
         onRowClick={(r) => navigate({ to: "/occurrences/$id", params: { id: r.id } })}
         columns={[
-          { key: "code", header: "Código", render: (r) => <span className="font-mono text-xs">{r.code ?? r.id}</span> },
+          {
+            key: "code",
+            header: "Código",
+            render: (r) => <span className="font-mono text-xs">{r.code ?? r.id}</span>,
+          },
           { key: "type", header: "Tipo", render: (r) => typeLabel(r.type) },
           { key: "origin", header: "Origem", render: (r) => originLabel(r.origin) },
-          { key: "description", header: "Descrição", render: (r) => <span className="max-w-md truncate inline-block">{r.description}</span> },
+          {
+            key: "description",
+            header: "Descrição",
+            render: (r) => <span className="max-w-md truncate inline-block">{r.description}</span>,
+          },
           { key: "occurred_at", header: "Identificada em" },
-          { key: "responsible_id", header: "Responsável", render: (r) => profileName(r.responsible_id) },
+          {
+            key: "responsible_id",
+            header: "Responsável",
+            render: (r) => profileName(r.responsible_id),
+          },
           {
             key: "deadline",
             header: "Prazo",
@@ -249,13 +287,22 @@ function OccPage() {
               const overdue = isOverdue(d, r.status);
               return (
                 <span className={overdue ? "text-destructive font-medium" : ""}>
-                  {d}{overdue && " ⚠"}
+                  {d}
+                  {overdue && " ⚠"}
                 </span>
               );
             },
           },
-          { key: "severity", header: "Severidade", render: (r) => <StatusBadge>{r.severity}</StatusBadge> },
-          { key: "status", header: "Status", render: (r) => <StatusBadge>{statusLabel(r.status)}</StatusBadge> },
+          {
+            key: "severity",
+            header: "Severidade",
+            render: (r) => <StatusBadge>{r.severity}</StatusBadge>,
+          },
+          {
+            key: "status",
+            header: "Status",
+            render: (r) => <StatusBadge>{statusLabel(r.status)}</StatusBadge>,
+          },
         ]}
       />
 
@@ -277,27 +324,48 @@ function OccPage() {
             <div className="space-y-1.5">
               <Label>Tipo</Label>
               <Select value={draft.type} onValueChange={(v) => setDraft({ ...draft, type: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {TYPE_OPTIONS.map((o) => <SelectItem key={o} value={o}>{typeLabel(o)}</SelectItem>)}
+                  {TYPE_OPTIONS.map((o) => (
+                    <SelectItem key={o} value={o}>
+                      {typeLabel(o)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Origem</Label>
               <Select value={draft.origin} onValueChange={(v) => setDraft({ ...draft, origin: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {ORIGIN_OPTIONS.map((o) => <SelectItem key={o} value={o}>{originLabel(o)}</SelectItem>)}
+                  {ORIGIN_OPTIONS.map((o) => (
+                    <SelectItem key={o} value={o}>
+                      {originLabel(o)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Severidade</Label>
-              <Select value={draft.severity} onValueChange={(v) => setDraft({ ...draft, severity: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={draft.severity}
+                onValueChange={(v) => setDraft({ ...draft, severity: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {SEVERITY_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  {SEVERITY_OPTIONS.map((o) => (
+                    <SelectItem key={o} value={o}>
+                      {o}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -315,10 +383,14 @@ function OccPage() {
                 value={draft.responsible_id ?? ""}
                 onValueChange={(v) => setDraft({ ...draft, responsible_id: v || null })}
               >
-                <SelectTrigger><SelectValue placeholder="Selecionar…" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar…" />
+                </SelectTrigger>
                 <SelectContent>
                   {profilesStore.list().map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -342,7 +414,9 @@ function OccPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
             <Button onClick={handleCreate}>Registrar</Button>
           </DialogFooter>
         </DialogContent>
@@ -351,7 +425,17 @@ function OccPage() {
   );
 }
 
-function Kpi({ label, value, tone, icon }: { label: string; value: number; tone?: "info" | "success" | "warning" | "danger"; icon?: React.ReactNode }) {
+function Kpi({
+  label,
+  value,
+  tone,
+  icon,
+}: {
+  label: string;
+  value: number;
+  tone?: "info" | "success" | "warning" | "danger";
+  icon?: React.ReactNode;
+}) {
   const toneClass = {
     info: "text-blue-600",
     success: "text-emerald-600",

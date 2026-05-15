@@ -45,6 +45,7 @@ import {
 } from "@/lib/equipment-meta-store";
 import { useServerFn } from "@tanstack/react-start";
 import { sendEmail } from "@/lib/send-email.functions";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 export const Route = createFileRoute("/_app/calibrations")({ component: CalPage });
 
@@ -612,6 +613,8 @@ function CalPage() {
         title="Calibrações"
         description="Cronograma, certificados, rastreabilidade metrológica e múltiplos pontos por equipamento"
       />
+
+      <OfflineBanner stores={[calibrationsStore, equipmentsStore]} />
 
       <LimitsConfigPanel equipments={equipments} />
 
