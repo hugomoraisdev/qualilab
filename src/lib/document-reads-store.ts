@@ -93,12 +93,14 @@ export async function confirmRead(entry: {
   userName: string;
   documentVersion?: string | null;
 }) {
+  // NOTA: a coluna `document_version` não existe na tabela `document_reads`.
+  // Mantemos `entry.documentVersion` na assinatura para compatibilidade, mas
+  // não é persistida até que uma migração adicione a coluna.
   const { error } = await (supabase as any).from("document_reads").upsert(
     {
       document_id: entry.documentId,
       user_id: entry.userId,
       confirmed_at: new Date().toISOString(),
-      document_version: entry.documentVersion ?? null,
     },
     { onConflict: "document_id,user_id" },
   );
