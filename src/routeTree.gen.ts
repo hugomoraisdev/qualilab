@@ -58,6 +58,8 @@ import { Route as AppDocumentsIdRouteImport } from './routes/_app/documents.$id'
 import { Route as AppCustomerServiceNewRouteImport } from './routes/_app/customer-service.new'
 import { Route as AppCustomerServiceIdRouteImport } from './routes/_app/customer-service.$id'
 import { Route as AppAuditsIdRouteImport } from './routes/_app/audits.$id'
+import { Route as ApiPublicV1OccurrencesRouteImport } from './routes/api/public/v1/occurrences'
+import { Route as ApiPublicV1OccurrencesIdRouteImport } from './routes/api/public/v1/occurrences.$id'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -303,6 +305,17 @@ const AppAuditsIdRoute = AppAuditsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppAuditsRoute,
 } as any)
+const ApiPublicV1OccurrencesRoute = ApiPublicV1OccurrencesRouteImport.update({
+  id: '/api/public/v1/occurrences',
+  path: '/api/public/v1/occurrences',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1OccurrencesIdRoute =
+  ApiPublicV1OccurrencesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicV1OccurrencesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -353,6 +366,8 @@ export interface FileRoutesByFullPath {
   '/suppliers/$id': typeof AppSuppliersIdRoute
   '/customer-service/': typeof AppCustomerServiceIndexRoute
   '/meetings/': typeof AppMeetingsIndexRoute
+  '/api/public/v1/occurrences': typeof ApiPublicV1OccurrencesRouteWithChildren
+  '/api/public/v1/occurrences/$id': typeof ApiPublicV1OccurrencesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -402,6 +417,8 @@ export interface FileRoutesByTo {
   '/suppliers/$id': typeof AppSuppliersIdRoute
   '/customer-service': typeof AppCustomerServiceIndexRoute
   '/meetings': typeof AppMeetingsIndexRoute
+  '/api/public/v1/occurrences': typeof ApiPublicV1OccurrencesRouteWithChildren
+  '/api/public/v1/occurrences/$id': typeof ApiPublicV1OccurrencesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -454,6 +471,8 @@ export interface FileRoutesById {
   '/_app/suppliers/$id': typeof AppSuppliersIdRoute
   '/_app/customer-service/': typeof AppCustomerServiceIndexRoute
   '/_app/meetings/': typeof AppMeetingsIndexRoute
+  '/api/public/v1/occurrences': typeof ApiPublicV1OccurrencesRouteWithChildren
+  '/api/public/v1/occurrences/$id': typeof ApiPublicV1OccurrencesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -506,6 +525,8 @@ export interface FileRouteTypes {
     | '/suppliers/$id'
     | '/customer-service/'
     | '/meetings/'
+    | '/api/public/v1/occurrences'
+    | '/api/public/v1/occurrences/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -555,6 +576,8 @@ export interface FileRouteTypes {
     | '/suppliers/$id'
     | '/customer-service'
     | '/meetings'
+    | '/api/public/v1/occurrences'
+    | '/api/public/v1/occurrences/$id'
   id:
     | '__root__'
     | '/'
@@ -606,6 +629,8 @@ export interface FileRouteTypes {
     | '/_app/suppliers/$id'
     | '/_app/customer-service/'
     | '/_app/meetings/'
+    | '/api/public/v1/occurrences'
+    | '/api/public/v1/occurrences/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -616,6 +641,7 @@ export interface RootRouteChildren {
   SacRoute: typeof SacRoute
   SignupRoute: typeof SignupRoute
   SuppliersPortalRoute: typeof SuppliersPortalRoute
+  ApiPublicV1OccurrencesRoute: typeof ApiPublicV1OccurrencesRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -963,6 +989,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAuditsIdRouteImport
       parentRoute: typeof AppAuditsRoute
     }
+    '/api/public/v1/occurrences': {
+      id: '/api/public/v1/occurrences'
+      path: '/api/public/v1/occurrences'
+      fullPath: '/api/public/v1/occurrences'
+      preLoaderRoute: typeof ApiPublicV1OccurrencesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/occurrences/$id': {
+      id: '/api/public/v1/occurrences/$id'
+      path: '/$id'
+      fullPath: '/api/public/v1/occurrences/$id'
+      preLoaderRoute: typeof ApiPublicV1OccurrencesIdRouteImport
+      parentRoute: typeof ApiPublicV1OccurrencesRoute
+    }
   }
 }
 
@@ -1166,6 +1206,20 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface ApiPublicV1OccurrencesRouteChildren {
+  ApiPublicV1OccurrencesIdRoute: typeof ApiPublicV1OccurrencesIdRoute
+}
+
+const ApiPublicV1OccurrencesRouteChildren: ApiPublicV1OccurrencesRouteChildren =
+  {
+    ApiPublicV1OccurrencesIdRoute: ApiPublicV1OccurrencesIdRoute,
+  }
+
+const ApiPublicV1OccurrencesRouteWithChildren =
+  ApiPublicV1OccurrencesRoute._addFileChildren(
+    ApiPublicV1OccurrencesRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
@@ -1174,17 +1228,8 @@ const rootRouteChildren: RootRouteChildren = {
   SacRoute: SacRoute,
   SignupRoute: SignupRoute,
   SuppliersPortalRoute: SuppliersPortalRoute,
+  ApiPublicV1OccurrencesRoute: ApiPublicV1OccurrencesRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
