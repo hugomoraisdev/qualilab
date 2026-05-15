@@ -44,7 +44,6 @@ import { confirmRead, hasConfirmed, useDocumentReads } from "@/lib/document-read
 import {
   archiveDocumentVersion,
   useDocumentVersions,
-  type DocumentVersion,
 } from "@/lib/document-versions-store";
 import {
   useDocumentMeta,
@@ -78,20 +77,58 @@ function suggestNextVersion(current: string): string {
   return `${Number(m[1])}.${Number(m[2]) + 1}`;
 }
 
-function downloadVersion(v: DocumentVersion) {
-  if (v.file_url) {
-    window.open(v.file_url, "_blank", "noopener,noreferrer");
+/**
+ * Converte uma URL (http(s) ou data:) num Blob URL utilizável para abrir
+ * em nova aba ou disparar download. Necessário porque Chrome bloqueia
+ * navegação top-level para `data:` URLs.
+ */
+async function toBlobUrl(url: string): Promise<{ blobUrl: string; mime: string } | null> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return { blobUrl: URL.createObjectURL(blob), mime: blob.type || "application/octet-stream" };
+  } catch (err) {
+    console.error("[documents] toBlobUrl:", err);
+    return null;
+  }
+}
+
+function extFromMime(mime: string, fallback = "bin"): string {
+  const map: Record<string, string> = {
+    "application/pdf": "pdf",
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "text/plain": "txt",
+    "text/csv": "csv",
+    "application/msword": "doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+    "application/vnd.ms-excel": "xls",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+  };
+  return map[mime] ?? fallback;
+}
+
+async function openFile(fileUrl: string, action: "download" | "print", fileName: string) {
+  const result = await toBlobUrl(fileUrl);
+  if (!result) {
+    toast.error("Falha ao abrir arquivo");
     return;
   }
-  const blob = new Blob([JSON.stringify(v, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = (v.file_name ?? `${v.snapshot.code}-v${v.version}`) + ".json";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const { blobUrl, mime } = result;
+  if (action === "download") {
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    const hasExt = /\.[a-z0-9]{2,5}$/i.test(fileName);
+    a.download = hasExt ? fileName : `${fileName}.${extFromMime(mime)}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } else {
+    window.open(blobUrl, "_blank", "noopener,noreferrer");
+  }
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
 }
 
 function fmtDate(iso: string | null | undefined) {
@@ -1013,11 +1050,11 @@ function DocumentDetail() {
       toast.error("Versão obsoleta — distribuição bloqueada");
       return;
     }
-    if (doc.file_url) {
-      window.open(doc.file_url, "_blank", "noopener,noreferrer");
-    } else {
+    if (!doc.file_url) {
       toast.info("Nenhum arquivo anexado");
+      return;
     }
+    await openFile(doc.file_url, action, `${doc.code}-v${doc.version}`);
     if (user) {
       await logDocumentAccess({
         documentId: doc.id,
@@ -1164,8 +1201,13 @@ function DocumentDetail() {
                       <StatusBadge>Substituída</StatusBadge>
                     </td>
                     <td className="text-right">
-                      <Button size="sm" variant="ghost" onClick={() => downloadVersion(v)}>
-                        <Download className="size-3.5" /> Baixar
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled
+                        title="Apenas a versão vigente pode ser aberta"
+                      >
+                        <Lock className="size-3.5" /> Bloqueada
                       </Button>
                     </td>
                   </tr>
@@ -1199,14 +1241,14 @@ function DocumentDetail() {
               {doc.code}-v{doc.version}.pdf
               <br />
               {doc.file_url ? (
-                <a
-                  href={doc.file_url}
-                  className="text-xs underline"
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  className="text-xs underline disabled:opacity-50"
+                  disabled={isObsolete}
+                  onClick={() => handleDownload("print")}
                 >
                   Abrir
-                </a>
+                </button>
               ) : (
                 <span className="text-xs italic">sem arquivo</span>
               )}
