@@ -243,11 +243,21 @@ export async function setDocumentTaxonomy(
 export async function setCustomField(
   documentId: string,
   key: string,
-  value: string,
+  value: string | string[] | boolean | number | null,
 ): Promise<void> {
   await updateDocumentMeta(documentId, (prev) => ({
     ...prev,
     custom_fields: { ...prev.custom_fields, [key]: value },
+  }));
+}
+
+export async function setCustomFields(
+  documentId: string,
+  patch: Record<string, string | string[] | boolean | number | null>,
+): Promise<void> {
+  await updateDocumentMeta(documentId, (prev) => ({
+    ...prev,
+    custom_fields: { ...prev.custom_fields, ...patch },
   }));
 }
 
