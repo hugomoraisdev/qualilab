@@ -110,7 +110,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Outlet />
-        <OfflineIndicator />
+        
         <Toaster richColors position="top-right" />
       </AuthProvider>
     </QueryClientProvider>
