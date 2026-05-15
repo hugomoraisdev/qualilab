@@ -32,7 +32,7 @@ const emptyDraft = (): Draft => ({ description: "", supplier_id: "none", quantit
 
 function PurchasesPage() {
   useAuditAccess("purchases");
-  const purchases = useTableStore(purchasesStore);
+  const purchasesRaw = useTableStore(purchasesStore);
   const suppliers = useTableStore(suppliersStore);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -40,6 +40,13 @@ function PurchasesPage() {
 
   const supplierName = (id: string | null) =>
     suppliers.find((s) => s.id === id)?.name ?? "—";
+
+  // Enriquece cada linha com o nome do fornecedor para que a busca textual
+  // (e os filtros por coluna) funcionem digitando o nome do fornecedor.
+  const purchases = purchasesRaw.map((p) => ({
+    ...p,
+    supplier_name: supplierName(p.supplier_id),
+  }));
 
   const create = async () => {
     if (!draft.description.trim()) { toast.error("Informe o item ou serviço"); return; }
