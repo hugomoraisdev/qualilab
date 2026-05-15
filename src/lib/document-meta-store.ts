@@ -62,7 +62,8 @@ export interface DocumentMeta {
   folder: string | null;
   sector: string | null;
   process: string | null;
-  custom_fields: Record<string, string>;
+  /** Valores dos campos personalizados (engine em custom-fields-store). */
+  custom_fields: Record<string, string | string[] | boolean | number | null>;
   obsolete: boolean;
   body: string | null;
 }
@@ -242,11 +243,21 @@ export async function setDocumentTaxonomy(
 export async function setCustomField(
   documentId: string,
   key: string,
-  value: string,
+  value: string | string[] | boolean | number | null,
 ): Promise<void> {
   await updateDocumentMeta(documentId, (prev) => ({
     ...prev,
     custom_fields: { ...prev.custom_fields, [key]: value },
+  }));
+}
+
+export async function setCustomFields(
+  documentId: string,
+  patch: Record<string, string | string[] | boolean | number | null>,
+): Promise<void> {
+  await updateDocumentMeta(documentId, (prev) => ({
+    ...prev,
+    custom_fields: { ...prev.custom_fields, ...patch },
   }));
 }
 
