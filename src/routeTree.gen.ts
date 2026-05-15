@@ -58,8 +58,9 @@ import { Route as AppDocumentsIdRouteImport } from './routes/_app/documents.$id'
 import { Route as AppCustomerServiceNewRouteImport } from './routes/_app/customer-service.new'
 import { Route as AppCustomerServiceIdRouteImport } from './routes/_app/customer-service.$id'
 import { Route as AppAuditsIdRouteImport } from './routes/_app/audits.$id'
-import { Route as ApiPublicV1OccurrencesRouteImport } from './routes/api/public/v1/occurrences'
-import { Route as ApiPublicV1OccurrencesIdRouteImport } from './routes/api/public/v1/occurrences.$id'
+import { Route as ApiPublicV1IndicatorsRouteImport } from './routes/api/public/v1/indicators'
+import { Route as ApiPublicV1IndicatorsIdRouteImport } from './routes/api/public/v1/indicators.$id'
+import { Route as ApiPublicV1IndicatorsIdResultsRouteImport } from './routes/api/public/v1/indicators.$id.results'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -305,16 +306,21 @@ const AppAuditsIdRoute = AppAuditsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppAuditsRoute,
 } as any)
-const ApiPublicV1OccurrencesRoute = ApiPublicV1OccurrencesRouteImport.update({
-  id: '/api/public/v1/occurrences',
-  path: '/api/public/v1/occurrences',
+const ApiPublicV1IndicatorsRoute = ApiPublicV1IndicatorsRouteImport.update({
+  id: '/api/public/v1/indicators',
+  path: '/api/public/v1/indicators',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicV1OccurrencesIdRoute =
-  ApiPublicV1OccurrencesIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => ApiPublicV1OccurrencesRoute,
+const ApiPublicV1IndicatorsIdRoute = ApiPublicV1IndicatorsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiPublicV1IndicatorsRoute,
+} as any)
+const ApiPublicV1IndicatorsIdResultsRoute =
+  ApiPublicV1IndicatorsIdResultsRouteImport.update({
+    id: '/results',
+    path: '/results',
+    getParentRoute: () => ApiPublicV1IndicatorsIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -366,8 +372,9 @@ export interface FileRoutesByFullPath {
   '/suppliers/$id': typeof AppSuppliersIdRoute
   '/customer-service/': typeof AppCustomerServiceIndexRoute
   '/meetings/': typeof AppMeetingsIndexRoute
-  '/api/public/v1/occurrences': typeof ApiPublicV1OccurrencesRouteWithChildren
-  '/api/public/v1/occurrences/$id': typeof ApiPublicV1OccurrencesIdRoute
+  '/api/public/v1/indicators': typeof ApiPublicV1IndicatorsRouteWithChildren
+  '/api/public/v1/indicators/$id': typeof ApiPublicV1IndicatorsIdRouteWithChildren
+  '/api/public/v1/indicators/$id/results': typeof ApiPublicV1IndicatorsIdResultsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -417,8 +424,9 @@ export interface FileRoutesByTo {
   '/suppliers/$id': typeof AppSuppliersIdRoute
   '/customer-service': typeof AppCustomerServiceIndexRoute
   '/meetings': typeof AppMeetingsIndexRoute
-  '/api/public/v1/occurrences': typeof ApiPublicV1OccurrencesRouteWithChildren
-  '/api/public/v1/occurrences/$id': typeof ApiPublicV1OccurrencesIdRoute
+  '/api/public/v1/indicators': typeof ApiPublicV1IndicatorsRouteWithChildren
+  '/api/public/v1/indicators/$id': typeof ApiPublicV1IndicatorsIdRouteWithChildren
+  '/api/public/v1/indicators/$id/results': typeof ApiPublicV1IndicatorsIdResultsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -471,8 +479,9 @@ export interface FileRoutesById {
   '/_app/suppliers/$id': typeof AppSuppliersIdRoute
   '/_app/customer-service/': typeof AppCustomerServiceIndexRoute
   '/_app/meetings/': typeof AppMeetingsIndexRoute
-  '/api/public/v1/occurrences': typeof ApiPublicV1OccurrencesRouteWithChildren
-  '/api/public/v1/occurrences/$id': typeof ApiPublicV1OccurrencesIdRoute
+  '/api/public/v1/indicators': typeof ApiPublicV1IndicatorsRouteWithChildren
+  '/api/public/v1/indicators/$id': typeof ApiPublicV1IndicatorsIdRouteWithChildren
+  '/api/public/v1/indicators/$id/results': typeof ApiPublicV1IndicatorsIdResultsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -525,8 +534,9 @@ export interface FileRouteTypes {
     | '/suppliers/$id'
     | '/customer-service/'
     | '/meetings/'
-    | '/api/public/v1/occurrences'
-    | '/api/public/v1/occurrences/$id'
+    | '/api/public/v1/indicators'
+    | '/api/public/v1/indicators/$id'
+    | '/api/public/v1/indicators/$id/results'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -576,8 +586,9 @@ export interface FileRouteTypes {
     | '/suppliers/$id'
     | '/customer-service'
     | '/meetings'
-    | '/api/public/v1/occurrences'
-    | '/api/public/v1/occurrences/$id'
+    | '/api/public/v1/indicators'
+    | '/api/public/v1/indicators/$id'
+    | '/api/public/v1/indicators/$id/results'
   id:
     | '__root__'
     | '/'
@@ -629,8 +640,9 @@ export interface FileRouteTypes {
     | '/_app/suppliers/$id'
     | '/_app/customer-service/'
     | '/_app/meetings/'
-    | '/api/public/v1/occurrences'
-    | '/api/public/v1/occurrences/$id'
+    | '/api/public/v1/indicators'
+    | '/api/public/v1/indicators/$id'
+    | '/api/public/v1/indicators/$id/results'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -641,7 +653,7 @@ export interface RootRouteChildren {
   SacRoute: typeof SacRoute
   SignupRoute: typeof SignupRoute
   SuppliersPortalRoute: typeof SuppliersPortalRoute
-  ApiPublicV1OccurrencesRoute: typeof ApiPublicV1OccurrencesRouteWithChildren
+  ApiPublicV1IndicatorsRoute: typeof ApiPublicV1IndicatorsRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -989,19 +1001,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAuditsIdRouteImport
       parentRoute: typeof AppAuditsRoute
     }
-    '/api/public/v1/occurrences': {
-      id: '/api/public/v1/occurrences'
-      path: '/api/public/v1/occurrences'
-      fullPath: '/api/public/v1/occurrences'
-      preLoaderRoute: typeof ApiPublicV1OccurrencesRouteImport
+    '/api/public/v1/indicators': {
+      id: '/api/public/v1/indicators'
+      path: '/api/public/v1/indicators'
+      fullPath: '/api/public/v1/indicators'
+      preLoaderRoute: typeof ApiPublicV1IndicatorsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/v1/occurrences/$id': {
-      id: '/api/public/v1/occurrences/$id'
+    '/api/public/v1/indicators/$id': {
+      id: '/api/public/v1/indicators/$id'
       path: '/$id'
-      fullPath: '/api/public/v1/occurrences/$id'
-      preLoaderRoute: typeof ApiPublicV1OccurrencesIdRouteImport
-      parentRoute: typeof ApiPublicV1OccurrencesRoute
+      fullPath: '/api/public/v1/indicators/$id'
+      preLoaderRoute: typeof ApiPublicV1IndicatorsIdRouteImport
+      parentRoute: typeof ApiPublicV1IndicatorsRoute
+    }
+    '/api/public/v1/indicators/$id/results': {
+      id: '/api/public/v1/indicators/$id/results'
+      path: '/results'
+      fullPath: '/api/public/v1/indicators/$id/results'
+      preLoaderRoute: typeof ApiPublicV1IndicatorsIdResultsRouteImport
+      parentRoute: typeof ApiPublicV1IndicatorsIdRoute
     }
   }
 }
@@ -1206,18 +1225,31 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
-interface ApiPublicV1OccurrencesRouteChildren {
-  ApiPublicV1OccurrencesIdRoute: typeof ApiPublicV1OccurrencesIdRoute
+interface ApiPublicV1IndicatorsIdRouteChildren {
+  ApiPublicV1IndicatorsIdResultsRoute: typeof ApiPublicV1IndicatorsIdResultsRoute
 }
 
-const ApiPublicV1OccurrencesRouteChildren: ApiPublicV1OccurrencesRouteChildren =
+const ApiPublicV1IndicatorsIdRouteChildren: ApiPublicV1IndicatorsIdRouteChildren =
   {
-    ApiPublicV1OccurrencesIdRoute: ApiPublicV1OccurrencesIdRoute,
+    ApiPublicV1IndicatorsIdResultsRoute: ApiPublicV1IndicatorsIdResultsRoute,
   }
 
-const ApiPublicV1OccurrencesRouteWithChildren =
-  ApiPublicV1OccurrencesRoute._addFileChildren(
-    ApiPublicV1OccurrencesRouteChildren,
+const ApiPublicV1IndicatorsIdRouteWithChildren =
+  ApiPublicV1IndicatorsIdRoute._addFileChildren(
+    ApiPublicV1IndicatorsIdRouteChildren,
+  )
+
+interface ApiPublicV1IndicatorsRouteChildren {
+  ApiPublicV1IndicatorsIdRoute: typeof ApiPublicV1IndicatorsIdRouteWithChildren
+}
+
+const ApiPublicV1IndicatorsRouteChildren: ApiPublicV1IndicatorsRouteChildren = {
+  ApiPublicV1IndicatorsIdRoute: ApiPublicV1IndicatorsIdRouteWithChildren,
+}
+
+const ApiPublicV1IndicatorsRouteWithChildren =
+  ApiPublicV1IndicatorsRoute._addFileChildren(
+    ApiPublicV1IndicatorsRouteChildren,
   )
 
 const rootRouteChildren: RootRouteChildren = {
@@ -1228,8 +1260,18 @@ const rootRouteChildren: RootRouteChildren = {
   SacRoute: SacRoute,
   SignupRoute: SignupRoute,
   SuppliersPortalRoute: SuppliersPortalRoute,
-  ApiPublicV1OccurrencesRoute: ApiPublicV1OccurrencesRouteWithChildren,
+  ApiPublicV1IndicatorsRoute: ApiPublicV1IndicatorsRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
