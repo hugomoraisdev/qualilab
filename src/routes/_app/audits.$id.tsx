@@ -399,6 +399,62 @@ function AuditDetail() {
               </Button>
             </div>
           </section>
+
+          <section className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-2 text-sm">
+            <h3 className="text-sm font-semibold">Planejamento</h3>
+            <div><div className="text-xs text-muted-foreground">Objetivo</div><div>{plan.objective || <span className="italic text-muted-foreground">não informado</span>}</div></div>
+            <div><div className="text-xs text-muted-foreground">Critério</div><div>{plan.criterion || <span className="italic text-muted-foreground">não informado</span>}</div></div>
+            {(plan.start_time || plan.end_time) && (
+              <div><div className="text-xs text-muted-foreground">Horário</div><div>{plan.start_time ?? "—"} → {plan.end_time ?? "—"}</div></div>
+            )}
+            {plan.scope_areas && (
+              <div><div className="text-xs text-muted-foreground">Processos / áreas</div><div>{plan.scope_areas}</div></div>
+            )}
+            {plan.followers && (
+              <div><div className="text-xs text-muted-foreground">Acompanhamento</div><div>{plan.followers}</div></div>
+            )}
+            {plan.roteiro_notes && (
+              <div><div className="text-xs text-muted-foreground">Roteiro</div><div className="whitespace-pre-wrap">{plan.roteiro_notes}</div></div>
+            )}
+            {plan.participants.length > 0 && (
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Participantes ({plan.participants.length})</div>
+                <ul className="space-y-1">
+                  {plan.participants.map((p) => (
+                    <li key={p.id} className="text-xs">
+                      <span className="font-medium">{p.name}</span>
+                      <span className="text-muted-foreground"> · {p.role.replace(/_/g, " ")}{p.email ? ` · ${p.email}` : ""}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {plan.checklist_template_id && (
+              <div className="text-xs">
+                <span className="text-muted-foreground">Checklist: </span>
+                {templates.find((t) => t.id === plan.checklist_template_id)?.name ?? "—"}
+                {plan.checklist_required && <span className="ml-1 text-destructive">(obrigatório)</span>}
+              </div>
+            )}
+            {plan.document_ref_ids.length > 0 && (
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Documentos de referência</div>
+                <ul className="space-y-1">
+                  {plan.document_ref_ids.map((did) => {
+                    const d = docs.find((x) => x.id === did);
+                    if (!d) return null;
+                    return (
+                      <li key={did} className="text-xs">
+                        <Link to="/documents/$id" params={{ id: d.id }} className="hover:underline">
+                          <span className="font-mono text-muted-foreground">{d.code}</span> {d.title}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </section>
         </aside>
       </div>
 
