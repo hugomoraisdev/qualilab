@@ -64,6 +64,7 @@ export interface DocumentMeta {
   process: string | null;
   custom_fields: Record<string, string>;
   obsolete: boolean;
+  body: string | null;
 }
 
 const emptyAssignment = (): StageAssignment => ({
@@ -89,6 +90,7 @@ export const emptyMeta = (): DocumentMeta => ({
   process: null,
   custom_fields: {},
   obsolete: false,
+  body: null,
 });
 
 const keyFor = (id: string) => `doc-meta:${id}`;
@@ -254,6 +256,10 @@ export async function removeCustomField(documentId: string, key: string): Promis
     delete cf[key];
     return { ...prev, custom_fields: cf };
   });
+}
+
+export async function setDocumentBody(documentId: string, body: string | null): Promise<void> {
+  await updateDocumentMeta(documentId, (prev) => ({ ...prev, body: body ?? null }));
 }
 
 /** Hook reativo. */

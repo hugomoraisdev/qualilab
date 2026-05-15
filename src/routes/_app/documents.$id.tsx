@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useAuditAccess } from "@/lib/audit";
+import { useAuditAccess, logAudit } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { documentsStore, saveDocument, type DocumentRow } from "@/lib/documents-store";
@@ -26,8 +26,8 @@ import {
 import {
   useDocumentMeta, addDocumentComment, setStageAssignment, signStage,
   addDistributionCopy, setDocumentObsolete, setDocumentTaxonomy,
-  setCustomField, removeCustomField, logDocumentAccess, stageLabel,
-  type Stage,
+  setCustomField, removeCustomField, logDocumentAccess, setDocumentBody,
+  stageLabel, type Stage,
 } from "@/lib/document-meta-store";
 import { toast } from "sonner";
 import { sendEmail } from "@/lib/send-email.functions";
@@ -558,6 +558,93 @@ function TaxonomyCard({ doc }: { doc: DocumentRow }) {
   );
 }
 
+/* ───────────── Conteúdo do documento ───────────── */
+
+function DocumentBodyCard({ doc }: { doc: DocumentRow }) {
+  const { user } = useAuth();
+  const meta = useDocumentMeta(doc.id);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const body = meta.body ?? null;
+
+  const startEdit = () => {
+    setDraft(body ?? "");
+    setEditing(true);
+  };
+
+  const cancel = () => {
+    setEditing(false);
+    setDraft("");
+  };
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const newBody = draft.trim() || null;
+      await setDocumentBody(doc.id, newBody);
+      logAudit({ module: "documents", action: "content_edited", record_id: doc.id, record_label: doc.title });
+      setEditing(false);
+      setDraft("");
+      toast.success("Conteúdo salvo com sucesso");
+    } catch (err) {
+      toast.error("Falha ao salvar conteúdo", { description: String((err as Error)?.message ?? err) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="bg-card border border-border rounded-lg p-5 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <FileText className="size-4 text-primary" /> Conteúdo do documento
+        </h3>
+        {!editing && (
+          <Button size="sm" variant="outline" onClick={startEdit}>
+            Editar conteúdo
+          </Button>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor="doc-body" className="sr-only">Conteúdo do documento</Label>
+            <Textarea
+              id="doc-body"
+              rows={10}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Escreva o conteúdo do documento aqui…"
+              className="resize-y min-h-[200px]"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={cancel} disabled={busy}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={save} disabled={busy}>
+              {busy && <Loader2 className="size-4 animate-spin" />} Salvar
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="text-sm">
+          {body ? (
+            <p className="whitespace-pre-wrap text-foreground leading-relaxed">{body}</p>
+          ) : (
+            <p className="text-muted-foreground italic">
+              Nenhum conteúdo redigido. Clique em Editar para adicionar.
+            </p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 /* ───────────── Página ───────────── */
 
 function DocumentDetail() {
@@ -653,6 +740,8 @@ function DocumentDetail() {
               <div><dt className="text-xs text-muted-foreground">Pasta / setor / processo</dt><dd>{[meta.folder, meta.sector, meta.process].filter(Boolean).join(" / ") || "—"}</dd></div>
             </dl>
           </section>
+
+          <DocumentBodyCard doc={doc} />
 
           <WorkflowCard doc={doc} />
 

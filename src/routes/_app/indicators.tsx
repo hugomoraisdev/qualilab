@@ -5,13 +5,14 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Target, TrendingUp, TrendingDown, Filter, History, BarChart3 } from "lucide-react";
+import { Plus, Target, TrendingUp, TrendingDown, Filter, History, BarChart3, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTableStore } from "@/lib/table-store";
 import {
   indicatorsStore, indicatorResultsStore, saveIndicator, saveResult, newId,
   type IndicatorRow, type IndicatorDirection, type IndicatorFrequency, type IndicatorResultRow,
 } from "@/lib/indicators-store";
+import { saveActionPlan, type ActionPlanRow } from "@/lib/action-plans-store";
 import { useIndicatorMeta, setIndicatorExtra, type IndicatorKind } from "@/lib/indicator-meta-store";
 import { profilesStore, profileName } from "@/lib/profiles-store";
 import { toast } from "sonner";
@@ -116,6 +117,29 @@ function IndicatorsPage() {
     await saveResult(r);
     toast.success("Resultado registrado");
     setResultDraft(null);
+  };
+
+  const createActionPlanFromResult = async (ind: IndicatorRow, r: IndicatorResultRow) => {
+    const deadline = new Date();
+    deadline.setDate(deadline.getDate() + 30);
+    const ap: ActionPlanRow = {
+      id: newId("AP"),
+      code: null,
+      origin_type: "indicator",
+      origin_id: ind.id,
+      description: `Indicador ${ind.name} abaixo da meta no período ${r.period}: resultado ${r.value} ${ind.unit} (meta: ${ind.direction === "maior" ? "≥" : "≤"} ${ind.target} ${ind.unit})`,
+      responsible_id: ind.responsible_id,
+      deadline: deadline.toISOString().slice(0, 10),
+      priority: "alta",
+      status: "aberto",
+      progress: 0,
+      notes: null,
+    };
+    await saveActionPlan(ap);
+    toast.success("Plano de ação criado", {
+      description: "Acesse a seção Planos de Ação para acompanhar.",
+      action: { label: "Ver planos", onClick: () => window.location.assign("/action-plans") },
+    });
   };
 
   // Overview metrics
@@ -297,7 +321,7 @@ function IndicatorsPage() {
                   ) : (
                     <table className="w-full text-xs">
                       <thead className="text-muted-foreground">
-                        <tr><th className="text-left py-1">Período</th><th className="text-right">Valor</th><th className="text-right">Status</th><th className="text-left pl-2">Notas</th></tr>
+                        <tr><th className="text-left py-1">Período</th><th className="text-right">Valor</th><th className="text-right">Status</th><th className="text-left pl-2">Notas</th><th /></tr>
                       </thead>
                       <tbody>
                         {[...allFor].reverse().map((r) => (
@@ -308,6 +332,18 @@ function IndicatorsPage() {
                               <span className={cn("rounded px-1.5 py-0.5 text-[10px]", r.status === "ok" ? "bg-success/15 text-success" : "bg-warning/20 text-warning-foreground")}>{r.status}</span>
                             </td>
                             <td className="pl-2 text-muted-foreground">{r.notes ?? ""}</td>
+                            <td className="pl-2">
+                              {r.status === "atencao" && (
+                                <button
+                                  type="button"
+                                  title="Abrir plano de ação"
+                                  onClick={() => createActionPlanFromResult(i, r)}
+                                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-warning-foreground bg-warning/20 hover:bg-warning/40 transition-colors"
+                                >
+                                  <AlertTriangle className="size-2.5" /> Abrir ação
+                                </button>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

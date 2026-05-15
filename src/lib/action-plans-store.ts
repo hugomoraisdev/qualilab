@@ -34,4 +34,5 @@ export const ORIGIN_TYPE_LABEL: Record<string, string> = {
   calibration: "Calibração",
   meeting: "Reunião",
   manual: "Manual",
+  indicator: "Indicador",
 };
