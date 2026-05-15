@@ -93,8 +93,8 @@ const emptyIshikawa = (): IshikawaData => ({
   causes: { machine: [], method: [], material: [], manpower: [], environment: [], measurement: [] },
 });
 
-function newId(prefix: string) {
-  return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
+function newId(_prefix?: string) {
+  return crypto.randomUUID();
 }
 
 function isOverdue(deadline: string | null, status: string) {

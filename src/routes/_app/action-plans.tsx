@@ -18,8 +18,8 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/action-plans")({ component: APPage });
 
-function newId(prefix: string) {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+function newId(_prefix?: string) {
+  return crypto.randomUUID();
 }
 
 type Draft = {

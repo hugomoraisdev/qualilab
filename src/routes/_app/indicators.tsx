@@ -24,6 +24,7 @@ import {
   saveIndicator,
   saveResult,
   newId,
+  newCode,
   type IndicatorRow,
   type IndicatorDirection,
   type IndicatorFrequency,
@@ -154,10 +155,10 @@ function IndicatorsPage() {
 
   const create = async () => {
     if (!draft.name.trim()) return;
-    const id = newId("IND");
+    const id = crypto.randomUUID();
     const ind: IndicatorRow = {
       id,
-      code: id,
+      code: newCode("IND"),
       name: draft.name,
       unit: draft.unit || "—",
       frequency: draft.frequency,

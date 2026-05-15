@@ -46,6 +46,10 @@ export const listFindings = (auditId?: string) => {
 export const saveFinding = (f: AuditFindingRow) => auditFindingsStore.upsert(f);
 export const deleteFinding = (id: string) => auditFindingsStore.remove(id);
 
-export function newId(prefix: string) {
+export function newId(_prefix?: string) {
+  return crypto.randomUUID();
+}
+
+export function newCode(prefix: string) {
   return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
 }

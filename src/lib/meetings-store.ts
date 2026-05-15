@@ -46,8 +46,8 @@ export const listAgenda = (meetingId: string) =>
 export const saveAgenda = (a: AgendaRow) => agendaStore.upsert(a);
 export const deleteAgenda = (id: string) => agendaStore.remove(id);
 
-export function newId(prefix: string) {
-  return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
+export function newId(_prefix?: string) {
+  return crypto.randomUUID();
 }
 
 export function addDate(iso: string, freq: RecurrenceFrequency, n: number): string {

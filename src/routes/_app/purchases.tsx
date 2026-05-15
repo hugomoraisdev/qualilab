@@ -24,7 +24,7 @@ function PurchasesRoute() {
 }
 
 function newId() {
-  return `PRC-${Date.now().toString(36).toUpperCase()}`;
+  return crypto.randomUUID();
 }
 
 type Draft = { description: string; supplier_id: string; quantity: string; expected_at: string };

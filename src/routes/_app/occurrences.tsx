@@ -44,7 +44,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 export const Route = createFileRoute("/_app/occurrences")({ component: OccPage });
 
 function newId() {
-  return `OC-${Date.now().toString(36).toUpperCase()}`;
+  return crypto.randomUUID();
 }
 
 function isOverdue(deadline: string | null, status: string) {

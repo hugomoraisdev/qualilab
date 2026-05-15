@@ -24,7 +24,7 @@ import { Plus } from "lucide-react";
 export const Route = createFileRoute("/_app/equipments")({ component: EqPage });
 
 function newId() {
-  return `EQ-${Date.now().toString(36).toUpperCase()}`;
+  return crypto.randomUUID();
 }
 
 type Draft = {

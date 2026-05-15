@@ -56,6 +56,6 @@ export async function nextProtocol(): Promise<string> {
   return data as string;
 }
 
-export function newId(prefix: string) {
-  return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
+export function newId(_prefix?: string) {
+  return crypto.randomUUID();
 }

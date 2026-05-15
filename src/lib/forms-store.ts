@@ -60,6 +60,6 @@ export const updateResponse = (id: string, patch: Partial<FormResponseRow>) => {
   responsesStore.upsert({ ...cur, ...patch });
 };
 
-export function newId(prefix: string) {
-  return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
+export function newId(_prefix?: string) {
+  return crypto.randomUUID();
 }

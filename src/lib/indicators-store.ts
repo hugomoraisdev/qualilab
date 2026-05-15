@@ -45,7 +45,11 @@ export const listResults = (indicatorId?: string) => {
 export const saveResult = (r: IndicatorResultRow) => indicatorResultsStore.upsert(r);
 export const deleteResult = (id: string) => indicatorResultsStore.remove(id);
 
-export function newId(prefix: string) {
+export function newId(_prefix?: string) {
+  return crypto.randomUUID();
+}
+
+export function newCode(prefix: string) {
   return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
 }
 

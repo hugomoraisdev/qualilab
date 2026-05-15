@@ -935,10 +935,10 @@ function ActionsPanel({ meetingId, onChange }: { meetingId: string; onChange: ()
 
   async function addAction() {
     if (!desc.trim()) return;
-    const id = newId("AP");
+    const id = crypto.randomUUID();
     await saveActionPlan({
       id,
-      code: id,
+      code: null,
       origin_type: "meeting",
       origin_id: meetingId,
       description: desc.trim(),

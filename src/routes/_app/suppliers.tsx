@@ -24,7 +24,7 @@ import { Inbox, Plus } from "lucide-react";
 export const Route = createFileRoute("/_app/suppliers")({ component: SupPage });
 
 function newId() {
-  return `SUP-${Date.now().toString(36).toUpperCase()}`;
+  return crypto.randomUUID();
 }
 
 type Draft = { name: string; cnpj: string; category: string; contact_name: string; email: string; phone: string; status: string };

@@ -145,7 +145,7 @@ function AuditDetail() {
     const requirement = (text ?? reqText).trim();
     if (!requirement) return;
     const f: AuditFindingRow = {
-      id: newId("F"),
+      id: crypto.randomUUID(),
       audit_id: a.id,
       requirement,
       result: "conforme",
@@ -167,7 +167,7 @@ function AuditDetail() {
     let pos = findings.length;
     for (const req of t.requirements) {
       await saveFinding({
-        id: newId("F"),
+        id: crypto.randomUUID(),
         audit_id: a.id,
         requirement: req,
         result: "conforme",
@@ -209,7 +209,7 @@ function AuditDetail() {
     if (!actionDlg) return;
     const f = actionDlg.finding;
     const ap: ActionPlanRow = {
-      id: newId("AP"),
+      id: crypto.randomUUID(),
       code: null,
       origin_type: "audit_finding",
       origin_id: f.id,
@@ -269,7 +269,7 @@ function AuditDetail() {
               onClick={async () => {
                 const ncCount = findings.filter((f) => f.result === "nao_conforme").length;
                 const ap: ActionPlanRow = {
-                  id: newId("AP"),
+                  id: crypto.randomUUID(),
                   code: null,
                   origin_type: "audit",
                   origin_id: a.id,
