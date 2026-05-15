@@ -111,10 +111,6 @@ function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Não tem conta?{" "}
-            <Link to="/signup" className="text-primary hover:underline font-medium">Criar conta</Link>
-          </p>
 
         </div>
       </div>
