@@ -81,7 +81,7 @@ export const runEmailDigest = createServerFn({ method: "POST" })
       supabaseAdmin.from("app_data").select("key,value").like("key", "equipment-meta:%"),
       supabaseAdmin.from("documents").select("id,code,title").is("deleted_at", null),
       supabaseAdmin.from("app_data").select("key,value").like("key", "doc-meta:%"),
-      supabaseAdmin.from("suppliers").select("id,name").is("deleted_at", null),
+      supabaseAdmin.from("suppliers").select("id,name,email").is("deleted_at", null),
       supabaseAdmin.from("app_data").select("key,value").like("key", "supplier-meta:%"),
       supabaseAdmin.from("user_roles").select("user_id,role").in("role", ["admin", "gestor"]),
       supabaseAdmin.from("app_data").select("value").eq("key", "alert-recipients").maybeSingle(),
@@ -140,8 +140,12 @@ export const runEmailDigest = createServerFn({ method: "POST" })
     for (const doc of documents ?? []) docMap.set(doc.id, { code: doc.code, title: doc.title });
 
     // Mapa de suppliers: id → { name }
-    const supplierMap = new Map<string, { name: string }>();
-    for (const s of suppliers ?? []) supplierMap.set(s.id, { name: s.name });
+    const supplierMap = new Map<string, { name: string; email: string | null }>();
+    for (const s of suppliers ?? [])
+      supplierMap.set(s.id, {
+        name: s.name,
+        email: (s as { email?: string | null }).email ?? null,
+      });
 
     // Lista de emails de admins/gestores
     const adminEmails: { email: string; name: string }[] = [];
@@ -352,16 +356,25 @@ export const runEmailDigest = createServerFn({ method: "POST" })
         const d = daysUntil(doc.validity);
         if (d > 30) continue;
 
+        const supplierEntry = supplierMap.get(supplierId);
+        const alertPayload: DigestAlert = {
+          category: "Fornecedor",
+          level: d < 0 ? "danger" : "warning",
+          title:
+            d < 0
+              ? "Documento de fornecedor vencido"
+              : `Documento de fornecedor vence em ${d} dia(s)`,
+          description: `${supplierEntry?.name ?? ""} — ${doc.type}`,
+          daysLeft: d,
+        };
         for (const { email, name } of fornecedorRecipients) {
-          addAlert(email, name, {
-            category: "Fornecedor",
-            level: d < 0 ? "danger" : "warning",
-            title:
-              d < 0
-                ? "Documento de fornecedor vencido"
-                : `Documento de fornecedor vence em ${d} dia(s)`,
-            description: `${supplierMap.get(supplierId)?.name ?? ""} — ${doc.type}`,
-            daysLeft: d,
+          addAlert(email, name, alertPayload);
+        }
+        // Notifica o próprio fornecedor se tiver e-mail cadastrado
+        if (supplierEntry?.email) {
+          addAlert(supplierEntry.email, supplierEntry.name, {
+            ...alertPayload,
+            title: d < 0 ? "Seu documento venceu" : `Seu documento vence em ${d} dia(s)`,
           });
         }
       }

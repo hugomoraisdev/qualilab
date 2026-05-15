@@ -20,6 +20,18 @@ export const sendEmail = createServerFn({ method: "POST" })
         html: data.html,
       },
     });
-    if (error) throw new Error(`Email send failed: ${error.message}`);
+    if (error) {
+      let detail = error.message;
+      try {
+        const ctx = (error as { context?: Response }).context;
+        if (ctx) {
+          const body = await ctx.json();
+          detail = typeof body === "string" ? body : JSON.stringify(body);
+        }
+      } catch {
+        // ignore parse failure
+      }
+      throw new Error(`Email send failed: ${detail}`);
+    }
     return result as { id?: string };
   });

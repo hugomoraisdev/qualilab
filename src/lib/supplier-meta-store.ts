@@ -5,11 +5,16 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type SupplierStrategicClassification = "critico" | "estrategico" | "operacional" | "nao_critico" | null;
+export type SupplierStrategicClassification =
+  | "critico"
+  | "estrategico"
+  | "operacional"
+  | "nao_critico"
+  | null;
 
 export interface SupplierDocument {
   id: string;
-  type: string;          // ex: "Contrato Social", "ISO 9001"
+  type: string; // ex: "Contrato Social", "ISO 9001"
   number?: string | null;
   issued_at?: string | null;
   validity?: string | null;
@@ -34,7 +39,7 @@ export interface SupplierDocumentRequest {
 export interface SupplierInspection {
   id: string;
   inspection_date: string;
-  type: string;          // "Recebimento", "Auditoria in loco", "Qualidade", ...
+  type: string; // "Recebimento", "Auditoria in loco", "Qualidade", ...
   result: "aprovado" | "aprovado_restricao" | "reprovado";
   inspector_name?: string | null;
   observations?: string | null;
@@ -55,6 +60,23 @@ export interface SupplierCustomField {
   value: string;
 }
 
+export interface PurchaseOrderField {
+  label: string;
+  value: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  order_number: string;
+  description: string;
+  date: string;
+  expected_delivery?: string | null;
+  status: "solicitado" | "aprovado" | "em_andamento" | "entregue" | "cancelado";
+  value?: number | null;
+  notes?: string | null;
+  custom_fields: PurchaseOrderField[];
+}
+
 export interface SupplierHistoryEvent {
   id: string;
   at: string;
@@ -71,6 +93,7 @@ export interface SupplierMeta {
   messages: SupplierMessage[];
   custom_fields: SupplierCustomField[];
   history: SupplierHistoryEvent[];
+  purchase_orders: PurchaseOrder[];
 }
 
 export const emptySupplierMeta = (): SupplierMeta => ({
@@ -81,18 +104,25 @@ export const emptySupplierMeta = (): SupplierMeta => ({
   messages: [],
   custom_fields: [],
   history: [],
+  purchase_orders: [],
 });
 
 const supKey = (id: string) => `supplier-meta:${id}`;
 
 export async function readSupplierMeta(id: string): Promise<SupplierMeta> {
-  const { data } = await supabase.from("app_data").select("value").eq("key", supKey(id)).maybeSingle();
+  const { data } = await supabase
+    .from("app_data")
+    .select("value")
+    .eq("key", supKey(id))
+    .maybeSingle();
   if (!data) return emptySupplierMeta();
   return { ...emptySupplierMeta(), ...(data.value as Partial<SupplierMeta>) };
 }
 
 export async function writeSupplierMeta(id: string, meta: SupplierMeta): Promise<void> {
-  const { error } = await supabase.from("app_data").upsert({ key: supKey(id), value: meta as never });
+  const { error } = await supabase
+    .from("app_data")
+    .upsert({ key: supKey(id), value: meta as never });
   if (error) throw error;
   if (typeof window !== "undefined") window.dispatchEvent(new Event(`storage:supplier-meta:${id}`));
 }
@@ -137,11 +167,19 @@ export function useSupplierMeta(id: string | undefined): {
   useEffect(() => {
     if (!id) return;
     void load();
-    const handler = () => { void load(); };
+    const handler = () => {
+      void load();
+    };
     window.addEventListener(`storage:supplier-meta:${id}`, handler);
     const channel = supabase
       .channel(`supplier-meta:${id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "app_data", filter: `key=eq.${supKey(id)}` }, () => { void load(); })
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "app_data", filter: `key=eq.${supKey(id)}` },
+        () => {
+          void load();
+        },
+      )
       .subscribe();
     return () => {
       window.removeEventListener(`storage:supplier-meta:${id}`, handler);
@@ -158,7 +196,10 @@ export function useAllSupplierMeta(ids: string[]): Record<string, SupplierMeta> 
   const joinKey = ids.join("|");
   const channelName = useRef(`supplier-meta-bulk:${Math.random().toString(36).slice(2)}`);
   useEffect(() => {
-    if (ids.length === 0) { setMap({}); return; }
+    if (ids.length === 0) {
+      setMap({});
+      return;
+    }
     let cancelled = false;
     const keys = ids.map(supKey);
     const load = async () => {
@@ -167,16 +208,23 @@ export function useAllSupplierMeta(ids: string[]): Record<string, SupplierMeta> 
       const out: Record<string, SupplierMeta> = {};
       for (const id of ids) {
         const row = data?.find((r) => r.key === supKey(id));
-        out[id] = row ? { ...emptySupplierMeta(), ...(row.value as Partial<SupplierMeta>) } : emptySupplierMeta();
+        out[id] = row
+          ? { ...emptySupplierMeta(), ...(row.value as Partial<SupplierMeta>) }
+          : emptySupplierMeta();
       }
       setMap(out);
     };
     void load();
     const channel = supabase
       .channel(channelName.current)
-      .on("postgres_changes", { event: "*", schema: "public", table: "app_data" }, () => { void load(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_data" }, () => {
+        void load();
+      })
       .subscribe();
-    return () => { cancelled = true; supabase.removeChannel(channel); };
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [joinKey]);
   return map;
@@ -192,11 +240,20 @@ export const classificationLabel: Record<NonNullable<SupplierStrategicClassifica
 export const classificationTone = (
   c: SupplierStrategicClassification,
 ): "destructive" | "warning" | "info" | "muted" =>
-  c === "critico" ? "destructive" : c === "estrategico" ? "warning" : c === "operacional" ? "info" : "muted";
+  c === "critico"
+    ? "destructive"
+    : c === "estrategico"
+      ? "warning"
+      : c === "operacional"
+        ? "info"
+        : "muted";
 
-export function deriveDocumentStatus(d: Pick<SupplierDocument, "validity">): SupplierDocument["status"] {
+export function deriveDocumentStatus(
+  d: Pick<SupplierDocument, "validity">,
+): SupplierDocument["status"] {
   if (!d.validity) return "vigente";
-  const today = new Date(); today.setHours(0,0,0,0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const v = new Date(d.validity + "T00:00:00");
   return v.getTime() < today.getTime() ? "vencido" : "vigente";
 }
