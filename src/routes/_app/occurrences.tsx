@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useLocation, Outlet } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
@@ -56,6 +56,7 @@ function OccPage() {
   const occurrences = useTableStore(occurrencesStore);
   useTableStore(profilesStore);
   const navigate = useNavigate();
+  const location = useLocation();
   const ids = useMemo(() => occurrences.map((o) => o.id), [occurrences]);
   const metaMap = useAllOccurrenceMeta(ids);
   const [open, setOpen] = useState(false);
@@ -67,6 +68,7 @@ function OccPage() {
     occurred_at: new Date().toISOString().slice(0, 10),
   });
   const [draftDeadline, setDraftDeadline] = useState<string>("");
+
 
   const kpis = useMemo(() => {
     let abertas = 0, analise = 0, concluidas = 0, atrasadas = 0;
@@ -101,6 +103,10 @@ function OccPage() {
     const max = Math.max(1, ...months.map((m) => m.count));
     return { months, max };
   }, [occurrences]);
+
+  if (location.pathname !== "/occurrences") {
+    return <Outlet />;
+  }
 
   const handleCreate = async () => {
     if (!draft.description?.trim()) {
