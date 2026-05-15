@@ -115,10 +115,10 @@ function APPage() {
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs">Responsável</Label>
-          <Select value={d.responsible_id} onValueChange={(v) => set((p) => ({ ...p, responsible_id: v }))}>
+          <Select value={d.responsible_id || "none"} onValueChange={(v) => set((p) => ({ ...p, responsible_id: v === "none" ? "" : v }))}>
             <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">— Nenhum —</SelectItem>
+              <SelectItem value="none">— Nenhum —</SelectItem>
               {profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select>

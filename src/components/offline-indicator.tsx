@@ -58,7 +58,7 @@ export function OfflineIndicator() {
     };
   }, [qc]);
 
-  if (online) return null;
+  if (online && pending === 0 && !syncing) return null;
 
   return (
     <div className="fixed bottom-4 left-1/2 z-[60] -translate-x-1/2">

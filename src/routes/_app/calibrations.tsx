@@ -316,6 +316,7 @@ function CalPage() {
         data={calibrations}
         searchKeys={["certificate_number", "provider", "result", "equipment_id"]}
         newLabel="Nova calibração"
+        hideNew
         exportName="calibracoes"
         columns={[
           { key: "certificate_number", header: "Certificado", render: (r) => <span className="font-mono text-xs">{r.certificate_number ?? "—"}</span> },
