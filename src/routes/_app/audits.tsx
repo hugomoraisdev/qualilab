@@ -333,7 +333,9 @@ function NewAuditDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
     navigate({ to: "/audits/$id", params: { id } });
     } catch (err) {
       console.error("[audits] create:", err);
-      toast.error("Erro ao criar auditoria", { description: err instanceof Error ? err.message : String(err) });
+      const anyErr = err as Record<string, unknown> | null;
+      const desc = anyErr?.message ?? anyErr?.error_description ?? anyErr?.error ?? JSON.stringify(err);
+      toast.error("Erro ao criar auditoria", { description: String(desc) });
     } finally {
       setSaving(false);
     }
