@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
+import { useRouteGuard } from "@/lib/permissions";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,20 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
-import { FileDown, FileSpreadsheet, BarChart3, Settings2, Filter } from "lucide-react";
+import { FileDown, FileSpreadsheet, BarChart3, Settings2, Filter, FileText } from "lucide-react";
+import {
+  Document as DocxDocument,
+  Packer,
+  Paragraph,
+  TextRun,
+  Table as DocxTable,
+  TableRow as DocxTableRow,
+  TableCell,
+  WidthType,
+  HeadingLevel,
+  AlignmentType,
+  BorderStyle,
+} from "docx";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { useTableStore } from "@/lib/table-store";
@@ -45,6 +59,7 @@ interface ReportDef {
 
 function ReportsPage() {
   useAuditAccess("reports");
+  useRouteGuard("reports");
   const documents = useTableStore(documentsStore);
   const occurrences = useTableStore(occurrencesStore);
   const actions = useTableStore(actionPlansStore);
@@ -69,6 +84,8 @@ function ReportsPage() {
   const [to, setTo] = useState<string>("");
   const [openConfig, setOpenConfig] = useState<string | null>(null);
   const [colSelection, setColSelection] = useState<Record<string, boolean[]>>({});
+  const [responsibleFilter, setResponsibleFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   const today_ = today();
   const isExpired = (iso: string | null | undefined) => !!iso && iso < today_;
@@ -282,18 +299,41 @@ function ReportsPage() {
 
   const groups = ["Todos", ...Array.from(new Set(REPORTS.map((r) => r.group)))];
 
-  // Filtro por período aplicado a cada relatório
+  // Filtro por período + responsável + status aplicado a cada relatório
   const applyFilters = (rep: ReportDef, rows: (string | number | null | undefined)[][]) => {
-    if (!from && !to) return rows;
-    const idx = rep.dateColIndex;
-    if (idx == null) return rows;
-    return rows.filter((r) => {
-      const v = String(r[idx] ?? "").slice(0, 10);
-      if (!v) return false;
-      if (from && v < from) return false;
-      if (to && v > to) return false;
-      return true;
-    });
+    let result = rows;
+
+    // Filtro de período
+    if (from || to) {
+      const idx = rep.dateColIndex;
+      if (idx != null) {
+        result = result.filter((r) => {
+          const v = String(r[idx] ?? "").slice(0, 10);
+          if (!v) return false;
+          if (from && v < from) return false;
+          if (to && v > to) return false;
+          return true;
+        });
+      }
+    }
+
+    // Filtro de responsável: busca em qualquer coluna que contenha "Responsável"
+    if (responsibleFilter) {
+      const respIdx = rep.cols.findIndex((c) => c.toLowerCase().includes("responsável"));
+      if (respIdx >= 0) {
+        result = result.filter((r) => String(r[respIdx] ?? "").toLowerCase().includes(responsibleFilter.toLowerCase()));
+      }
+    }
+
+    // Filtro de status: busca em qualquer coluna "Status"
+    if (statusFilter) {
+      const statusIdx = rep.cols.findIndex((c) => c.toLowerCase() === "status");
+      if (statusIdx >= 0) {
+        result = result.filter((r) => String(r[statusIdx] ?? "").toLowerCase() === statusFilter.toLowerCase());
+      }
+    }
+
+    return result;
   };
 
   const buildRowsFor = async (rep: ReportDef) => {
@@ -354,6 +394,75 @@ function ReportsPage() {
     toast.success(`Excel "${rep.title}" gerado`);
   };
 
+  const handleDocx = async (rep: ReportDef) => {
+    const rows = await buildRowsFor(rep);
+    if (!rows.length) { toast.info(`Nenhum dado para "${rep.title}"`); return; }
+    const proj = project(rep, rows);
+
+    const cellBorder = { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" };
+    const borderDef = { top: cellBorder, bottom: cellBorder, left: cellBorder, right: cellBorder };
+
+    const headerRow = new DocxTableRow({
+      children: proj.cols.map((col) =>
+        new TableCell({
+          borders: borderDef,
+          shading: { fill: "2563EB" },
+          children: [new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: col, bold: true, color: "FFFFFF", size: 20 })],
+          })],
+        })
+      ),
+    });
+
+    const dataRows = proj.rows.map((row) =>
+      new DocxTableRow({
+        children: row.map((cell) =>
+          new TableCell({
+            borders: borderDef,
+            children: [new Paragraph({
+              children: [new TextRun({ text: String(cell ?? ""), size: 18 })],
+            })],
+          })
+        ),
+      })
+    );
+
+    const doc = new DocxDocument({
+      sections: [{
+        children: [
+          new Paragraph({
+            heading: HeadingLevel.HEADING_1,
+            children: [new TextRun({ text: rep.title, bold: true, size: 32 })],
+          }),
+          new Paragraph({
+            children: [new TextRun({
+              text: `Gerado em: ${new Date().toLocaleString("pt-BR")} · ${rows.length} registro(s)`,
+              size: 18,
+              color: "888888",
+            })],
+          }),
+          new Paragraph({ text: "" }),
+          new DocxTable({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [headerRow, ...dataRows],
+          }),
+        ],
+      }],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${rep.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.docx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    toast.success(`DOCX "${rep.title}" gerado`);
+  };
+
   const filtered = REPORTS.filter((r) =>
     (groupFilter === "Todos" || r.group === groupFilter) &&
     (!search || r.title.toLowerCase().includes(search.toLowerCase()) || r.group.toLowerCase().includes(search.toLowerCase())),
@@ -387,9 +496,27 @@ function ReportsPage() {
           <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9" />
         </div>
         <div className="flex items-end">
-          <Button variant="outline" className="h-9 w-full" onClick={() => { setFrom(""); setTo(""); setSearch(""); setGroupFilter("Todos"); }}>
+          <Button variant="outline" className="h-9 w-full" onClick={() => { setFrom(""); setTo(""); setSearch(""); setGroupFilter("Todos"); setResponsibleFilter(""); setStatusFilter(""); }}>
             Limpar filtros
           </Button>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Responsável</Label>
+          <select value={responsibleFilter} onChange={(e) => setResponsibleFilter(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+            <option value="">Todos</option>
+            {Array.from(new Set(profiles.map((p) => p.name).filter(Boolean))).sort().map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Status</Label>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+            <option value="">Todos</option>
+            {["aberta", "em_analise", "em_tratamento", "concluida", "cancelada", "rascunho", "aprovado", "obsoleto", "pendente", "em_andamento"].map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -416,6 +543,7 @@ function ReportsPage() {
               <div className="flex items-center gap-2 mt-4">
                 <Button size="sm" className="flex-1" onClick={() => handlePdf(rep)}><FileDown className="size-4" /> PDF</Button>
                 <Button size="sm" variant="outline" onClick={() => handleExcel(rep)}><FileSpreadsheet className="size-4" /> Excel</Button>
+                <Button size="sm" variant="outline" onClick={() => handleDocx(rep)}><FileText className="size-4" /> DOCX</Button>
                 <Dialog open={openConfig === rep.title} onOpenChange={(o) => setOpenConfig(o ? rep.title : null)}>
                   <DialogTrigger asChild>
                     <Button size="sm" variant="ghost" title="Personalizar colunas"><Settings2 className="size-4" /></Button>

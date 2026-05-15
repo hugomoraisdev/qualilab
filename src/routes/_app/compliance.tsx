@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAuditAccess } from "@/lib/audit";
+import { useRouteGuard } from "@/lib/permissions";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -51,6 +52,7 @@ function Section({ title, icon: Icon, items }: { title: string; icon: any; items
 
 function CompliancePage() {
   useAuditAccess("compliance");
+  useRouteGuard("all"); // compliance só é acessível a admin
   const lgpd: Item[] = [
     { icon: ScrollText, title: "Base legal e finalidade", status: "ok", desc: "Tratamento de dados restrito à execução do sistema de gestão da qualidade (legítimo interesse e cumprimento de obrigação legal)." },
     { icon: Eye, title: "Direitos do titular", status: "ok", desc: "Acesso, retificação e exclusão atendidos via Configurações → Conta. Solicitações formais devem ser enviadas ao Encarregado (DPO)." },

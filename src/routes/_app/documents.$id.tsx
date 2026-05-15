@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuditAccess, logAudit } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { documentsStore, saveDocument, type DocumentRow } from "@/lib/documents-store";
+import { documentsStore, saveDocument, type DocumentRow, type DocumentClassification } from "@/lib/documents-store";
 import { useTableStore } from "@/lib/table-store";
 import {
   ArrowLeft,
@@ -147,6 +147,27 @@ async function openFile(fileUrl: string, action: "download" | "print", fileName:
   setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
 }
 
+const CLASSIFICATION_LABELS: Record<DocumentClassification, string> = {
+  publico: "Público",
+  interno: "Interno",
+  restrito: "Restrito",
+  confidencial: "Confidencial",
+};
+const CLASSIFICATION_COLORS: Record<DocumentClassification, string> = {
+  publico: "bg-green-100 text-green-800 border-green-200",
+  interno: "bg-blue-100 text-blue-800 border-blue-200",
+  restrito: "bg-orange-100 text-orange-800 border-orange-200",
+  confidencial: "bg-red-100 text-red-800 border-red-200",
+};
+function ClassificationBadge({ value }: { value: DocumentClassification | null | undefined }) {
+  if (!value) return <span className="text-muted-foreground">—</span>;
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${CLASSIFICATION_COLORS[value]}`}>
+      {CLASSIFICATION_LABELS[value]}
+    </span>
+  );
+}
+
 function fmtDate(iso: string | null | undefined) {
   if (!iso) return "—";
   try {
@@ -187,6 +208,7 @@ function ReadConfirmationCard({ doc }: { doc: DocumentRow }) {
             userId: user.id,
             userEmail: user.email,
             userName: user.name,
+            documentVersion: doc.version,
           });
           await logDocumentAccess({
             documentId: doc.id,
@@ -223,7 +245,7 @@ function ReadConfirmationCard({ doc }: { doc: DocumentRow }) {
                 {r.user_name}
               </span>
               <span className="text-xs text-muted-foreground">
-                v{doc.version} · {new Date(r.confirmed_at).toLocaleString("pt-BR")}
+                {r.document_version ? `v${r.document_version}` : `v${doc.version}`} · {new Date(r.confirmed_at).toLocaleString("pt-BR")}
               </span>
             </li>
           ))}
@@ -1093,12 +1115,15 @@ function DocumentBodyCard({ doc }: { doc: DocumentRow }) {
     setBusy(true);
     try {
       const newBody = draft.trim() || null;
+      const previousBody = body;
       await setDocumentBody(doc.id, newBody);
       logAudit({
         module: "documents",
         action: "content_edited",
         record_id: doc.id,
         record_label: doc.title,
+        before: { body: previousBody, version: doc.version },
+        after: { body: newBody, version: doc.version },
       });
       setEditing(false);
       setDraft("");
@@ -1247,6 +1272,11 @@ function DocumentDetail() {
           deve ser distribuída.
         </div>
       )}
+      {user?.role === "consulta" && doc.status !== "aprovado" && (
+        <div className="mb-3 flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <AlertTriangle className="size-4" /> Este documento ainda não está vigente — somente documentos aprovados são oficialmente válidos.
+        </div>
+      )}
 
       <PageHeader
         title={doc.title}
@@ -1305,6 +1335,10 @@ function DocumentDetail() {
                 <dd>
                   {[meta.folder, meta.sector, meta.process].filter(Boolean).join(" / ") || "—"}
                 </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Classificação</dt>
+                <dd><ClassificationBadge value={doc.classification} /></dd>
               </div>
             </dl>
           </section>

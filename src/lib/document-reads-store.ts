@@ -10,6 +10,7 @@ export interface DocumentRead {
   user_email: string;
   user_name: string;
   confirmed_at: string;
+  document_version: string | null;
 }
 
 interface DocumentReadRow {
@@ -17,6 +18,7 @@ interface DocumentReadRow {
   document_id: string;
   user_id: string;
   confirmed_at: string;
+  document_version?: string | null;
 }
 
 const cache = new Map<string, DocumentRead[]>(); // key = document_id
@@ -36,6 +38,7 @@ function enrich(rows: DocumentReadRow[]): DocumentRead[] {
       ...r,
       user_email: p?.email ?? "",
       user_name: p?.name ?? "—",
+      document_version: r.document_version ?? null,
     };
   });
 }
@@ -88,12 +91,14 @@ export async function confirmRead(entry: {
   userId: string;
   userEmail: string;
   userName: string;
+  documentVersion?: string | null;
 }) {
   const { error } = await (supabase as any).from("document_reads").upsert(
     {
       document_id: entry.documentId,
       user_id: entry.userId,
       confirmed_at: new Date().toISOString(),
+      document_version: entry.documentVersion ?? null,
     },
     { onConflict: "document_id,user_id" },
   );

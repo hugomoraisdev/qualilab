@@ -24,7 +24,8 @@ import {
   type EquipmentCustomField,
 } from "@/lib/equipment-meta-store";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Bell, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/equipments/$id")({ component: EqDetail });
@@ -41,7 +42,8 @@ function EqDetail() {
 
   const [maxError, setMaxError] = useState("");
   const [unit, setUnit] = useState("");
-  const [recipientInput, setRecipientInput] = useState("");
+  const [savingRecipients, setSavingRecipients] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(true);
   const [cfLabel, setCfLabel] = useState("");
   const [cfValue, setCfValue] = useState("");
 
@@ -79,34 +81,31 @@ function EqDetail() {
     refresh();
   }
 
-  async function addRecipient() {
-    const email = recipientInput.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast.error("E-mail inválido.");
-      return;
+  async function toggleRecipient(userId: string, userName: string, checked: boolean) {
+    setSavingRecipients(true);
+    try {
+      await updateEquipmentMeta(
+        id,
+        (m) => {
+          const current = m.notification_recipients;
+          if (checked) {
+            return current.includes(userId)
+              ? m
+              : { ...m, notification_recipients: [...current, userId] };
+          } else {
+            return { ...m, notification_recipients: current.filter((r) => r !== userId) };
+          }
+        },
+        {
+          action: checked ? "Destinatário adicionado" : "Destinatário removido",
+          detail: userName,
+          actor,
+        },
+      );
+      refresh();
+    } finally {
+      setSavingRecipients(false);
     }
-    await updateEquipmentMeta(
-      id,
-      (m) =>
-        m.notification_recipients.includes(email)
-          ? m
-          : { ...m, notification_recipients: [...m.notification_recipients, email] },
-      { action: "Destinatário adicionado", detail: email, actor },
-    );
-    setRecipientInput("");
-    refresh();
-  }
-
-  async function removeRecipient(email: string) {
-    await updateEquipmentMeta(
-      id,
-      (m) => ({
-        ...m,
-        notification_recipients: m.notification_recipients.filter((r) => r !== email),
-      }),
-      { action: "Destinatário removido", detail: email, actor },
-    );
-    refresh();
   }
 
   async function addCustomField() {
@@ -322,44 +321,75 @@ function EqDetail() {
         </TabsContent>
 
         <TabsContent value="notificacoes">
-          <section className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-3">
-            <p className="text-xs text-muted-foreground">
-              E-mails que receberão alertas automáticos de vencimento de calibração deste
-              equipamento.
-            </p>
-            <div className="flex gap-2">
-              <Input
-                value={recipientInput}
-                onChange={(e) => setRecipientInput(e.target.value)}
-                placeholder="email@empresa.com"
-                type="email"
-              />
-              <Button onClick={addRecipient}>
-                <Plus className="size-4" /> Adicionar
-              </Button>
-            </div>
-            <ul className="space-y-1">
-              {meta.notification_recipients.length === 0 && (
-                <li className="text-xs text-muted-foreground italic">
-                  Nenhum destinatário configurado.
-                </li>
-              )}
-              {meta.notification_recipients.map((r) => (
-                <li
-                  key={r}
-                  className="flex items-center justify-between border border-border rounded-md px-3 py-2 text-sm"
-                >
-                  <span className="font-mono text-xs">{r}</span>
-                  <button
-                    onClick={() => removeRecipient(r)}
-                    className="text-muted-foreground hover:text-destructive"
-                    aria-label="Remover"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
-                </li>
-              ))}
-            </ul>
+          <section className="bg-card border border-border rounded-lg shadow-sm">
+            {/* Cabeçalho colapsável */}
+            <button
+              type="button"
+              onClick={() => setNotifOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-5 py-4 text-sm font-semibold hover:bg-muted/40 transition-colors rounded-t-lg"
+            >
+              <span className="flex items-center gap-2">
+                <Bell className="size-4 text-primary" />
+                Notificações de calibração
+                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                  ({meta.notification_recipients.length} usuário(s) selecionado(s))
+                </span>
+              </span>
+              {notifOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+            </button>
+
+            {notifOpen && (
+              <div className="px-5 pb-5 space-y-3 border-t border-border">
+                <p className="text-xs text-muted-foreground pt-3">
+                  Selecione os usuários que receberão alertas automáticos de vencimento de
+                  calibração deste equipamento. As notificações são enviadas diariamente por e-mail.
+                </p>
+
+                {profiles.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">
+                    Nenhum usuário cadastrado no sistema.
+                  </p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {profiles.map((p) => {
+                      const checked = meta.notification_recipients.includes(p.id);
+                      return (
+                        <li
+                          key={p.id}
+                          className="flex items-center gap-3 border border-border rounded-md px-3 py-2.5 text-sm hover:bg-muted/30 transition-colors"
+                        >
+                          <Checkbox
+                            id={`notif-${p.id}`}
+                            checked={checked}
+                            disabled={savingRecipients}
+                            onCheckedChange={(val) =>
+                              toggleRecipient(p.id, p.name, val === true)
+                            }
+                          />
+                          <label
+                            htmlFor={`notif-${p.id}`}
+                            className="flex-1 cursor-pointer select-none"
+                          >
+                            <span className="font-medium">{p.name}</span>
+                            <span className="ml-2 text-xs text-muted-foreground font-mono">
+                              {p.email}
+                            </span>
+                          </label>
+                          {checked && (
+                            <span className="text-xs text-primary font-medium">Ativo</span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+
+                <p className="text-xs text-muted-foreground border-t border-border pt-3">
+                  Além dos usuários selecionados acima, o responsável pelo equipamento também
+                  recebe alertas automaticamente.
+                </p>
+              </div>
+            )}
           </section>
         </TabsContent>
 

@@ -199,9 +199,18 @@ export const runEmailDigest = createServerFn({ method: "POST" })
         daysLeft: d,
       };
       // Destinatários: notification_recipients do equipment-meta
+      // Suporta user IDs (UUID) e e-mails diretos (legado) para retrocompatibilidade
       const eqMeta = eqMetaMap.get(cal.equipment_id);
-      for (const email of eqMeta?.notification_recipients ?? []) {
-        addAlert(email, "Equipe", alert);
+      for (const entry of eqMeta?.notification_recipients ?? []) {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entry);
+        if (isUuid) {
+          const email = profileById.get(entry);
+          const name = profileByIdName.get(entry) ?? "";
+          if (email) addAlert(email, name, alert);
+        } else {
+          // entrada legada: string de e-mail direto
+          addAlert(entry, "Equipe", alert);
+        }
       }
       // + responsible do equipamento por nome
       const eqResponsible = eq?.responsible_id;

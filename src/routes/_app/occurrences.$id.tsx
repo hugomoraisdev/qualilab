@@ -10,6 +10,7 @@ import {
   type FiveWhysData,
   type IshikawaData,
   type BrainstormData,
+  type FiveW2HData as RootCauseFiveW2HData,
   STATUS_OPTIONS,
   SEVERITY_OPTIONS,
   TYPE_OPTIONS,
@@ -50,6 +51,7 @@ import {
   AlertTriangle,
   Save,
   Loader2,
+  LayoutGrid,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,6 +76,7 @@ const TOOL_META: Record<RootCauseTool, { label: string; Icon: typeof ListOrdered
   "5_whys": { label: "5 Porquês", Icon: ListOrdered },
   ishikawa: { label: "Ishikawa (6M)", Icon: Fish },
   brainstorm: { label: "Brainstorm", Icon: Lightbulb },
+  "5w2h": { label: "5W2H", Icon: LayoutGrid },
 };
 
 const ISHIKAWA_GROUPS: { key: keyof IshikawaData["causes"]; label: string }[] = [
@@ -408,6 +411,51 @@ function BrainstormView({ data }: { data: BrainstormData }) {
 }
 
 // ============================================================================
+// 5W2H (causa raiz)
+// ============================================================================
+const EMPTY_5W2H: RootCauseFiveW2HData = { what: "", why: "", where: "", when: "", who: "", how: "", how_much: "" };
+const W2H_FIELDS: { key: keyof RootCauseFiveW2HData; label: string; placeholder: string; multiline?: boolean }[] = [
+  { key: "what", label: "What — O quê?", placeholder: "O que ocorreu / qual o problema", multiline: true },
+  { key: "why", label: "Why — Por quê?", placeholder: "Por que aconteceu", multiline: true },
+  { key: "where", label: "Where — Onde?", placeholder: "Onde foi identificado" },
+  { key: "when", label: "When — Quando?", placeholder: "Quando ocorreu" },
+  { key: "who", label: "Who — Quem?", placeholder: "Quem está envolvido / responsável" },
+  { key: "how", label: "How — Como?", placeholder: "Como será tratado", multiline: true },
+  { key: "how_much", label: "How Much — Quanto custa?", placeholder: "Custo estimado do tratamento" },
+];
+function RootCauseFiveW2HForm({ value, onChange }: { value: RootCauseFiveW2HData; onChange: (v: RootCauseFiveW2HData) => void }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">Estruture a análise da causa raiz usando os 7 elementos do 5W2H.</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {W2H_FIELDS.map((f) => (
+          <div key={f.key} className={cn("space-y-1.5", f.multiline && "md:col-span-2")}>
+            <Label className="text-xs">{f.label}</Label>
+            {f.multiline ? (
+              <Textarea rows={2} value={value[f.key]} onChange={(e) => onChange({ ...value, [f.key]: e.target.value })} placeholder={f.placeholder} />
+            ) : (
+              <Input value={value[f.key]} onChange={(e) => onChange({ ...value, [f.key]: e.target.value })} placeholder={f.placeholder} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function RootCauseFiveW2HView({ data }: { data: RootCauseFiveW2HData }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {W2H_FIELDS.filter((f) => data[f.key]).map((f) => (
+        <div key={f.key} className={cn("border border-border rounded-md p-3 bg-background", f.multiline && "md:col-span-2")}>
+          <div className="text-xs font-semibold mb-1">{f.label}</div>
+          <div className="text-sm">{data[f.key]}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
 // Causa raiz (todas as ferramentas)
 // ============================================================================
 function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
@@ -420,6 +468,7 @@ function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
       "5_whys": { whys: ["", "", "", "", ""], rootCause: "" } as FiveWhysData,
       ishikawa: emptyIshikawa(),
       brainstorm: { ideas: [], selected: "" } as BrainstormData,
+      "5w2h": { ...EMPTY_5W2H } as RootCauseFiveW2HData,
     };
     if (saved && occurrence.root_cause_data) {
       (base as any)[saved] = occurrence.root_cause_data;
@@ -430,11 +479,13 @@ function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
   const [fiveWhys, setFiveWhys] = useState<FiveWhysData>(initial["5_whys"]);
   const [ishikawa, setIshikawa] = useState<IshikawaData>(initial.ishikawa);
   const [brainstorm, setBrainstorm] = useState<BrainstormData>(initial.brainstorm);
+  const [fiveW2h, setFiveW2h] = useState<RootCauseFiveW2HData>(initial["5w2h"]);
 
   useEffect(() => {
     setFiveWhys(initial["5_whys"]);
     setIshikawa(initial.ishikawa);
     setBrainstorm(initial.brainstorm);
+    setFiveW2h(initial["5w2h"]);
     setTool(saved ?? "5_whys");
     setEditing(!saved);
   }, [initial, saved]);
@@ -442,6 +493,7 @@ function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
   const currentData = () => {
     if (tool === "5_whys") return { tool, data: fiveWhys };
     if (tool === "ishikawa") return { tool, data: ishikawa };
+    if (tool === "5w2h") return { tool, data: fiveW2h };
     return { tool, data: brainstorm };
   };
 
@@ -473,6 +525,7 @@ function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
         {saved === "brainstorm" && (
           <BrainstormView data={occurrence.root_cause_data as BrainstormData} />
         )}
+        {saved === "5w2h" && <RootCauseFiveW2HView data={occurrence.root_cause_data as RootCauseFiveW2HData} />}
       </div>
     );
   }
@@ -480,7 +533,7 @@ function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
   return (
     <div>
       <Tabs value={tool} onValueChange={(v) => setTool(v as RootCauseTool)}>
-        <TabsList className="grid grid-cols-3 w-full">
+        <TabsList className="grid grid-cols-4 w-full">
           <TabsTrigger value="5_whys">
             <ListOrdered className="size-3.5 mr-1" /> 5 Porquês
           </TabsTrigger>
@@ -489,6 +542,9 @@ function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
           </TabsTrigger>
           <TabsTrigger value="brainstorm">
             <Lightbulb className="size-3.5 mr-1" /> Brainstorm
+          </TabsTrigger>
+          <TabsTrigger value="5w2h">
+            <LayoutGrid className="size-3.5 mr-1" /> 5W2H
           </TabsTrigger>
         </TabsList>
         <TabsContent value="5_whys" className="pt-4">
@@ -499,6 +555,9 @@ function RootCauseSection({ occurrence }: { occurrence: OccurrenceRow }) {
         </TabsContent>
         <TabsContent value="brainstorm" className="pt-4">
           <BrainstormForm value={brainstorm} onChange={setBrainstorm} />
+        </TabsContent>
+        <TabsContent value="5w2h" className="pt-4">
+          <RootCauseFiveW2HForm value={fiveW2h} onChange={setFiveW2h} />
         </TabsContent>
       </Tabs>
       <div className={cn("mt-6 flex justify-end gap-2")}>

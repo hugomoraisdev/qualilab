@@ -14,6 +14,8 @@ export function logAudit(params: {
   action: string;
   record_id?: string | null;
   record_label?: string | null;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
 }): void {
   if (typeof window === "undefined") return;
   const user = _currentUser;
@@ -26,6 +28,8 @@ export function logAudit(params: {
       action: params.action,
       record_id: params.record_id ?? null,
       record_label: params.record_label ?? null,
+      before: params.before ?? null,
+      after: params.after ?? null,
     },
   });
 }

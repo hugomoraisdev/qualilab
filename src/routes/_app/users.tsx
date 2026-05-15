@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
+import { useRouteGuard } from "@/lib/permissions";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ interface UserRow {
 
 function UsersPage() {
   useAuditAccess("users");
+  useRouteGuard("all"); // gerenciamento de usuários restrito a administradores
   const { user } = useAuth();
   const { units } = useLabUnits();
   const isAdmin = user?.role === "admin";

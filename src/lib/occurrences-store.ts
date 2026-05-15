@@ -4,7 +4,7 @@
 // e campos personalizados) ficam em `app_data` via `occurrence-meta-store`.
 import { createTableStore } from "./table-store";
 
-export type RootCauseTool = "5_whys" | "ishikawa" | "brainstorm";
+export type RootCauseTool = "5_whys" | "ishikawa" | "brainstorm" | "5w2h";
 
 /** Estruturas serializadas em occurrences.root_cause_data (jsonb). */
 export interface FiveWhysData {
@@ -26,7 +26,16 @@ export interface BrainstormData {
   ideas: string[];
   selected: string;
 }
-export type RootCauseData = FiveWhysData | IshikawaData | BrainstormData;
+export interface FiveW2HData {
+  what: string;     // O quê?
+  why: string;      // Por quê?
+  where: string;    // Onde?
+  when: string;     // Quando?
+  who: string;      // Quem?
+  how: string;      // Como?
+  how_much: string; // Quanto custa?
+}
+export type RootCauseData = FiveWhysData | IshikawaData | BrainstormData | FiveW2HData;
 
 export interface OccurrenceRow {
   id: string;

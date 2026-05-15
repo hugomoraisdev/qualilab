@@ -4,7 +4,7 @@ import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
-import { documentsStore, saveDocument, type DocumentRow } from "@/lib/documents-store";
+import { documentsStore, saveDocument, type DocumentRow, type DocumentClassification } from "@/lib/documents-store";
 import { useTableStore } from "@/lib/table-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -131,6 +131,7 @@ function NewDocumentDialog({
     process: "",
     file_url: "",
     description: "",
+    classification: "" as DocumentClassification | "",
   });
   const [customValues, setCustomValues] = useState<CustomValuesMap>({});
 
@@ -147,6 +148,7 @@ function NewDocumentDialog({
       process: "",
       file_url: "",
       description: "",
+      classification: "",
     });
     setCustomValues({});
   };
@@ -176,6 +178,7 @@ function NewDocumentDialog({
         responsible_id: user?.id ?? null,
         file_url: form.file_url.trim() || null,
         description: form.description.trim() || null,
+        classification: (form.classification as DocumentClassification) || null,
         created_at: now,
         updated_at: now,
       };
@@ -344,6 +347,24 @@ function NewDocumentDialog({
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
           </div>
+          <div>
+            <Label htmlFor="doc-classification">Classificação</Label>
+            <Select
+              value={form.classification || "__none"}
+              onValueChange={(v) => setForm({ ...form, classification: v === "__none" ? "" : v as DocumentClassification })}
+            >
+              <SelectTrigger id="doc-classification">
+                <SelectValue placeholder="Selecione…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Não classificado</SelectItem>
+                <SelectItem value="publico">Público</SelectItem>
+                <SelectItem value="interno">Interno</SelectItem>
+                <SelectItem value="restrito">Restrito</SelectItem>
+                <SelectItem value="confidencial">Confidencial</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {customFields.filter((f) => f.active).length > 0 && (
             <div className="col-span-2 border-t border-border pt-3">
@@ -426,6 +447,7 @@ function FilterBar({
 
 function DocumentsPage() {
   useAuditAccess("documents");
+  const { user } = useAuth();
   const documents = useTableStore(documentsStore);
   const ids = useMemo(() => documents.map((d) => d.id), [documents]);
   const metaMap = useAllDocumentMeta(ids);
@@ -440,8 +462,12 @@ function DocumentsPage() {
     return <Outlet />;
   }
 
+  const isReadOnly = user?.role === "consulta";
+
   const filtered = useMemo(() => {
     return documents.filter((d) => {
+      // Perfil consulta só vê documentos aprovados
+      if (isReadOnly && d.status !== "aprovado") return false;
       const m = metaMap[d.id];
       if (filters.category && d.category !== filters.category) return false;
       if (filters.folder && (m?.folder ?? "") !== filters.folder) return false;
@@ -451,7 +477,7 @@ function DocumentsPage() {
       if (filters.responsible && d.responsible !== filters.responsible) return false;
       return true;
     });
-  }, [documents, metaMap, filters]);
+  }, [documents, metaMap, filters, isReadOnly]);
 
   // Colunas básicas (visão "docs") e estendidas (Lista Mestra).
   const baseColumns = [

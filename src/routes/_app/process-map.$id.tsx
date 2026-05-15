@@ -355,6 +355,12 @@ function ProcessDetailPage() {
                     className="border border-border rounded-md p-3 grid grid-cols-1 lg:grid-cols-12 gap-2 items-start"
                   >
                     <div className="lg:col-span-1 flex flex-col items-center pt-2">
+                      {/* GripVertical indica que a etapa é reordenável.
+                          DnD completo requer instalação de @dnd-kit/sortable ou react-beautiful-dnd.
+                          Por ora, use os botões ↑/↓ abaixo para reordenar. */}
+                      <span aria-label="Reordenável — use ↑↓">
+                        <GripVertical className="size-4 text-muted-foreground cursor-grab mb-0.5" />
+                      </span>
                       <span className="text-xs font-mono text-muted-foreground">#{s.order}</span>
                       <button
                         className="text-muted-foreground hover:text-foreground text-xs mt-1"

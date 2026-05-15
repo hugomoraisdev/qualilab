@@ -1,6 +1,8 @@
 // Store de documentos — Fase 2B (tabela dedicada).
 import { createTableStore } from "./table-store";
 
+export type DocumentClassification = "publico" | "interno" | "restrito" | "confidencial";
+
 export interface DocumentRow {
   id: string;
   code: string;
@@ -13,6 +15,7 @@ export interface DocumentRow {
   responsible_id?: string | null;
   file_url?: string | null;
   description?: string | null;
+  classification?: DocumentClassification | null;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;

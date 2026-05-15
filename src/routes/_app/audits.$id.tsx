@@ -25,6 +25,7 @@ import {
   BookmarkPlus,
   ExternalLink,
   Loader2,
+  ClipboardList,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTableStore } from "@/lib/table-store";
@@ -262,6 +263,30 @@ function AuditDetail() {
         actions={
           <>
             <StatusBadge>{a.status}</StatusBadge>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                const ncCount = findings.filter((f) => f.result === "nao_conforme").length;
+                const ap: ActionPlanRow = {
+                  id: newId("AP"),
+                  code: null,
+                  origin_type: "audit",
+                  origin_id: a.id,
+                  description: `Plano de ação geral — Auditoria ${a.code ?? a.id}: ${a.scope}. ${ncCount} não conformidade(s) encontrada(s). Tipo: ${a.type}. Auditor: ${a.auditor_name ?? "—"}.`,
+                  responsible_id: null,
+                  deadline: null,
+                  priority: ncCount > 0 ? "alta" : "media",
+                  status: "pendente",
+                  progress: 0,
+                  notes: `Gerado automaticamente da auditoria ${a.code ?? a.id}`,
+                };
+                await saveActionPlan(ap);
+                toast.success("Plano de ação geral criado", { description: `ID: ${ap.id}` });
+              }}
+            >
+              <ClipboardList className="size-4" /> Gerar plano geral
+            </Button>
             <Button
               size="sm"
               variant="outline"

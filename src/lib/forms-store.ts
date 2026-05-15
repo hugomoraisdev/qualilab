@@ -33,6 +33,7 @@ export interface FormResponseRow {
   submitted_by: string | null;
   submitted_by_name: string | null;
   submitted_at: string;
+  deadline: string | null; // data ISO YYYY-MM-DD definida pelo respondente
   approval_status: "n/a" | "pending" | "approved" | "rejected";
   approver_id: string | null;
   approved_at: string | null;

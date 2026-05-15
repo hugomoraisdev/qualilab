@@ -97,6 +97,8 @@ function CompPage() {
   const [filterArea, setFilterArea] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterExpiry, setFilterExpiry] = useState("");
+  const [aptUser, setAptUser] = useState("");
+  const [aptRole, setAptRole] = useState("");
 
   const profiles = listProfiles();
   const collaborators = useMemo(() => {
@@ -143,7 +145,7 @@ function CompPage() {
     );
   };
 
-  const apidaoRows = collaborators
+  const allAptRows = collaborators
     .map((userId) => {
       const roleId = assignments[userId];
       const role = roles.find((r) => r.id === roleId);
@@ -162,9 +164,23 @@ function CompPage() {
     })
     .filter((x): x is NonNullable<typeof x> => !!x);
 
-  const exportApidaoCsv = () => {
+  const apidaoRows = allAptRows
+    .filter((r) => !aptUser || r.userId === aptUser)
+    .filter((r) => !aptRole || r.roleId === aptRole);
+
+  const downloadCsv = (csvContent: string, filename: string) => {
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const buildAptidaoCsv = (rows: typeof allAptRows) => {
     const lines = ["Colaborador,Função,Requisitos,Atendidos,Lacunas,Apto"];
-    apidaoRows.forEach((r) => {
+    rows.forEach((r) => {
       lines.push(
         [
           profileName(r.userId),
@@ -178,14 +194,48 @@ function CompPage() {
           .join(","),
       );
     });
-    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `aptidao_${today()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    return "﻿" + lines.join("\n");
+  };
+
+  const exportApidaoCsv = () => {
+    downloadCsv(buildAptidaoCsv(apidaoRows), `aptidao_${today()}.csv`);
     toast.success("Aptidão exportada");
+  };
+
+  const exportColaboradorCsv = (userId: string) => {
+    const name = profileName(userId);
+    const comps = competencies.filter((c) => c.user_id === userId);
+    const lines = [
+      "Colaborador,Área,Competência,Tipo,Nível,Certificado em,Validade,Status,Observações",
+    ];
+    comps.forEach((c) => {
+      const ex = extras[c.id] ?? {};
+      lines.push(
+        [
+          name,
+          c.area,
+          c.skill,
+          ex.training_type ?? "—",
+          LEVEL_LABEL[c.level] ?? c.level,
+          c.certified_at ?? "—",
+          c.expires_at ?? "—",
+          c.status,
+          c.notes ?? "",
+        ]
+          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+          .join(","),
+      );
+    });
+    downloadCsv("﻿" + lines.join("\n"), `colaborador_${name.replace(/\s+/g, "_")}_${today()}.csv`);
+    toast.success(`Relatório de ${name} exportado`);
+  };
+
+  const exportFuncaoCsv = (roleId: string) => {
+    const role = roles.find((r) => r.id === roleId);
+    if (!role) return;
+    const rows = allAptRows.filter((r) => r.roleId === roleId);
+    downloadCsv(buildAptidaoCsv(rows), `funcao_${role.name.replace(/\s+/g, "_")}_${today()}.csv`);
+    toast.success(`Relatório da função ${role.name} exportado`);
   };
 
   return (
@@ -485,9 +535,19 @@ function CompPage() {
                           <p className="text-xs text-muted-foreground mt-1">{r.description}</p>
                         )}
                       </div>
-                      <Button size="sm" variant="ghost" onClick={() => setEditingRole(r)}>
-                        <Pencil className="size-3.5" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          title="Relatório por função"
+                          onClick={() => exportFuncaoCsv(r.id)}
+                        >
+                          <FileSpreadsheet className="size-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingRole(r)}>
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="mt-3">
                       <div className="text-[11px] uppercase text-muted-foreground tracking-wider mb-1">
@@ -582,21 +642,66 @@ function CompPage() {
 
         {/* APTIDÃO */}
         <TabsContent value="aptidao" className="mt-4 space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold">Aptidão da equipe</h3>
               <p className="text-xs text-muted-foreground">
                 Comprovação de que cada colaborador atende aos requisitos da função atribuída.
               </p>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={exportApidaoCsv}
-              disabled={apidaoRows.length === 0}
-            >
-              <FileSpreadsheet className="size-4" /> Exportar
-            </Button>
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Filtrar colaborador</Label>
+                <Select value={aptUser} onValueChange={setAptUser}>
+                  <SelectTrigger className="h-8 w-44 text-xs">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos</SelectItem>
+                    {profiles.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name || p.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Filtrar função</Label>
+                <Select value={aptRole} onValueChange={setAptRole}>
+                  <SelectTrigger className="h-8 w-44 text-xs">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todas</SelectItem>
+                    {roles.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {aptUser && (
+                <Button size="sm" variant="outline" onClick={() => exportColaboradorCsv(aptUser)}>
+                  <FileSpreadsheet className="size-4" /> Rel. colaborador
+                </Button>
+              )}
+              {aptRole && !aptUser && (
+                <Button size="sm" variant="outline" onClick={() => exportFuncaoCsv(aptRole)}>
+                  <FileSpreadsheet className="size-4" /> Rel. função
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={exportApidaoCsv}
+                disabled={apidaoRows.length === 0}
+              >
+                <FileSpreadsheet className="size-4" /> Exportar{" "}
+                {apidaoRows.length < allAptRows.length ? "filtrado" : "todos"}
+              </Button>
+            </div>
           </div>
 
           {apidaoRows.length === 0 ? (
@@ -614,6 +719,7 @@ function CompPage() {
                     <th className="text-left px-4 py-2.5">Cobertura</th>
                     <th className="text-left px-4 py-2.5">Lacunas</th>
                     <th className="text-left px-4 py-2.5">Aptidão</th>
+                    <th className="px-4 py-2.5"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -651,6 +757,15 @@ function CompPage() {
                             <ShieldAlert className="size-3 mr-1" /> Pendente
                           </Badge>
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                          title="Exportar relatório deste colaborador"
+                          onClick={() => exportColaboradorCsv(r.userId)}
+                        >
+                          <FileSpreadsheet className="size-3.5" />
+                        </button>
                       </td>
                     </tr>
                   ))}

@@ -74,6 +74,7 @@ function FormDetail() {
   const equipments = useTableStore(equipmentsStore);
 
   const [values, setValues] = useState<FormValues>({});
+  const [deadline, setDeadline] = useState<string>("");
   const [linkModule, setLinkModule] = useState<LinkableModule | "">("");
   const [linkRecordId, setLinkRecordId] = useState("");
 
@@ -197,18 +198,21 @@ function FormDetail() {
       submitted_by: user?.id ?? null,
       submitted_by_name: user?.name ?? "—",
       submitted_at: submittedAt.toISOString(),
+      deadline: deadline || null,
       approval_status: custom.requires_approval ? "pending" : "n/a",
       approver_id: null,
       approved_at: null,
     };
     await saveResponse(resp);
 
-    // Metadados (vínculo + prazo)
+    // Metadados (vínculo + prazo): prazo explícito tem precedência sobre SLA do formulário
     const deadlineDays = formMeta?.deadline_days ?? null;
     const deadlineAt =
-      deadlineDays != null
-        ? new Date(submittedAt.getTime() + deadlineDays * 86400000).toISOString()
-        : null;
+      deadline
+        ? new Date(deadline + "T23:59:59").toISOString()
+        : deadlineDays != null
+          ? new Date(submittedAt.getTime() + deadlineDays * 86400000).toISOString()
+          : null;
     const linkLabel = linkOptions.find((o) => o.id === linkRecordId)?.label ?? null;
     if (linkModule || deadlineAt) {
       await upsertResponseMeta({
@@ -221,6 +225,7 @@ function FormDetail() {
     }
 
     setValues({});
+    setDeadline("");
     setLinkModule("");
     setLinkRecordId("");
     toast.success("Resposta enviada", {
@@ -245,6 +250,7 @@ function FormDetail() {
       "status_aprovacao",
       "vinculo_modulo",
       "vinculo_registro",
+      "prazo_resposta",
       "prazo_em",
       ...custom.fields.map((f) => f.label),
     ];
@@ -263,6 +269,7 @@ function FormDetail() {
           r.approval_status,
           meta?.linked_module ?? "",
           meta?.linked_record_label ?? "",
+          r.deadline ?? "",
           meta?.deadline_at ? new Date(meta.deadline_at).toLocaleDateString("pt-BR") : "",
           ...custom.fields.map((f) => {
             const v = r.values[f.id];
@@ -401,6 +408,94 @@ function FormDetail() {
               </div>
             ))}
           </div>
+
+          {responses.length > 0 && (
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <div className="px-4 py-3 border-b border-border text-sm font-semibold flex items-center gap-1.5">
+                <Clock className="size-4" /> Respostas e prazos
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/30">
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">Protocolo</th>
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">Enviado por</th>
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">Data de envio</th>
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">Prazo</th>
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">Aprovação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {responses.map((r) => {
+                      const meta = respMeta.byId[r.id];
+                      // Usar prazo explícito da resposta (deadline) com fallback para deadline_at do meta
+                      const deadlineDisplay = r.deadline
+                        ? new Date(r.deadline + "T00:00:00").toLocaleDateString("pt-BR")
+                        : meta?.deadline_at
+                          ? new Date(meta.deadline_at).toLocaleDateString("pt-BR")
+                          : null;
+                      const deadlineDate = r.deadline
+                        ? new Date(r.deadline + "T23:59:59")
+                        : meta?.deadline_at
+                          ? new Date(meta.deadline_at)
+                          : null;
+                      const isOverdue =
+                        deadlineDate !== null &&
+                        deadlineDate.getTime() < Date.now() &&
+                        r.approval_status !== "approved";
+                      return (
+                        <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                          <td className="px-3 py-2 font-mono text-[10px] text-muted-foreground">{r.id}</td>
+                          <td className="px-3 py-2">{r.submitted_by_name ?? "—"}</td>
+                          <td className="px-3 py-2 text-muted-foreground">
+                            {new Date(r.submitted_at).toLocaleString("pt-BR")}
+                          </td>
+                          <td className="px-3 py-2">
+                            {deadlineDisplay ? (
+                              <span
+                                className={`inline-flex items-center gap-1 font-medium ${isOverdue ? "text-destructive" : "text-foreground"}`}
+                              >
+                                <Clock className="size-3" />
+                                {deadlineDisplay}
+                                {isOverdue && (
+                                  <span className="text-[10px] bg-destructive/10 text-destructive rounded px-1">
+                                    vencido
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground italic">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2">
+                            <span
+                              className={`text-[10px] rounded px-1.5 py-0.5 font-medium ${
+                                r.approval_status === "approved"
+                                  ? "bg-success/10 text-success"
+                                  : r.approval_status === "rejected"
+                                    ? "bg-destructive/10 text-destructive"
+                                    : r.approval_status === "pending"
+                                      ? "bg-warning/10 text-warning"
+                                      : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {r.approval_status === "approved"
+                                ? "Aprovado"
+                                : r.approval_status === "rejected"
+                                  ? "Reprovado"
+                                  : r.approval_status === "pending"
+                                    ? "Pendente"
+                                    : "N/A"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -542,11 +637,32 @@ function FormDetail() {
                   ))}
               </div>
             ))}
-            <div className="flex justify-end gap-2 border-t border-border pt-4">
-              <Button type="button" variant="outline" onClick={() => setValues({})}>
-                Limpar
-              </Button>
-              <Button type="submit">Enviar resposta</Button>
+            <div className="border-t border-border pt-4 space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm flex items-center gap-1.5">
+                  <Clock className="size-3.5" /> Prazo para resposta{" "}
+                  <span className="text-muted-foreground font-normal text-xs">(opcional)</span>
+                </Label>
+                <Input
+                  type="date"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  className="max-w-[200px]"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setValues({});
+                    setDeadline("");
+                  }}
+                >
+                  Limpar
+                </Button>
+                <Button type="submit">Enviar resposta</Button>
+              </div>
             </div>
           </form>
 

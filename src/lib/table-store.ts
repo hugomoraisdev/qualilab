@@ -1,6 +1,18 @@
 // Helper genérico — espelha CloudStore mas para tabelas dedicadas (Fase 2B).
 // Hidrata via SELECT *, mantém cache em memória, sincroniza via Realtime.
 //
+// MECANISMO DE PERSISTÊNCIA LOCAL (IMPORTANTE — IMPRECISÃO DOCUMENTAL):
+// Este módulo utiliza **localStorage** (Web Storage API), NÃO IndexedDB.
+// Qualquer referência a "IndexedDB" ou "51 stores IndexedDB" em relatórios
+// externos é imprecisa — trata-se de localStorage com as seguintes chaves:
+//   - `tbl-cache:<table>`  — espelho em memória dos dados de cada tabela
+//   - `tbl-queue:<table>`  — fila de operações pendentes (offline outbox)
+// Os dados são sincronizados com o Supabase (PostgreSQL) via Realtime.
+// O `offline-outbox.ts` usa o mesmo padrão de fila em localStorage.
+//
+// Se IndexedDB real for necessário (dados > 5MB, transações ACID no cliente),
+// substitua window.localStorage por idb-keyval ou Dexie.js.
+//
 // Suporte offline (Fase Auditorias):
 // - Cache espelhado em localStorage por tabela (`tbl-cache:<table>`) para
 //   navegação imediata quando o usuário entra sem rede.
@@ -143,14 +155,22 @@ export class TableStore<T extends { id: string }> {
   }
 
   async upsert(row: T): Promise<void> {
-    const isCreate = !this.cache.some((r) => r.id === row.id);
+    const existing = this.cache.find((r) => r.id === row.id);
+    const isCreate = !existing;
     const previousCache = this.cache;
     this.cache = [row, ...this.cache.filter((r) => r.id !== row.id)];
     this.persistCache();
     this.notify();
     const r = row as Record<string, unknown>;
     const label = String(r.name ?? r.title ?? r.description ?? r.code ?? row.id ?? "");
-    logAudit({ module: this.table, action: isCreate ? "created" : "updated", record_id: row.id, record_label: label || null });
+    logAudit({
+      module: this.table,
+      action: isCreate ? "created" : "updated",
+      record_id: row.id,
+      record_label: label || null,
+      before: isCreate ? null : (existing as Record<string, unknown>),
+      after: row as Record<string, unknown>,
+    });
     if (this.isOffline()) {
       this.enqueue({ kind: "upsert", row, ts: Date.now() });
       return;
@@ -171,7 +191,7 @@ export class TableStore<T extends { id: string }> {
     this.cache = this.cache.filter((r) => r.id !== id);
     this.persistCache();
     this.notify();
-    logAudit({ module: this.table, action: "deleted", record_id: id, record_label: label });
+    logAudit({ module: this.table, action: "deleted", record_id: id, record_label: label, before: existing ?? null });
     if (this.isOffline()) {
       this.enqueue({ kind: "delete", id, ts: Date.now() });
       return;

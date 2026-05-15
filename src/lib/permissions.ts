@@ -1,4 +1,7 @@
+import { useEffect } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useAuth, type Role } from "./auth";
+import { toast } from "sonner";
 
 // Mapa de permissões por papel — usado para ocultar menus, ações e botões.
 // "all" = acesso total. Caso contrário, a permissão precisa estar listada.
@@ -53,4 +56,21 @@ export function usePermission(permission: string): boolean {
 export function useAnyPermission(permissions: string[]): boolean {
   const { user } = useAuth();
   return permissions.some((p) => hasPermission(user?.role, p));
+}
+
+/**
+ * Guard de rota: redireciona para /dashboard com toast se o usuário não tem a permissão.
+ * Use no topo de componentes de página para proteger rotas sensíveis.
+ */
+export function useRouteGuard(permission: string): void {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (loading) return;
+    if (!hasPermission(user?.role, permission)) {
+      toast.error("Acesso não autorizado", { description: `Permissão necessária: ${permission}` });
+      void navigate({ to: "/dashboard" });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role, loading]);
 }
