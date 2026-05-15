@@ -313,12 +313,12 @@ function CompPage() {
           <div className="flex flex-wrap gap-2 items-end pb-1">
             <div className="space-y-1">
               <Label className="text-xs">Colaborador</Label>
-              <Select value={filterUser} onValueChange={setFilterUser}>
+              <Select value={filterUser || "__all"} onValueChange={(v) => setFilterUser(v === "__all" ? "" : v)}>
                 <SelectTrigger className="h-8 w-44 text-xs">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="__all">Todos</SelectItem>
                   {profiles.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name || p.email}
@@ -329,12 +329,12 @@ function CompPage() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Área</Label>
-              <Select value={filterArea} onValueChange={setFilterArea}>
+              <Select value={filterArea || "__all"} onValueChange={(v) => setFilterArea(v === "__all" ? "" : v)}>
                 <SelectTrigger className="h-8 w-40 text-xs">
                   <SelectValue placeholder="Todas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
+                  <SelectItem value="__all">Todas</SelectItem>
                   {allAreas.map((a) => (
                     <SelectItem key={a} value={a}>
                       {a}
@@ -345,12 +345,12 @@ function CompPage() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Status</Label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <Select value={filterStatus || "__all"} onValueChange={(v) => setFilterStatus(v === "__all" ? "" : v)}>
                 <SelectTrigger className="h-8 w-36 text-xs">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="__all">Todos</SelectItem>
                   <SelectItem value="ativo">Ativo</SelectItem>
                   <SelectItem value="vencido">Vencido</SelectItem>
                   <SelectItem value="pendente">Pendente</SelectItem>
@@ -360,12 +360,12 @@ function CompPage() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Validade</Label>
-              <Select value={filterExpiry} onValueChange={setFilterExpiry}>
+              <Select value={filterExpiry || "__all"} onValueChange={(v) => setFilterExpiry(v === "__all" ? "" : v)}>
                 <SelectTrigger className="h-8 w-48 text-xs">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="__all">Todos</SelectItem>
                   <SelectItem value="vencidos">Vencidos</SelectItem>
                   <SelectItem value="30dias">A vencer em 30 dias</SelectItem>
                   <SelectItem value="60dias">A vencer em 60 dias</SelectItem>
@@ -652,12 +652,12 @@ function CompPage() {
             <div className="flex flex-wrap items-end gap-2">
               <div className="space-y-1">
                 <Label className="text-xs">Filtrar colaborador</Label>
-                <Select value={aptUser} onValueChange={setAptUser}>
+                <Select value={aptUser || "__all"} onValueChange={(v) => setAptUser(v === "__all" ? "" : v)}>
                   <SelectTrigger className="h-8 w-44 text-xs">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="__all">Todos</SelectItem>
                     {profiles.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name || p.email}
@@ -668,12 +668,12 @@ function CompPage() {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Filtrar função</Label>
-                <Select value={aptRole} onValueChange={setAptRole}>
+                <Select value={aptRole || "__all"} onValueChange={(v) => setAptRole(v === "__all" ? "" : v)}>
                   <SelectTrigger className="h-8 w-44 text-xs">
                     <SelectValue placeholder="Todas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas</SelectItem>
+                    <SelectItem value="__all">Todas</SelectItem>
                     {roles.map((r) => (
                       <SelectItem key={r.id} value={r.id}>
                         {r.name}

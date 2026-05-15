@@ -8,11 +8,15 @@ import {
   ListChecks, ClipboardCheck, GraduationCap, TrendingUp, ArrowRight,
   Target, BarChart3, TrendingDown,
 } from "lucide-react";
-import {
-  documents, equipments, calibrations, suppliers, occurrences, risks,
-  actionPlans, audits, competencies, occurrencesByMonth,
-} from "@/lib/mock-data";
+import { documentsStore } from "@/lib/documents-store";
+import { equipmentsStore } from "@/lib/equipments-store";
+import { calibrationsStore } from "@/lib/calibrations-store";
 import { suppliersStore, getEvaluationStatus } from "@/lib/suppliers-store";
+import { occurrencesStore } from "@/lib/occurrences-store";
+import { risksStore, classifyScore } from "@/lib/risks-store";
+import { actionPlansStore } from "@/lib/action-plans-store";
+import { auditsStore } from "@/lib/audits-store";
+import { competenciesStore } from "@/lib/competencies-store";
 import {
   indicatorsStore,
   indicatorResultsStore,
@@ -60,19 +64,54 @@ function KpiCard({ label, value, hint, tone, icon: Icon, to }: {
   );
 }
 
+function calStatus(c: { result: string; next_due_date: string | null }, today: string, in30: string) {
+  if (c.result === "reprovado") return "Reprovada";
+  if (c.next_due_date && c.next_due_date < today) return "Vencida";
+  if (c.next_due_date && c.next_due_date <= in30) return "Próxima do vencimento";
+  return "Válida";
+}
+
+function riskClass(r: { classification: string | null; probability: number; impact: number }) {
+  return r.classification ?? classifyScore(r.probability * r.impact).label;
+}
+
 function Dashboard() {
   useAuditAccess("dashboard");
-  const docExpired = documents.filter(d => d.status === "Vencido" || d.status === "Em revisão").length;
-  const docActive = documents.filter(d => d.status === "Aprovado").length;
-  const calExpired = calibrations.filter(c => c.status === "Vencida" || c.status === "Reprovada").length;
-  const calNear = calibrations.filter(c => c.status === "Próxima do vencimento").length;
-  const supActive = suppliers.filter(s => s.status === "Ativo").length;
-  const supPending = suppliers.filter(s => s.status === "Em avaliação" || s.status === "Suspenso").length;
-  const realSuppliers = useTableStore(suppliersStore);
-  const supEvalAlerts = realSuppliers.filter((sp) => {
+
+  const today = new Date().toISOString().slice(0, 10);
+  const in30 = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+
+  const documents = useTableStore(documentsStore).filter((d) => !d.deleted_at);
+  const equipments = useTableStore(equipmentsStore).filter((e) => !e.deleted_at);
+  const calibrations = useTableStore(calibrationsStore).filter((c) => !c.deleted_at);
+  const suppliers = useTableStore(suppliersStore).filter((s) => !s.deleted_at);
+  const occurrences = useTableStore(occurrencesStore).filter((o) => !o.deleted_at);
+  const risks = useTableStore(risksStore).filter((r) => !r.deleted_at);
+  const actionPlans = useTableStore(actionPlansStore).filter((a) => !a.deleted_at);
+  const audits = useTableStore(auditsStore).filter((a) => !a.deleted_at);
+  const competencies = useTableStore(competenciesStore).filter((c) => !c.deleted_at);
+
+  const docActive = documents.filter((d) => d.status === "aprovado").length;
+  const docExpired = documents.filter((d) => d.status === "em_revisao" || d.status === "obsoleto").length;
+
+  const calExpired = calibrations.filter((c) => calStatus(c, today, in30) === "Vencida" || calStatus(c, today, in30) === "Reprovada").length;
+  const calNear = calibrations.filter((c) => calStatus(c, today, in30) === "Próxima do vencimento").length;
+
+  const supActive = suppliers.filter((s) => s.status === "ativo").length;
+  const supSuspenso = suppliers.filter((s) => s.status === "suspenso").length;
+  const supEvalAlerts = suppliers.filter((sp) => {
     const st = getEvaluationStatus(sp);
     return st === "vencida" || st === "a_vencer";
   }).length;
+
+  const occOpen = occurrences.filter((o) => o.status !== "concluida" && o.status !== "cancelada").length;
+  const ncCritical = occurrences.filter((o) => o.severity === "critica").length;
+
+  const risksHigh = risks.filter((r) => riskClass(r) === "Crítico" || riskClass(r) === "Alto").length;
+
+  const apPending = actionPlans.filter((a) => a.status !== "concluido" && a.status !== "cancelado").length;
+  const audOngoing = audits.filter((a) => a.status === "planejada" || a.status === "em_andamento").length;
+  const compExpired = competencies.filter((c) => c.status === "vencido" || c.status === "pendente").length;
 
   const indicators = useTableStore(indicatorsStore).filter((i) => !i.deleted_at);
   const allIndicatorResults = useTableStore(indicatorResultsStore);
@@ -107,27 +146,51 @@ function Dashboard() {
       .filter((d): d is { name: string; achievement: number; meets: boolean } => d !== null)
       .slice(0, 8);
   }, [indicators, allIndicatorResults]);
-  const occOpen = occurrences.filter(o => o.status !== "Concluída" && o.status !== "Cancelada").length;
-  const ncCritical = occurrences.filter(o => o.severity === "Alta").length;
-  const risksHigh = risks.filter(r => r.classification === "Alto" || r.classification === "Crítico").length;
-  const apPending = actionPlans.filter(a => a.status !== "Concluído" && a.status !== "Cancelado").length;
-  const audOngoing = audits.filter(a => a.status === "Em andamento" || a.status === "Planejada").length;
-  const compExpired = competencies.filter(c => c.status === "Vencido" || c.status === "Pendente").length;
 
-  const planStatus = ["Pendente", "Em andamento", "Aguardando validação", "Concluído", "Atrasado"].map(s => ({
-    name: s, value: actionPlans.filter(a => a.status === s).length,
+  const occurrencesByMonth = useMemo(() => {
+    const now = new Date();
+    const months: { key: string; month: string }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = d.toISOString().slice(0, 7);
+      const month = d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(". ", "/");
+      months.push({ key, month });
+    }
+    const counts: Record<string, number> = Object.fromEntries(months.map((m) => [m.key, 0]));
+    for (const o of occurrences) {
+      const key = o.occurred_at?.slice(0, 7);
+      if (key && key in counts) counts[key]++;
+    }
+    return months.map((m) => ({ month: m.month, value: counts[m.key] }));
+  }, [occurrences]);
+
+  const planStatus = [
+    { name: "Pendente", value: actionPlans.filter((a) => a.status === "pendente").length },
+    { name: "Em andamento", value: actionPlans.filter((a) => a.status === "em_andamento").length },
+    { name: "Concluído", value: actionPlans.filter((a) => a.status === "concluido").length },
+    { name: "Cancelado", value: actionPlans.filter((a) => a.status === "cancelado").length },
+  ];
+
+  const riskBySeverity = ["Baixo", "Médio", "Alto", "Crítico"].map((s) => ({
+    name: s,
+    value: risks.filter((r) => riskClass(r) === s).length,
   }));
-  const riskBySeverity = ["Baixo", "Médio", "Alto", "Crítico"].map(s => ({
-    name: s, value: risks.filter(r => r.classification === s).length,
+
+  const calByStatus = ["Válida", "Próxima do vencimento", "Vencida", "Reprovada"].map((s) => ({
+    name: s,
+    value: calibrations.filter((c) => calStatus(c, today, in30) === s).length,
   }));
-  const calByStatus = ["Válida", "Próxima do vencimento", "Vencida", "Reprovada"].map(s => ({
-    name: s, value: calibrations.filter(c => c.status === s).length,
-  }));
-  const docByCategory = Array.from(new Set(documents.map(d => d.category))).map(cat => ({
-    name: cat, value: documents.filter(d => d.category === cat).length,
+
+  const docByCategory = Array.from(new Set(documents.map((d) => d.category))).map((cat) => ({
+    name: cat,
+    value: documents.filter((d) => d.category === cat).length,
   }));
 
   const PIE_COLORS = ["var(--info)", "var(--success)", "var(--warning)", "var(--destructive)", "var(--primary)"];
+
+  const conformidade = documents.length + suppliers.length > 0
+    ? Math.round(((docActive + supActive) / (documents.length + suppliers.length)) * 100)
+    : 0;
 
   return (
     <>
@@ -138,18 +201,18 @@ function Dashboard() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
         <KpiCard label="Documentos ativos" value={docActive} hint={`${documents.length} no total`} icon={FileText} tone="success" to="/documents" />
-        <KpiCard label="Documentos pendentes" value={docExpired} hint="Vencidos ou em revisão" icon={FileText} tone="warning" to="/documents" />
-        <KpiCard label="Equipamentos" value={equipments.length} hint={`${equipments.filter(e => e.status === "Ativo").length} ativos`} icon={Wrench} to="/equipments" />
+        <KpiCard label="Documentos pendentes" value={docExpired} hint="Em revisão ou obsoletos" icon={FileText} tone="warning" to="/documents" />
+        <KpiCard label="Equipamentos" value={equipments.length} hint={`${equipments.filter((e) => e.status === "ativo").length} ativos`} icon={Wrench} to="/equipments" />
         <KpiCard label="Calibrações vencidas" value={calExpired} hint="Atenção imediata" icon={Gauge} tone="destructive" to="/calibrations" />
         <KpiCard label="Calibrações a vencer" value={calNear} hint="Próximas do vencimento" icon={Gauge} tone="warning" to="/calibrations" />
-        <KpiCard label="Fornecedores ativos" value={supActive} hint={`${supPending} em avaliação`} icon={Truck} tone="info" to="/suppliers" />
+        <KpiCard label="Fornecedores ativos" value={supActive} hint={`${supSuspenso} suspensos`} icon={Truck} tone="info" to="/suppliers" />
         <KpiCard label="Avaliação de fornecedor" value={supEvalAlerts} hint="Vencidas ou a vencer" icon={Truck} tone="warning" to="/suppliers" />
         <KpiCard label="Ocorrências abertas" value={occOpen} hint={`${ncCritical} críticas`} icon={AlertTriangle} tone="warning" to="/occurrences" />
         <KpiCard label="Riscos altos / críticos" value={risksHigh} hint={`${risks.length} mapeados`} icon={ShieldAlert} tone="destructive" to="/risks" />
         <KpiCard label="Planos de ação pendentes" value={apPending} icon={ListChecks} tone="warning" to="/action-plans" />
         <KpiCard label="Auditorias em curso" value={audOngoing} hint={`${audits.length} no total`} icon={ClipboardCheck} tone="info" to="/audits" />
         <KpiCard label="Competências vencidas" value={compExpired} hint="Treinamentos pendentes" icon={GraduationCap} tone="destructive" to="/competencies" />
-        <KpiCard label="Conformidade geral" value={`${Math.round(((docActive + supActive) / (documents.length + suppliers.length)) * 100)}%`} hint="Indicador composto" icon={TrendingUp} tone="success" to="/reports" />
+        <KpiCard label="Conformidade geral" value={`${conformidade}%`} hint="Indicador composto" icon={TrendingUp} tone="success" to="/reports" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
@@ -335,9 +398,9 @@ function Dashboard() {
               <tr className="text-left"><th className="px-2 py-1.5">Código</th><th className="px-2 py-1.5">Tipo</th><th className="px-2 py-1.5">Descrição</th><th className="px-2 py-1.5">Severidade</th><th className="px-2 py-1.5">Status</th></tr>
             </thead>
             <tbody>
-              {occurrences.slice(0, 5).map(o => (
+              {occurrences.slice(0, 5).map((o) => (
                 <tr key={o.id} className="border-t border-border">
-                  <td className="px-2 py-2 font-mono text-xs">{o.id}</td>
+                  <td className="px-2 py-2 font-mono text-xs">{o.code ?? o.id.slice(0, 8)}</td>
                   <td className="px-2 py-2">{o.type}</td>
                   <td className="px-2 py-2 max-w-md truncate">{o.description}</td>
                   <td className="px-2 py-2"><StatusBadge>{o.severity}</StatusBadge></td>
