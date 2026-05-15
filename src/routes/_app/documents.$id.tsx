@@ -1051,11 +1051,11 @@ function DocumentDetail() {
       toast.error("Versão obsoleta — distribuição bloqueada");
       return;
     }
-    if (doc.file_url) {
-      window.open(doc.file_url, "_blank", "noopener,noreferrer");
-    } else {
+    if (!doc.file_url) {
       toast.info("Nenhum arquivo anexado");
+      return;
     }
+    await openFile(doc.file_url, action, `${doc.code}-v${doc.version}`);
     if (user) {
       await logDocumentAccess({
         documentId: doc.id,
