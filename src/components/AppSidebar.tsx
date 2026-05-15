@@ -1,9 +1,32 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard, FileText, ClipboardCheck, AlertTriangle, ShieldAlert, ListChecks,
-  Wrench, Gauge, Truck, ShoppingCart, GraduationCap, Users2, Workflow, FormInput,
-  BarChart3, Settings, Users, History, Rocket, LogOut, Headset, Target, KanbanSquare, X,
-  CheckSquare, DatabaseZap,
+  LayoutDashboard,
+  FileText,
+  ClipboardCheck,
+  AlertTriangle,
+  ShieldAlert,
+  ListChecks,
+  Wrench,
+  Gauge,
+  Truck,
+  ShoppingCart,
+  GraduationCap,
+  Users2,
+  Workflow,
+  FormInput,
+  BarChart3,
+  Settings,
+  Users,
+  History,
+  Rocket,
+  LogOut,
+  Headset,
+  Target,
+  KanbanSquare,
+  X,
+  CheckSquare,
+  DatabaseZap,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
@@ -15,13 +38,29 @@ import logo from "@/assets/logo.png";
 // `lab-units.tsx`. Itens fora desta lista são sempre exibidos (dashboards,
 // POC, configurações, etc.).
 const RESTRICTABLE = new Set([
-  "documents", "occurrences", "audits", "risks", "indicators", "calibrations",
-  "equipments", "suppliers", "purchases", "competencies", "meetings", "forms",
-  "process-map", "reports",
+  "documents",
+  "occurrences",
+  "audits",
+  "risks",
+  "indicators",
+  "calibrations",
+  "equipments",
+  "suppliers",
+  "purchases",
+  "competencies",
+  "meetings",
+  "forms",
+  "process-map",
+  "reports",
 ]);
 const moduleKeyOf = (to: string) => to.replace(/^\//, "").split("/")[0];
 
-type Item = { to: string; label: string; icon: React.ComponentType<{ className?: string }>; perm: string };
+type Item = {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  perm: string;
+};
 
 const groups: { label: string; items: Item[] }[] = [
   {
@@ -66,11 +105,18 @@ const groups: { label: string; items: Item[] }[] = [
       { to: "/settings", label: "Configurações", icon: Settings, perm: "all" },
       { to: "/users", label: "Usuários e Permissões", icon: Users, perm: "all" },
       { to: "/audit-log", label: "Log de Auditoria", icon: History, perm: "audit-log" },
+      { to: "/email-test", label: "Teste de E-mails", icon: Mail, perm: "all" },
     ],
   },
 ];
 
-export function AppSidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose?: () => void }) {
+export function AppSidebar({
+  mobileOpen,
+  onClose,
+}: {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { user, logout } = useAuth();
   const { currentUnitId, getAllowedModules } = useLabUnits();
@@ -107,7 +153,11 @@ export function AppSidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onCl
         )}
       >
         <div className="px-5 py-5 border-b border-sidebar-border flex items-center gap-2.5">
-          <img src={logo} alt="QualiLab" className="size-10 rounded-lg object-contain bg-white p-1 ring-1 ring-white/10" />
+          <img
+            src={logo}
+            alt="QualiLab"
+            className="size-10 rounded-lg object-contain bg-white p-1 ring-1 ring-white/10"
+          />
           <div className="flex-1">
             <div className="text-base font-semibold leading-tight tracking-tight">QualiLab</div>
             <div className="text-[11px] text-sidebar-foreground/60">Gestão da Qualidade</div>
@@ -124,7 +174,9 @@ export function AppSidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onCl
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
           {visibleGroups.map((g) => (
             <div key={g.label}>
-              <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-sidebar-foreground/50">{g.label}</div>
+              <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-sidebar-foreground/50">
+                {g.label}
+              </div>
               <ul className="mt-1 space-y-0.5">
                 {g.items.map((it) => {
                   const active = path === it.to || path.startsWith(it.to + "/");
@@ -154,7 +206,11 @@ export function AppSidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onCl
         <div className="border-t border-sidebar-border p-3">
           <div className="flex items-center gap-3 px-2 py-2">
             <div className="size-9 rounded-full bg-sidebar-primary/20 grid place-items-center text-sm font-semibold">
-              {user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+              {user?.name
+                ?.split(" ")
+                .map((n) => n[0])
+                .join("")
+                .slice(0, 2)}
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium truncate">{user?.name}</div>

@@ -31,6 +31,7 @@ import { Route as AppLabUnitsRouteImport } from './routes/_app/lab-units'
 import { Route as AppIndicatorsRouteImport } from './routes/_app/indicators'
 import { Route as AppFormsRouteImport } from './routes/_app/forms'
 import { Route as AppEquipmentsRouteImport } from './routes/_app/equipments'
+import { Route as AppEmailTestRouteImport } from './routes/_app/email-test'
 import { Route as AppDocumentsRouteImport } from './routes/_app/documents'
 import { Route as AppDataMigrationRouteImport } from './routes/_app/data-migration'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
@@ -166,6 +167,11 @@ const AppFormsRoute = AppFormsRouteImport.update({
 const AppEquipmentsRoute = AppEquipmentsRouteImport.update({
   id: '/equipments',
   path: '/equipments',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEmailTestRoute = AppEmailTestRouteImport.update({
+  id: '/email-test',
+  path: '/email-test',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDocumentsRoute = AppDocumentsRouteImport.update({
@@ -320,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/data-migration': typeof AppDataMigrationRoute
   '/documents': typeof AppDocumentsRouteWithChildren
+  '/email-test': typeof AppEmailTestRoute
   '/equipments': typeof AppEquipmentsRouteWithChildren
   '/forms': typeof AppFormsRouteWithChildren
   '/indicators': typeof AppIndicatorsRoute
@@ -369,6 +376,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/data-migration': typeof AppDataMigrationRoute
   '/documents': typeof AppDocumentsRouteWithChildren
+  '/email-test': typeof AppEmailTestRoute
   '/equipments': typeof AppEquipmentsRouteWithChildren
   '/forms': typeof AppFormsRouteWithChildren
   '/indicators': typeof AppIndicatorsRoute
@@ -421,6 +429,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/data-migration': typeof AppDataMigrationRoute
   '/_app/documents': typeof AppDocumentsRouteWithChildren
+  '/_app/email-test': typeof AppEmailTestRoute
   '/_app/equipments': typeof AppEquipmentsRouteWithChildren
   '/_app/forms': typeof AppFormsRouteWithChildren
   '/_app/indicators': typeof AppIndicatorsRoute
@@ -473,6 +482,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/data-migration'
     | '/documents'
+    | '/email-test'
     | '/equipments'
     | '/forms'
     | '/indicators'
@@ -522,6 +532,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/data-migration'
     | '/documents'
+    | '/email-test'
     | '/equipments'
     | '/forms'
     | '/indicators'
@@ -573,6 +584,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/data-migration'
     | '/_app/documents'
+    | '/_app/email-test'
     | '/_app/equipments'
     | '/_app/forms'
     | '/_app/indicators'
@@ -772,6 +784,13 @@ declare module '@tanstack/react-router' {
       path: '/equipments'
       fullPath: '/equipments'
       preLoaderRoute: typeof AppEquipmentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/email-test': {
+      id: '/_app/email-test'
+      path: '/email-test'
+      fullPath: '/email-test'
+      preLoaderRoute: typeof AppEmailTestRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/documents': {
@@ -1113,6 +1132,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppDataMigrationRoute: typeof AppDataMigrationRoute
   AppDocumentsRoute: typeof AppDocumentsRouteWithChildren
+  AppEmailTestRoute: typeof AppEmailTestRoute
   AppEquipmentsRoute: typeof AppEquipmentsRouteWithChildren
   AppFormsRoute: typeof AppFormsRouteWithChildren
   AppIndicatorsRoute: typeof AppIndicatorsRoute
@@ -1144,6 +1164,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppDataMigrationRoute: AppDataMigrationRoute,
   AppDocumentsRoute: AppDocumentsRouteWithChildren,
+  AppEmailTestRoute: AppEmailTestRoute,
   AppEquipmentsRoute: AppEquipmentsRouteWithChildren,
   AppFormsRoute: AppFormsRouteWithChildren,
   AppIndicatorsRoute: AppIndicatorsRoute,
@@ -1178,3 +1199,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
