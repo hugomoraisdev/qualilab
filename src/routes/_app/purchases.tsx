@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useLocation, Outlet } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
@@ -26,6 +26,8 @@ const emptyDraft = (): Draft => ({ description: "", supplier_id: "none", quantit
 
 function PurchasesPage() {
   useAuditAccess("purchases");
+  const location = useLocation();
+  if (location.pathname !== "/purchases") return <Outlet />;
   const purchases = useTableStore(purchasesStore);
   const suppliers = useTableStore(suppliersStore);
   const navigate = useNavigate();
