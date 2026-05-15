@@ -60,27 +60,25 @@ const SEED: Project[] = [
   ]},
 ];
 
-const LS_KEY = "qualilab.projects.kanban.v1";
-function loadState(): { projects: Project[]; columns: Column[] } {
-  if (typeof window === "undefined") return { projects: SEED, columns: DEFAULT_COLUMNS };
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return { projects: SEED, columns: DEFAULT_COLUMNS };
-    const p = JSON.parse(raw);
-    return {
-      projects: Array.isArray(p.projects) && p.projects.length ? p.projects : SEED,
-      columns: Array.isArray(p.columns) && p.columns.length ? p.columns : DEFAULT_COLUMNS,
-    };
-  } catch { return { projects: SEED, columns: DEFAULT_COLUMNS }; }
+interface KanbanState { projects: Project[]; columns: Column[] }
+const cloudStore = createCloudStore<KanbanState>(
+  "projects.kanban.v1",
+  { projects: SEED, columns: DEFAULT_COLUMNS },
+);
+
+function useKanbanState(): KanbanState {
+  return useSyncExternalStore(
+    (cb) => cloudStore.subscribe(cb),
+    () => cloudStore.get(),
+    () => ({ projects: SEED, columns: DEFAULT_COLUMNS }),
+  );
 }
 
 export const Route = createFileRoute("/_app/projects")({ component: ProjectsPage });
 
 function ProjectsPage() {
   useAuditAccess("projects");
-  const initial = useMemo(loadState, []);
-  const [projects, setProjects] = useState<Project[]>(initial.projects);
-  const [columns, setColumns] = useState<Column[]>(initial.columns);
+  const { projects, columns } = useKanbanState();
   const [showForm, setShowForm] = useState(false);
   const [view, setView] = useState<"kanban" | "gantt">("kanban");
   const [selected, setSelected] = useState<Project | null>(null);
@@ -88,23 +86,25 @@ function ProjectsPage() {
   const [responsible, setResponsible] = useState("");
   const [deadline, setDeadline] = useState("");
 
-  useEffect(() => {
-    try { localStorage.setItem(LS_KEY, JSON.stringify({ projects, columns })); } catch { /* noop */ }
-  }, [projects, columns]);
-
   const moveProject = (id: string, status: Status) => {
-    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
+    void cloudStore.update((s) => ({
+      ...s,
+      projects: s.projects.map((p) => (p.id === id ? { ...p, status } : p)),
+    }));
   };
 
   const create = () => {
     if (!title.trim()) return;
-    setProjects([{
-      id: "PRJ-" + String(projects.length + 1).padStart(3, "0"),
-      title, description: "", status: columns[0]?.key ?? "backlog", responsible: responsible || "—",
-      start: new Date().toISOString().slice(0, 10),
-      deadline: deadline || null,
-      progress: 0, subtasks: [],
-    }, ...projects]);
+    void cloudStore.update((s) => ({
+      ...s,
+      projects: [{
+        id: "PRJ-" + String(s.projects.length + 1).padStart(3, "0"),
+        title, description: "", status: s.columns[0]?.key ?? "backlog", responsible: responsible || "—",
+        start: new Date().toISOString().slice(0, 10),
+        deadline: deadline || null,
+        progress: 0, subtasks: [],
+      }, ...s.projects],
+    }));
     setTitle(""); setResponsible(""); setDeadline(""); setShowForm(false);
   };
 
@@ -112,20 +112,29 @@ function ProjectsPage() {
     const trimmed = label.trim();
     if (!trimmed) return;
     const key = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `col-${Date.now().toString(36)}`;
-    if (columns.some((c) => c.key === key)) return;
-    const palette = PALETTE[columns.length % PALETTE.length];
-    setColumns([...columns, { key, label: trimmed, ...palette }]);
+    void cloudStore.update((s) => {
+      if (s.columns.some((c) => c.key === key)) return s;
+      const palette = PALETTE[s.columns.length % PALETTE.length];
+      return { ...s, columns: [...s.columns, { key, label: trimmed, ...palette }] };
+    });
   };
   const renameColumn = (key: string, label: string) => {
     const trimmed = label.trim();
     if (!trimmed) return;
-    setColumns((prev) => prev.map((c) => (c.key === key ? { ...c, label: trimmed } : c)));
+    void cloudStore.update((s) => ({
+      ...s,
+      columns: s.columns.map((c) => (c.key === key ? { ...c, label: trimmed } : c)),
+    }));
   };
   const removeColumn = (key: string) => {
-    if (columns.length <= 1) return;
-    const fallback = columns.find((c) => c.key !== key)!.key;
-    setColumns((prev) => prev.filter((c) => c.key !== key));
-    setProjects((prev) => prev.map((p) => (p.status === key ? { ...p, status: fallback } : p)));
+    void cloudStore.update((s) => {
+      if (s.columns.length <= 1) return s;
+      const fallback = s.columns.find((c) => c.key !== key)!.key;
+      return {
+        columns: s.columns.filter((c) => c.key !== key),
+        projects: s.projects.map((p) => (p.status === key ? { ...p, status: fallback } : p)),
+      };
+    });
   };
 
   return (
