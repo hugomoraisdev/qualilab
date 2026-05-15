@@ -70,8 +70,8 @@ function PurchasesPage() {
     <>
       <PageHeader title="Processos de Compra" description="Solicitações, aprovação e inspeção de recebimento" />
       <DataTable
-        data={purchases}
-        searchKeys={["code", "description", "status"]}
+        data={purchases.map((p) => ({ ...p, supplier_name: supplierName(p.supplier_id) }))}
+        searchKeys={["code", "description", "status", "supplier_name"]}
         newLabel="Nova solicitação"
         onNew={() => { setDraft(emptyDraft()); setOpen(true); }}
         onRowClick={(r) => navigate({ to: "/purchases/$id", params: { id: r.id } })}
