@@ -8,10 +8,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { useTableStore } from "@/lib/table-store";
-import { auditsStore, auditFindingsStore, saveAudit, newId, type AuditRow } from "@/lib/audits-store";
+import {
+  auditsStore,
+  auditFindingsStore,
+  saveAudit,
+  newId,
+  type AuditRow,
+} from "@/lib/audits-store";
 import { useAuth } from "@/lib/auth";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { toast } from "sonner";
@@ -25,7 +38,14 @@ function AuditsPage() {
   const location = useLocation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState({ scope: "", type: "Interna", area: "", auditor_name: "", planned_at: new Date().toISOString().slice(0, 10) });
+  const [draft, setDraft] = useState({
+    scope: "",
+    type: "Interna",
+    area: "",
+    auditor_name: "",
+    planned_at: new Date().toISOString().slice(0, 10),
+  });
+  const [showTimeline, setShowTimeline] = useState(true);
 
   if (location.pathname !== "/audits") {
     return <Outlet />;
@@ -36,11 +56,43 @@ function AuditsPage() {
     planejada: rows.filter((r) => r.status === "planejada").length,
     em_andamento: rows.filter((r) => r.status === "em_andamento").length,
     concluida: rows.filter((r) => r.status === "concluida").length,
-    atrasada: rows.filter((r) => r.status !== "concluida" && r.status !== "cancelada" && r.planned_at && r.planned_at < today).length,
+    atrasada: rows.filter(
+      (r) =>
+        r.status !== "concluida" &&
+        r.status !== "cancelada" &&
+        r.planned_at &&
+        r.planned_at < today,
+    ).length,
+  };
+
+  const auditsByMonth = (() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 12, 1);
+    const months: { month: string; count: number }[] = [];
+    const cursor = new Date(start);
+    while (cursor < end) {
+      const key = cursor.toISOString().slice(0, 7);
+      months.push({
+        month: key,
+        count: rows.filter((r) => r.planned_at && r.planned_at.slice(0, 7) === key).length,
+      });
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return months;
+  })();
+
+  const TOOLTIP_STYLE = {
+    background: "var(--popover)",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
   };
 
   const create = async () => {
-    if (!draft.scope.trim()) { toast.error("Informe o escopo da auditoria"); return; }
+    if (!draft.scope.trim()) {
+      toast.error("Informe o escopo da auditoria");
+      return;
+    }
     const id = newId("AUD");
     const a: AuditRow = {
       id,
@@ -66,7 +118,11 @@ function AuditsPage() {
       <PageHeader
         title="Auditorias"
         description="Auditorias internas e externas com checklist e achados"
-        actions={<Button onClick={() => setOpen(true)}><Plus className="size-4" /> Nova auditoria</Button>}
+        actions={
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="size-4" /> Nova auditoria
+          </Button>
+        }
       />
       <OfflineBanner stores={[auditsStore, auditFindingsStore]} />
 
@@ -89,6 +145,30 @@ function AuditsPage() {
         </div>
       </div>
 
+      <div className="bg-card border border-border rounded-lg mb-4">
+        <button
+          type="button"
+          className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium"
+          onClick={() => setShowTimeline((v) => !v)}
+        >
+          <span>Planejamento por mês</span>
+          {showTimeline ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+        </button>
+        {showTimeline && (
+          <div className="h-48 px-4 pb-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={auditsByMonth} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Bar dataKey="count" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
       <DataTable
         data={rows}
         searchKeys={["id", "code", "scope", "auditor_name", "area", "status", "type"]}
@@ -96,9 +176,21 @@ function AuditsPage() {
         exportName="auditorias"
         onRowClick={(r) => navigate({ to: "/audits/$id", params: { id: r.id } })}
         columns={[
-          { key: "code", header: "Código", render: (r) => <span className="font-mono text-xs">{r.code ?? r.id}</span> },
-          { key: "type", header: "Tipo", render: (r) => <StatusBadge tone="info">{r.type}</StatusBadge> },
-          { key: "scope", header: "Escopo", render: (r) => <span className="font-medium">{r.scope}</span> },
+          {
+            key: "code",
+            header: "Código",
+            render: (r) => <span className="font-mono text-xs">{r.code ?? r.id}</span>,
+          },
+          {
+            key: "type",
+            header: "Tipo",
+            render: (r) => <StatusBadge tone="info">{r.type}</StatusBadge>,
+          },
+          {
+            key: "scope",
+            header: "Escopo",
+            render: (r) => <span className="font-medium">{r.scope}</span>,
+          },
           { key: "area", header: "Área", render: (r) => r.area ?? "—" },
           { key: "auditor_name", header: "Auditor", render: (r) => r.auditor_name ?? "—" },
           { key: "planned_at", header: "Planejada", render: (r) => r.planned_at ?? "—" },
@@ -111,7 +203,9 @@ function AuditsPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Plus className="size-4" /> Nova auditoria</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="size-4" /> Nova auditoria
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
@@ -125,8 +219,13 @@ function AuditsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Tipo</Label>
-                <Select value={draft.type} onValueChange={(v) => setDraft((d) => ({ ...d, type: v }))}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                <Select
+                  value={draft.type}
+                  onValueChange={(v) => setDraft((d) => ({ ...d, type: v }))}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Interna">Interna</SelectItem>
                     <SelectItem value="Externa">Externa</SelectItem>
@@ -135,21 +234,35 @@ function AuditsPage() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Área</Label>
-                <Input placeholder="Ex: Laboratório A" value={draft.area} onChange={(e) => setDraft((d) => ({ ...d, area: e.target.value }))} />
+                <Input
+                  placeholder="Ex: Laboratório A"
+                  value={draft.area}
+                  onChange={(e) => setDraft((d) => ({ ...d, area: e.target.value }))}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Auditor</Label>
-                <Input placeholder={user?.name ?? "Nome do auditor"} value={draft.auditor_name} onChange={(e) => setDraft((d) => ({ ...d, auditor_name: e.target.value }))} />
+                <Input
+                  placeholder={user?.name ?? "Nome do auditor"}
+                  value={draft.auditor_name}
+                  onChange={(e) => setDraft((d) => ({ ...d, auditor_name: e.target.value }))}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Data planejada</Label>
-                <Input type="date" value={draft.planned_at} onChange={(e) => setDraft((d) => ({ ...d, planned_at: e.target.value }))} />
+                <Input
+                  type="date"
+                  value={draft.planned_at}
+                  onChange={(e) => setDraft((d) => ({ ...d, planned_at: e.target.value }))}
+                />
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
               <Button onClick={create}>Criar auditoria</Button>
             </div>
           </div>

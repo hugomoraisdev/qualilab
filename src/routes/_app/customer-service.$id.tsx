@@ -3,8 +3,9 @@ import { useState, useEffect } from "react";
 import { useAuditAccess } from "@/lib/audit";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ArrowLeft, Star, AlertTriangle, ListChecks } from "lucide-react";
+import { ArrowLeft, Star, AlertTriangle, ListChecks, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ticketsStore,
   timelineStore,
@@ -47,6 +48,7 @@ function TicketDetail() {
     .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
   const t = tickets.find((x) => x.id === id);
   const [score, setScore] = useState<number>(0);
+  const [investigation, setInvestigation] = useState("");
 
   useEffect(() => {
     setScore(t?.satisfaction_score ?? 0);
@@ -85,6 +87,20 @@ function TicketDetail() {
   const setSat = async (n: number) => {
     setScore(n);
     await update({ satisfaction_score: n }, `Pesquisa de satisfação registrada: ${n}/5`);
+  };
+
+  const saveInvestigation = async () => {
+    if (!investigation.trim()) return;
+    const ev: TimelineRow = {
+      id: newId("TL"),
+      ticket_id: t.id,
+      author_id: user?.id ?? null,
+      author_name: user?.name ?? "—",
+      action: `Investigação: ${investigation.trim()}`,
+    };
+    await addTimeline(ev);
+    setInvestigation("");
+    toast.success("Investigação registrada na linha do tempo");
   };
 
   const createActionPlan = async () => {
@@ -135,6 +151,32 @@ function TicketDetail() {
           <div className="bg-card border border-border rounded-lg p-5 shadow-sm">
             <h3 className="text-sm font-semibold mb-3">Descrição</h3>
             <p className="text-sm whitespace-pre-wrap">{t.description}</p>
+          </div>
+
+          <div className="bg-card border border-border rounded-lg p-5 shadow-sm">
+            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <Search className="size-4 text-primary" /> Investigação / diagnóstico
+            </h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Registre a análise prévia antes de decidir abrir uma Não Conformidade ou plano de
+              ação.
+            </p>
+            <Textarea
+              rows={3}
+              value={investigation}
+              onChange={(e) => setInvestigation(e.target.value)}
+              placeholder="Descreva a investigação, causa provável, impacto ou contexto observado…"
+            />
+            <div className="flex justify-end mt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={saveInvestigation}
+                disabled={!investigation.trim()}
+              >
+                Registrar investigação
+              </Button>
+            </div>
           </div>
 
           <div className="bg-card border border-border rounded-lg p-5 shadow-sm">
