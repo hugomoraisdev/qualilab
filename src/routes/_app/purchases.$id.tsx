@@ -1,6 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuditAccess } from "@/lib/audit";
+import { usePermission } from "@/lib/permissions";
+import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -17,15 +19,44 @@ import {
   type PurchaseCustomField, type PurchaseReceivingInspection,
 } from "@/lib/purchase-meta-store";
 import { useTableStore } from "@/lib/table-store";
-import { useAuth } from "@/lib/auth";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_app/purchases/$id")({ component: PurchaseDetail });
+export const Route = createFileRoute("/_app/purchases/$id")({ component: PurchaseDetailRoute });
 
-function PurchaseDetail() {
-  useAuditAccess("purchases");
+// Guard de rota: valida autenticação e permissão ANTES de montar a tela
+// de detalhe (e portanto antes de qualquer hook de listas/stores).
+function PurchaseDetailRoute() {
+  const { user, loading } = useAuth();
+  const canView = usePermission("purchases");
   const { id } = Route.useParams();
+
+  if (loading) {
+    return <p className="text-sm text-muted-foreground p-4">Carregando…</p>;
+  }
+  if (!user) {
+    return <Navigate to="/login" search={{ redirect: `/purchases/${id}` }} />;
+  }
+  if (!canView) {
+    return (
+      <div className="max-w-md mx-auto mt-12 text-center space-y-3">
+        <ShieldAlert className="size-10 mx-auto text-destructive" />
+        <h2 className="text-lg font-semibold">Acesso negado</h2>
+        <p className="text-sm text-muted-foreground">
+          Você não tem permissão para visualizar solicitações de compra.
+        </p>
+        <Link to="/purchases" className="inline-flex items-center text-sm text-primary hover:underline">
+          <ArrowLeft className="size-4 mr-1" /> Voltar para Compras
+        </Link>
+      </div>
+    );
+  }
+
+  return <PurchaseDetail id={id} />;
+}
+
+function PurchaseDetail({ id }: { id: string }) {
+  useAuditAccess("purchases");
   const purchases = useTableStore(purchasesStore);
   const suppliers = useTableStore(suppliersStore);
   const { user } = useAuth();
@@ -34,6 +65,14 @@ function PurchaseDetail() {
 
   const [draft, setDraft] = useState<PurchaseRow | null>(null);
   useEffect(() => { if (p) setDraft(p); }, [p?.id]);
+
+  // Custom fields
+  const [cfLabel, setCfLabel] = useState("");
+  const [cfValue, setCfValue] = useState("");
+
+  // Receiving inspection
+  const [insp, setInsp] = useState<PurchaseReceivingInspection>(meta.receiving_inspection);
+  useEffect(() => { setInsp(meta.receiving_inspection); }, [meta.receiving_inspection.status, meta.receiving_inspection.inspected_at]);
 
   if (!p || !draft) {
     return (
@@ -53,9 +92,6 @@ function PurchaseDetail() {
     toast.success("Solicitação atualizada");
   };
 
-  // Custom fields
-  const [cfLabel, setCfLabel] = useState("");
-  const [cfValue, setCfValue] = useState("");
   const addCf = async () => {
     if (!cfLabel.trim()) return;
     const cf: PurchaseCustomField = { id: crypto.randomUUID(), label: cfLabel.trim(), value: cfValue };
@@ -71,9 +107,6 @@ function PurchaseDetail() {
     refresh();
   };
 
-  // Receiving inspection
-  const [insp, setInsp] = useState<PurchaseReceivingInspection>(meta.receiving_inspection);
-  useEffect(() => { setInsp(meta.receiving_inspection); }, [meta.receiving_inspection.status, meta.receiving_inspection.inspected_at]);
   const saveInspection = async () => {
     const next: PurchaseReceivingInspection = {
       ...insp,
